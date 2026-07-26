@@ -152,24 +152,37 @@ hl.bind("SUPER + ALT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_SOURCE@ togg
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true, description = "Window: Move" })
 hl.bind("SUPER + mouse:274", hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "Window: Resize" })
---#/# bind = SUPER + ←/↑/→/↓,, -- Focus in direction
+--#/# bind = SUPER + ←/↑/→/↓,, -- Focus column/window (scrolling-aware, no monitor cross)
 for i = 1, 4 do
     local arrowkey = { "Left", "Right", "Up", "Down" }
     local focusdir = { "l", "r", "u", "d" }
-    hl.bind("SUPER + " .. arrowkey[i], hl.dsp.focus({ direction = focusdir[i] }),
-        { description = "Window: Focus " .. arrowkey[i] })
+    -- For scrolling layout: Left/Right focus columns within monitor only
+    if i <= 2 then
+        hl.bind("SUPER + " .. arrowkey[i], hl.dsp.layout("focus " .. focusdir[i]),
+            { description = "Layout: Focus column " .. arrowkey[i] })
+    else
+        hl.bind("SUPER + " .. arrowkey[i], hl.dsp.focus({ direction = focusdir[i] }),
+            { description = "Window: Focus " .. arrowkey[i] })
+    end
 end
 for i = 1, 2 do
     local arrowkey = { "BracketLeft", "BracketRight" }
     local focusdir = { "l", "r" }
-    hl.bind("SUPER + " .. arrowkey[i], hl.dsp.focus({ direction = focusdir[i] }))
+    hl.bind("SUPER + " .. arrowkey[i], hl.dsp.layout("focus " .. focusdir[i]))
 end
---#/# bind = SUPER + SHIFT, ←/↑/→/↓,, -- Move in direction
+--#/# bind = SUPER + SHIFT, ←/→,, -- Consume/expel column (Niri-style nesting)
+--#/# bind = SUPER + SHIFT, ↑/↓,, -- Move window in column
 for i = 1, 4 do
     local arrowkey = { "Left", "Right", "Up", "Down" }
-    local focusdir = { "l", "r", "u", "d" }
-    hl.bind("SUPER + SHIFT + " .. arrowkey[i], hl.dsp.window.move({ direction = focusdir[i] }),
-        { description = "Window: Move " .. arrowkey[i] })
+    local consumedir = { "prev", "next" }
+    local focusdir = { "u", "d" }
+    if i <= 2 then
+        hl.bind("SUPER + SHIFT + " .. arrowkey[i], hl.dsp.layout("swapcol " .. consumedir[i]),
+            { description = "Layout: Swap column " .. arrowkey[i] })
+    else
+        hl.bind("SUPER + SHIFT + " .. arrowkey[i], hl.dsp.window.move({ direction = focusdir[i - 2] }),
+            { description = "Window: Move " .. arrowkey[i] })
+    end
 end
 
 hl.bind("ALT + F4",
@@ -181,16 +194,32 @@ hl.bind("ALT + F4",
 hl.bind("SUPER + Q", hl.dsp.window.close(), { description = "Window: Close" })
 hl.bind("SUPER + SHIFT + ALT + Q", hl.dsp.exec_cmd("hyprctl kill"), { description = "Window: Forcefully zap a window" })
 
---# Window split ratio
---#/# binde = SUPER, ;/',, -- Adjust split ratio
-hl.bind("SUPER + Semicolon", hl.dsp.layout("splitratio -0.1"), { repeating = true })
-hl.bind("SUPER + Apostrophe", hl.dsp.layout("splitratio +0.1"), { repeating = true })
+--# Scrolling layout navigation
+--#/# bind = SUPER, ;/',, -- Focus columns left/right
+hl.bind("SUPER + Semicolon", hl.dsp.layout("focus l"), { repeating = true, description = "Layout: Focus previous column" })
+hl.bind("SUPER + Apostrophe", hl.dsp.layout("focus r"), { repeating = true, description = "Layout: Focus next column" })
+hl.bind("SUPER + ALT + Left", hl.dsp.layout("consume_or_expel prev"), { description = "Layout: Consume/expel left" })
+hl.bind("SUPER + ALT + Right", hl.dsp.layout("consume_or_expel next"), { description = "Layout: Consume/expel right" })
+hl.bind("SUPER + SHIFT + Return", hl.dsp.layout("promote"), { description = "Layout: Promote window to own column" })
+hl.bind("SUPER + SHIFT + Backspace", hl.dsp.layout("expel"), { description = "Layout: Expel window from column" })
+
+hl.bind("SUPER + R", hl.dsp.layout("colresize +conf"), { repeating = true, description = "Layout: Cycle column width" })
+-- Niri-style additional binds
+hl.bind("SUPER + CTRL + F", hl.dsp.layout("fit expand"), { description = "Layout: Expand column (Niri Ctrl+F)" })
+
+-- Niri-style: toggle column 0.5/1.0
+local colFull = false
+hl.bind("SUPER + F", function()
+    colFull = not colFull
+    hl.dispatch(hl.dsp.layout("colresize " .. (colFull and "1.0" or "0.5")))
+end, { description = "Layout: Toggle column 0.5/1.0 (Niri-style)" })
 --# Positioning mode
 hl.bind("SUPER + ALT + Space", hl.dsp.window.float({ action = "toggle" }), { description = "Window: Float/Tile" })
 hl.bind("SUPER + D", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }),
     { description = "Window: Maximize" })
-hl.bind("SUPER + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }),
-    { description = "Window: Fullscreen" })
+-- hl.bind("SUPER + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }),
+--     { description = "Window: Fullscreen" })
+hl.bind("SUPER + SHIFT + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }), { description = "Window: Fullscreen" })
 hl.bind("SUPER + ALT + F", hl.dsp.window.fullscreen_state({ internal = 0, client = 3, action = "toggle" }),
     { description = "Window: Fullscreen spoof" })
 hl.bind("SUPER + P", hl.dsp.window.pin(), { description = "Window: Pin" })

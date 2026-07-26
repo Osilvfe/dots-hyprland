@@ -13,7 +13,7 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("sleep 1 && dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP") -- Some fix idk
 
     -- Audio
-    hl.exec_cmd("easyeffects --hide-window --service-mode")
+    hl.exec_cmd("jamesdsp -d")
 
     -- Clipboard: history
     --hl.exec_cmd("wl-paste --watch cliphist store")
@@ -22,4 +22,8 @@ hl.on("hyprland.start", function ()
 
     -- Cursor
     hl.exec_cmd("hyprctl setcursor Bibata-Modern-Classic 24")
+
+    -- hidpi-xprop-git: XWayland HiDPI (see https://github.com/hyprwm/Hyprland/pull/6446)
+    hl.exec_cmd("systemctl --user start xsettingsd.service && echo \"Xft.dpi:192\" | xrdb -merge && xprop -root -format _XWAYLAND_GLOBAL_OUTPUT_SCALE 32c -set _XWAYLAND_GLOBAL_OUTPUT_SCALE 2")
+    hl.exec_cmd("fcitx5 -d")
 end)

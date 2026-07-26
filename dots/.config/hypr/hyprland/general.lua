@@ -1,9 +1,20 @@
 -- MONITOR CONFIG
+-- eDP-1: 笔记本内屏  2560x1600@165  150% 缩放
 hl.monitor({
-    output = "",
-    mode = "preferred",
-    position = "auto",
-    scale = 1
+    output   = "eDP-1",
+    mode     = "2560x1600@165",
+    scale    = auto,
+    bitdepth = 10
+})
+
+-- HDMI-A-3: 外接显示器  3840x2160@144  自动缩放  (0,0) 为主屏
+hl.monitor({
+    output   = "HDMI-A-3",
+    mode     = "3840x2160@144",
+    position = "0x0",
+    scale    = "auto",
+    bitdepth = 10,
+    
 })
 
 hl.gesture({
@@ -51,15 +62,16 @@ hl.config({
         gaps_out = 5,
         gaps_workspaces = 50,
 
-        border_size = 1,
+        border_size = 4,
 
         col = {
             active_border = "rgba(0DB7D455)",
-            inactive_border = "rgba(31313600)"
+            inactive_border = "rgba(31313633)"
         },
         resize_on_border = true,
 
         no_focus_fallback = true,
+        layout = "scrolling",
         allow_tearing = true, -- This just allows the `immediate` window rule to work
         snap = {
             enabled = true,
@@ -107,143 +119,134 @@ hl.config({
     animations = {
         enabled = true
     },
-    dwindle = {
-        preserve_split = true,
-        smart_split = false,
-        smart_resizing = false
-        -- precise_mouse_move = true,
+    scrolling = {
+        column_width = 0.5,
+        focus_fit_method = 1,
+        follow_focus = true,
+        follow_min_visible = 0.4,
+        wrap_focus = false,
+        wrap_swapcol = false,
+        direction = "right",
+    },
+    render = {
+          cm_auto_hdr = 1,  -- 全屏 HDR 自动切，桌面保持 SDR
     },
 })
--- Curves
-hl.curve("expressiveFastSpatial", {
+-- Curves (Niri-inspired with Hyprland bezier spring approximation)
+hl.curve("niriOpen", {
     type = "bezier",
-    points = {{0.42, 1.67}, {0.21, 0.90}}
+    points = {{0.19, 1.0}, {0.22, 1.0}}
 })
-hl.curve("expressiveSlowSpatial", {
+hl.curve("niriClose", {
     type = "bezier",
-    points = {{0.39, 1.29}, {0.35, 0.98}}
+    points = {{0.33, 0.0}, {0.66, 1.0}}
 })
-hl.curve("expressiveDefaultSpatial", {
+hl.curve("niriSpring1000", {
     type = "bezier",
-    points = {{0.38, 1.21}, {0.22, 1.00}}
+    points = {{0.15, 1.0}, {0.05, 1.0}}
 })
-hl.curve("emphasizedDecel", {
+hl.curve("niriSpring800", {
     type = "bezier",
-    points = {{0.05, 0.7}, {0.1, 1}}
-})
-hl.curve("emphasizedAccel", {
-    type = "bezier",
-    points = {{0.3, 0}, {0.8, 0.15}}
+    points = {{0.2, 1.0}, {0.08, 1.0}}
 })
 hl.curve("standardDecel", {
     type = "bezier",
     points = {{0, 0}, {0, 1}}
 })
-hl.curve("menu_decel", {
-    type = "bezier",
-    points = {{0.1, 1}, {0, 1}}
-})
-hl.curve("menu_accel", {
-    type = "bezier",
-    points = {{0.52, 0.03}, {0.72, 0.08}}
-})
-hl.curve("stall", {
-    type = "bezier",
-    points = {{1, -0.1}, {0.7, 0.85}}
-})
--- Configs
--- windows
+-- windows (Niri: window-open 150ms ease-out-expo / window-close 150ms ease-out-quad)
 hl.animation({
     leaf = "windowsIn",
     enabled = true,
-    speed = 3,
-    bezier = "emphasizedDecel",
-    style = "popin 80%"
+    speed = 1.5,
+    bezier = "niriOpen",
+    
 })
 hl.animation({
     leaf = "fadeIn",
     enabled = true,
-    speed = 3,
-    bezier = "emphasizedDecel"
+    speed = 1.5,
+    bezier = "niriOpen"
 })
 hl.animation({
     leaf = "windowsOut",
     enabled = true,
-    speed = 2,
-    bezier = "emphasizedDecel",
-    style = "popin 90%"
+    speed = 1.5,
+    bezier = "niriClose",
+    
 })
 hl.animation({
     leaf = "fadeOut",
     enabled = true,
-    speed = 2,
-    bezier = "emphasizedDecel"
+    speed = 1.5,
+    bezier = "niriClose"
 })
 hl.animation({
     leaf = "windowsMove",
     enabled = true,
     speed = 3,
-    bezier = "emphasizedDecel",
+    bezier = "niriSpring800",
     style = "slide"
 })
 hl.animation({
     leaf = "border",
     enabled = true,
     speed = 10,
-    bezier = "emphasizedDecel"
+    bezier = "niriSpring800"
 })
 
 -- layers
 hl.animation({
     leaf = "layersIn",
     enabled = true,
-    speed = 2.7,
-    bezier = "emphasizedDecel",
-    style = "popin 93%"
+    speed = 1.5,
+    bezier = "niriOpen",
+    
 })
 hl.animation({
     leaf = "layersOut",
     enabled = true,
-    speed = 2.4,
-    bezier = "menu_accel",
-    style = "popin 94%"
+    speed = 1.5,
+    bezier = "niriClose",
+    style = "slide"
 })
--- fade
 hl.animation({
     leaf = "fadeLayersIn",
     enabled = true,
-    speed = 0.5,
-    bezier = "menu_decel"
+    speed = 1.5,
+    bezier = "niriOpen"
 })
 hl.animation({
     leaf = "fadeLayersOut",
     enabled = true,
-    speed = 2.7,
-    bezier = "stall"
+    speed = 6,
+    bezier = "niriClose"
 })
--- workspaces
+
+-- workspaces (Niri: spring damping=1 stiffness=1000)
 hl.animation({
     leaf = "workspaces",
     enabled = true,
-    speed = 7,
-    bezier = "menu_decel",
+    speed = 4,
+    bezier = "niriSpring1000",
     style = "slide"
 })
+
 -- specialWorkspace
 hl.animation({
     leaf = "specialWorkspaceIn",
     enabled = true,
-    speed = 2.8,
-    bezier = "emphasizedDecel",
+    speed = 1.5,
+    bezier = "niriOpen",
     style = "slidevert"
 })
 hl.animation({
     leaf = "specialWorkspaceOut",
     enabled = true,
-    speed = 1.2,
-    bezier = "emphasizedAccel",
+    speed = 1.0,
+    bezier = "niriClose",
     style = "slidevert"
 })
+
 -- zoom
 hl.animation({
     leaf = "zoomFactor",
@@ -251,7 +254,6 @@ hl.animation({
     speed = 3,
     bezier = "standardDecel"
 })
-
 hl.config({
     input = {
         kb_layout = "us",
@@ -298,8 +300,9 @@ hl.config({
         zoom_disable_aa = true,
         hotspot_padding = 1
     },
-
     xwayland = {
-        force_zero_scaling = true
+        force_zero_scaling = false,
+        use_nearest_neighbor = false
+
     }
 })

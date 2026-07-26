@@ -20,6 +20,14 @@ ButtonMouseArea {
         monitor: root.monitor
     }
 
+    readonly property int visibleCount: {
+        let max = 0;
+        for (let i = 0; i < wsModel.shownCount; i++) {
+            if (wsModel.occupied[i]) max = i + 1;
+        }
+        return Math.max(1, Math.min(wsModel.shownCount, max + 1));
+    }
+
     property bool vertical: Config.options.bar.vertical
     property bool superPressAndHeld: false // Relevant modifications at bottom of file
 
@@ -108,7 +116,7 @@ ButtonMouseArea {
             visible: false
 
             Repeater {
-                model: wsModel.shownCount
+                model: root.visibleCount
                 delegate: Item {
                     id: wsBg
                     required property int index
@@ -189,7 +197,7 @@ ButtonMouseArea {
             layer.enabled: true // For the masking
 
             Repeater {
-                model: wsModel.shownCount
+                model: root.visibleCount
                 delegate: NumberWorkspaceItem {}
             }
         }
@@ -213,7 +221,7 @@ ButtonMouseArea {
             z: 6
 
             Repeater {
-                model: wsModel.shownCount
+                model: root.visibleCount
                 delegate: WorkspaceItem {
                     id: wsApp
                     property var biggestWindow: wsModel.biggestWindow[index]
