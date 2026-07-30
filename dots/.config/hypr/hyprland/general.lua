@@ -226,7 +226,7 @@ hl.animation({
     enabled = true,
     speed = 3.5,
     bezier = "niriSpring",
-    style = "slide"
+    style = "slidevert"
 })
 
 -- specialWorkspace
