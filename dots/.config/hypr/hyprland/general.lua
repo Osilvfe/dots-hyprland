@@ -60,7 +60,6 @@ hl.config({
         no_focus_fallback = true,
         layout = "scrolling",
         allow_tearing = true, -- This just allows the `immediate` window rule to work
-        persistent_workspaces = true,
         snap = {
             enabled = true,
             window_gap = 4,

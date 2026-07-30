@@ -90,16 +90,6 @@ Scope {
                     property alias source: panelWindow.searchingText
                 }
             }
-
-            Loader {
-                id: overviewLoader
-                anchors.horizontalCenter: parent.horizontalCenter
-                active: GlobalStates.overviewOpen && (Config?.options.overview.enable ?? true)
-                sourceComponent: OverviewWidget {
-                    screen: panelWindow.screen
-                    visible: (panelWindow.searchingText == "")
-                }
-            }
         }
     }
 
@@ -149,22 +139,6 @@ Scope {
     GlobalShortcut {
         name: "searchToggle"
         description: "Toggles search on press"
-
-        onPressed: {
-            GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
-        }
-    }
-    GlobalShortcut {
-        name: "overviewWorkspacesClose"
-        description: "Closes overview on press"
-
-        onPressed: {
-            GlobalStates.overviewOpen = false;
-        }
-    }
-    GlobalShortcut {
-        name: "overviewWorkspacesToggle"
-        description: "Toggles overview on press"
 
         onPressed: {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;

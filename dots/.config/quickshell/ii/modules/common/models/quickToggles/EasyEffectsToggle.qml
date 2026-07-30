@@ -7,7 +7,7 @@ import qs.modules.common.functions
 import qs.modules.common.widgets
 
 QuickToggleModel {
-    name: Translation.tr("EasyEffects")
+    name: "JamesDSP"
 
     available: EasyEffects.available
     toggled: EasyEffects.active
@@ -22,9 +22,9 @@ QuickToggleModel {
     }
 
     altAction: () => {
-        Quickshell.execDetached(["bash", "-c", "flatpak run com.github.wwmm.easyeffects || easyeffects"])
+        Quickshell.execDetached(["bash", "-c", "jamesdsp"])
         GlobalStates.sidebarRightOpen = false
     }
 
-    tooltipText: Translation.tr("EasyEffects | Right-click to configure")
+    tooltipText: "JamesDSP | Right-click to configure"
 }
