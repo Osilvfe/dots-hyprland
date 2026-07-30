@@ -32,20 +32,7 @@ hl.gesture({
     direction = "horizontal",
     action = "workspace"
 })
-hl.gesture({
-    fingers = 4,
-    direction = "up",
-    action = function()
-        hl.dispatch(hl.dsp.global("quickshell:overviewWorkspacesToggle"))
-    end
-})
-hl.gesture({
-    fingers = 4,
-    direction = "down",
-    action = function()
-        hl.dispatch(hl.dsp.global("quickshell:overviewWorkspacesToggle"))
-    end
-})
+hl.plugin.scrolloverview.gesture({ fingers = 4, direction = "vertical" })
 
 hl.config({
     gestures = {
@@ -73,6 +60,7 @@ hl.config({
         no_focus_fallback = true,
         layout = "scrolling",
         allow_tearing = true, -- This just allows the `immediate` window rule to work
+        persistent_workspaces = true,
         snap = {
             enabled = true,
             window_gap = 4,
@@ -127,6 +115,21 @@ hl.config({
         wrap_focus = false,
         wrap_swapcol = false,
         direction = "right",
+    },
+    plugin = {
+        scrolloverview = {
+            scale = 0.3,
+            workspace_gap = 80,
+            layout = "vertical",
+            wallpaper = 0,
+            blur = false,
+            shadow = {
+                enabled = true,
+                range = 30,
+                render_power = 3,
+                color = 0xee1a1a1a,
+            },
+        },
     },
     render = {
           cm_auto_hdr = 1,  -- 全屏 HDR 自动切，桌面保持 SDR

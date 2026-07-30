@@ -20,7 +20,9 @@ hl.bind("SUPER_L", hl.dsp.global("quickshell:workspaceNumber"),
     { ignore_mods = true, transparent = true, release = true })
 hl.bind("SUPER_R", hl.dsp.global("quickshell:workspaceNumber"),
     { ignore_mods = true, transparent = true, release = true })
-hl.bind("SUPER + Tab", hl.dsp.global("quickshell:overviewWorkspacesToggle"), { description = "Shell: Toggle overview" })
+hl.bind("SUPER + Tab", function()
+    hl.plugin.scrolloverview.overview("toggle")
+end, { description = "Shell: Toggle overview" })
 hl.bind("SUPER + V", hl.dsp.global("quickshell:overviewClipboardToggle"))
 hl.bind("SUPER + Period", hl.dsp.global("quickshell:overviewEmojiToggle"))
 hl.bind("SUPER + A", hl.dsp.global("quickshell:sidebarLeftToggle"), { description = "Shell: Toggle left sidebar" })
@@ -170,14 +172,17 @@ for i = 1, 2 do
     local focusdir = { "l", "r" }
     hl.bind("SUPER + " .. arrowkey[i], hl.dsp.layout("focus " .. focusdir[i]))
 end
---#/# bind = SUPER + SHIFT, ←/→,, -- Consume/expel column (Niri-style nesting)
+--#/# bind = SUPER + SHIFT, ←/→,, -- Focus monitor (Niri-style)
 --#/# bind = SUPER + SHIFT, ↑/↓,, -- Move window in column
+--#/# bind = SUPER + CTRL + SHIFT, ←/→,, -- Swap column
 for i = 1, 4 do
     local arrowkey = { "Left", "Right", "Up", "Down" }
-    local consumedir = { "prev", "next" }
+    local monitordir = { "l", "r" }
     local focusdir = { "u", "d" }
     if i <= 2 then
-        hl.bind("SUPER + SHIFT + " .. arrowkey[i], hl.dsp.layout("swapcol " .. consumedir[i]),
+        hl.bind("SUPER + SHIFT + " .. arrowkey[i], hl.dsp.focus({ monitor = monitordir[i] }),
+            { description = "Monitor: Focus " .. arrowkey[i] })
+        hl.bind("SUPER + CTRL + SHIFT + " .. arrowkey[i], hl.dsp.layout("swapcol " .. (arrowkey[i] == "Left" and "prev" or "next")),
             { description = "Layout: Swap column " .. arrowkey[i] })
     else
         hl.bind("SUPER + SHIFT + " .. arrowkey[i], hl.dsp.window.move({ direction = focusdir[i - 2] }),
@@ -215,6 +220,8 @@ hl.bind("SUPER + F", function()
 end, { description = "Layout: Toggle column 0.5/1.0 (Niri-style)" })
 --# Positioning mode
 hl.bind("SUPER + ALT + Space", hl.dsp.window.float({ action = "toggle" }), { description = "Window: Float/Tile" })
+hl.bind("SUPER + CTRL + V", hl.dsp.exec_cmd(hyprScripts .. "/switchfloatfocus.sh"),
+    { description = "Window: Switch focus floating/tiling" })
 hl.bind("SUPER + D", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }),
     { description = "Window: Maximize" })
 -- hl.bind("SUPER + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }),
@@ -379,7 +386,7 @@ hl.bind("SUPER + W", hl.dsp.exec_cmd(browser), { description = "App: Browser" })
 hl.bind("SUPER + C", hl.dsp.exec_cmd(codeEditor), { description = "App: Code editor" })
 hl.bind("CTRL + SUPER + SHIFT + ALT + W", hl.dsp.exec_cmd(officeSoftware), { description = "App: Office software" })
 hl.bind("SUPER + X", hl.dsp.exec_cmd(textEditor), { description = "App: Text editor" })
-hl.bind("CTRL + SUPER + V", hl.dsp.exec_cmd(volumeMixer), { description = "App: Volume mixer" })
+
 hl.bind("SUPER + I", hl.dsp.exec_cmd(settingsApp), { description = "App: Settings app" })
 hl.bind("CTRL + SHIFT + Escape", hl.dsp.exec_cmd(taskManager), { description = "App: Task manager" })
 

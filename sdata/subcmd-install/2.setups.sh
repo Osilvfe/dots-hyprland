@@ -8,16 +8,11 @@ function prepare_systemd_user_service(){
 }
 
 function setup_user_group(){
-  if [[ -z $(getent group i2c) ]] && [[ "$OS_GROUP_ID" != "fedora" ]]; then
-    # On Fedora this is not needed. Tested with desktop computer with NVIDIA video card.
+  if [[ -z $(getent group i2c) ]]; then
     x sudo groupadd i2c
   fi
 
-  if [[ "$OS_GROUP_ID" == "fedora" ]]; then
-    x sudo usermod -aG video,input "$(whoami)"
-  else
-    x sudo usermod -aG video,i2c,input "$(whoami)"
-  fi
+  x sudo usermod -aG video,i2c,input "$(whoami)"
 }
 #####################################################################################
 # These python packages are installed using uv into the venv (virtual environment). Once the folder of the venv gets deleted, they are all gone cleanly. So it's considered as setups, not dependencies.
@@ -28,19 +23,8 @@ showfun setup_user_group
 v setup_user_group
 
 if [[ ! -z $(systemctl --version) ]]; then
-  # For Fedora, uinput is required for the virtual keyboard to function, and udev rules enable input group users to utilize it.
-  if [[ "$OS_GROUP_ID" == "fedora" ]]; then
-    v bash -c "echo uinput | sudo tee /etc/modules-load.d/uinput.conf"
-    v bash -c 'echo SUBSYSTEM==\"misc\", KERNEL==\"uinput\", MODE=\"0660\", GROUP=\"input\" | sudo tee /etc/udev/rules.d/99-uinput.rules'
-  else
-    v bash -c "echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf"
-  fi
-  # TODO: find a proper way for enable Nix installed ydotool. When running `systemctl --user enable ydotool, it errors "Failed to enable unit: Unit ydotool.service does not exist".
+  v bash -c "echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf"
   if [[ ! "${INSTALL_VIA_NIX}" == true ]]; then
-    if [[ "$OS_GROUP_ID" == "fedora" ]]; then
-      v prepare_systemd_user_service
-    fi
-    # When $DBUS_SESSION_BUS_ADDRESS and $XDG_RUNTIME_DIR are empty, it commonly means that the current user has been logged in with `su - user` or `ssh user@hostname`. In such case `systemctl --user enable <service>` is not usable. It should be `sudo systemctl --machine=$(whoami)@.host --user enable <service>` instead.
     if [[ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ]]; then
       v systemctl --user enable ydotool --now
     else
@@ -63,9 +47,35 @@ else
   pause
 fi
 
-if [[ "$OS_GROUP_ID" == "gentoo" ]]; then
-  v sudo chown -R $(whoami):$(whoami) ~/.local/
-fi
+# Install hyprland-scroll-overview plugin via hyprpm
+function setup_hyprpm_plugin(){
+  if [[ "$OS_GROUP_ID" != "arch" ]]; then
+    return 0
+  fi
+
+  if hyprpm list 2>/dev/null | grep -q "scrolloverview.*enabled"; then
+    echo "scrolloverview plugin already installed and enabled, skipping."
+    return 0
+  fi
+
+  echo "Setting up hyprpm for scrolloverview plugin..."
+  x sudo mkdir -p /usr/share/hyprpm
+  x sudo chown "$(whoami):$(whoami)" /usr/share/hyprpm
+
+  if ! hyprpm list 2>/dev/null | grep -q "scrolloverview"; then
+    echo "Adding scrolloverview plugin repository (git build branch)..."
+    x hyprpm add https://github.com/yayuuu/hyprland-scroll-overview origin/new-release
+    echo "Building plugin (this may take a while)..."
+    x hyprpm update
+  fi
+
+  echo "Enabling scrolloverview plugin..."
+  x hyprpm enable scrolloverview
+  echo "scrolloverview plugin installed successfully."
+}
+
+showfun setup_hyprpm_plugin
+v setup_hyprpm_plugin
 
 v gsettings set org.gnome.desktop.interface font-name 'Google Sans Flex Medium 11 @opsz=11,wght=500'
 v gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'

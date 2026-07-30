@@ -20,8 +20,14 @@ function create_if_not_exists(path)
 end
 
 function workspace_in_group(i)
-    local curr = hl.get_active_workspace().id
-    local newVal = math.floor((curr - 1) / workspaceGroupSize) * workspaceGroupSize + i
-    -- hl.notification.create({ text = "curr " .. curr .. " floor " .. math.floor(curr / 10) .. " new " .. newVal, duration = 5000 })
-    return newVal
+    local monitors = hl.get_monitors()
+    local focused = hl.get_active_monitor()
+    local monitorIndex = 0
+    for idx, mon in ipairs(monitors) do
+        if mon.name == focused.name then
+            monitorIndex = idx - 1
+            break
+        end
+    end
+    return monitorIndex * workspaceGroupSize + i
 end

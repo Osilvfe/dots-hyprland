@@ -1,4 +1,5 @@
 -- ######## Window rules ########
+require("hyprland.variables")
 
 -- Disable blur for xwayland context menus
 hl.window_rule({match = {class = "^()$", title = "^()$" },                   no_blur = true })
@@ -81,6 +82,18 @@ hl.window_rule({match = {class = "^(steam_app).*" }, immediate = true})
 hl.window_rule({match = {float = 0 }, no_shadow = true})
 
 -- ######## Workspace rules ########
+
+-- Niri-style per-monitor workspaces: each monitor gets its own block of workspaces
+do
+    local monitors = hl.get_monitors()
+    for midx, mon in ipairs(monitors) do
+        local base = (midx - 1) * workspaceGroupSize
+        for i = 1, workspaceGroupSize do
+            hl.workspace_rule({ workspace = (base + i) .. ", monitor:" .. mon.name })
+        end
+    end
+end
+
 hl.workspace_rule({ workspace = "special:special", gaps_out = 30 })
 
 -- ######## Layer rules ########
