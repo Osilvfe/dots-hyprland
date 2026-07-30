@@ -35,7 +35,7 @@ RowLayout {
     MaterialShapeWrappedMaterialSymbol {
         id: searchIcon
         Layout.alignment: Qt.AlignVCenter
-        iconSize: Appearance.font.pixelSize.huge
+        iconSize: Appearance.font.pixelSize.huge + 4
         shape: switch(root.searchPrefixType) {
             case SearchBar.SearchPrefixType.Action: return MaterialShape.Shape.Pill;
             case SearchBar.SearchPrefixType.App: return MaterialShape.Shape.Clover4Leaf;
@@ -60,11 +60,11 @@ RowLayout {
     }
     ToolbarTextField { // Search box
         id: searchInput
-        Layout.topMargin: 4
-        Layout.bottomMargin: 4
-        implicitHeight: 40
+        Layout.topMargin: 6
+        Layout.bottomMargin: 6
+        implicitHeight: 52
         focus: GlobalStates.overviewOpen
-        font.pixelSize: Appearance.font.pixelSize.small
+        font.pixelSize: Appearance.font.pixelSize.large
         placeholderText: Translation.tr("Search, calculate or run")
         implicitWidth: root.searchingText == "" ? Appearance.sizes.searchWidthCollapsed : Appearance.sizes.searchWidth
 

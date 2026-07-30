@@ -71,9 +71,11 @@ Scope {
         Column {
             id: columnLayout
             visible: GlobalStates.overviewOpen
+            width: Math.min(680, panelWindow.width - 80)
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 top: parent.top
+                topMargin: panelWindow.height * 0.18
             }
             spacing: -8
 
@@ -85,6 +87,7 @@ Scope {
 
             SearchWidget {
                 id: searchWidget
+                width: parent.width
                 anchors.horizontalCenter: parent.horizontalCenter
                 Synchronizer on searchingText {
                     property alias source: panelWindow.searchingText
