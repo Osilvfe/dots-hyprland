@@ -46,3 +46,7 @@ hyprpm enable scrolloverview
 
 # 4. 重启 Hyprland
 ```
+
+## 参考
+
+- [StatIndet/quickshell](https://github.com/StatIndet/quickshell) — 本分支使用的 Quickshell 实现
