@@ -134,102 +134,98 @@ hl.config({
           cm_auto_hdr = 1,  -- 全屏 HDR 自动切，桌面保持 SDR
     },
 })
--- Curves (Niri-inspired with Hyprland bezier spring approximation)
+-- Curves (Niri animation parity)
+-- window-open: cubic-bezier(0.05, 0.9, 0.1, 1.05)
 hl.curve("niriOpen", {
     type = "bezier",
-    points = {{0.19, 1.0}, {0.22, 1.0}}
+    points = {{0.05, 0.9}, {0.10, 1.05}}
 })
+-- window-close: ease-out-expo (snappier than quad)
 hl.curve("niriClose", {
     type = "bezier",
-    points = {{0.33, 0.0}, {0.66, 1.0}}
+    points = {{0.16, 1.0}, {0.3, 1.0}}
 })
-hl.curve("niriSpring1000", {
+-- spring damping=0.8 stiffness=400 approximation (with visible bounce)
+hl.curve("niriSpring", {
     type = "bezier",
-    points = {{0.15, 1.0}, {0.05, 1.0}}
-})
-hl.curve("niriSpring800", {
-    type = "bezier",
-    points = {{0.2, 1.0}, {0.08, 1.0}}
+    points = {{0.12, 1.12}, {0.04, 1.04}}
 })
 hl.curve("standardDecel", {
     type = "bezier",
     points = {{0, 0}, {0, 1}}
 })
--- windows (Niri: window-open 150ms ease-out-expo / window-close 150ms ease-out-quad)
+-- windows (Niri: window-open 500ms / window-close 150ms)
 hl.animation({
     leaf = "windowsIn",
     enabled = true,
-    speed = 1.5,
+    speed = 2.0,
     bezier = "niriOpen",
-    
 })
 hl.animation({
     leaf = "fadeIn",
     enabled = true,
-    speed = 1.5,
+    speed = 2.0,
     bezier = "niriOpen"
 })
 hl.animation({
     leaf = "windowsOut",
     enabled = true,
-    speed = 1.5,
+    speed = 2.0,
     bezier = "niriClose",
-    
 })
 hl.animation({
     leaf = "fadeOut",
     enabled = true,
-    speed = 1.5,
+    speed = 2.0,
     bezier = "niriClose"
 })
 hl.animation({
     leaf = "windowsMove",
     enabled = true,
-    speed = 3,
-    bezier = "niriSpring800",
+    speed = 3.5,
+    bezier = "niriSpring",
     style = "slide"
 })
 hl.animation({
     leaf = "border",
     enabled = true,
     speed = 10,
-    bezier = "niriSpring800"
+    bezier = "niriSpring"
 })
 
 -- layers
 hl.animation({
     leaf = "layersIn",
     enabled = true,
-    speed = 1.5,
+    speed = 2.0,
     bezier = "niriOpen",
-    
 })
 hl.animation({
     leaf = "layersOut",
     enabled = true,
-    speed = 1.5,
+    speed = 3.0,
     bezier = "niriClose",
     style = "slide"
 })
 hl.animation({
     leaf = "fadeLayersIn",
     enabled = true,
-    speed = 1.5,
+    speed = 2.0,
     bezier = "niriOpen"
 })
 hl.animation({
     leaf = "fadeLayersOut",
     enabled = true,
-    speed = 6,
+    speed = 3.0,
     bezier = "niriClose"
 })
 
--- workspaces (Niri: spring damping=1 stiffness=1000)
+-- workspaces (Niri: spring damping=0.8 stiffness=400)
 hl.animation({
     leaf = "workspaces",
     enabled = true,
-    speed = 4,
-    bezier = "niriSpring1000",
+    speed = 3.5,
+    bezier = "niriSpring",
     style = "slide"
 })
 
@@ -237,14 +233,14 @@ hl.animation({
 hl.animation({
     leaf = "specialWorkspaceIn",
     enabled = true,
-    speed = 1.5,
+    speed = 2.0,
     bezier = "niriOpen",
     style = "slidevert"
 })
 hl.animation({
     leaf = "specialWorkspaceOut",
     enabled = true,
-    speed = 1.0,
+    speed = 3.5,
     bezier = "niriClose",
     style = "slidevert"
 })
