@@ -29,4 +29,6 @@ hl.on("hyprland.start", function ()
     -- hidpi-xprop-git: XWayland HiDPI (see https://github.com/hyprwm/Hyprland/pull/6446)
     hl.exec_cmd("systemctl --user start xsettingsd.service && echo \"Xft.dpi:192\" | xrdb -merge && xprop -root -format _XWAYLAND_GLOBAL_OUTPUT_SCALE 32c -set _XWAYLAND_GLOBAL_OUTPUT_SCALE 2")
     hl.exec_cmd("fcitx5 -d")
+
+    hl.exec_cmd("hyprpm reload")
 end)
