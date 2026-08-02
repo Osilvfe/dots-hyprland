@@ -30,12 +30,16 @@ Singleton {
                 .map(item => item.entry)
         }
 
-        return Fuzzy.go(search, preparedEntries, {
-            all: true,
-            key: "name"
-        }).map(r => {
-            return r.obj.entry
-        });
+        if (search.trim() === "") {
+            return root.list;
+        }
+
+        // Word-based matching: every query word must appear in the entry text
+        const words = search.toLowerCase().split(/\s+/).filter(w => w !== "");
+        return root.list.filter(entry => {
+            const lower = entry.toLowerCase();
+            return words.every(w => lower.includes(w));
+        }).slice(0, 50);
     }
 
     function load() {

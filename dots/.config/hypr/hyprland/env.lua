@@ -20,4 +20,4 @@ hl.env("ILLOGICAL_IMPULSE_VIRTUAL_ENV", home_dir .. "/.local/state/quickshell/.v
 
 -- Cursor (XWayland)
 hl.env("XCURSOR_THEME", "Bibata-Modern-Classic")
-hl.env("XCURSOR_SIZE", "24")
+hl.env("XCURSOR_SIZE", "48")

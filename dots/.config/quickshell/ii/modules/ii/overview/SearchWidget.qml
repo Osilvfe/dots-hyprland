@@ -21,6 +21,7 @@ Item { // Wrapper
 
     property string searchingText: LauncherSearch.query
     property bool showResults: searchingText != ""
+    property bool emojiMode: searchingText.startsWith(Config.options.search.prefix.emojis)
     implicitWidth: searchWidgetContent.implicitWidth + Appearance.sizes.elevationMargin * 2
     implicitHeight: searchWidgetContent.implicitHeight + searchBar.verticalPadding * 2 + Appearance.sizes.elevationMargin * 2
 
@@ -160,7 +161,7 @@ Item { // Wrapper
 
             ListView { // App results
                 id: appResults
-                visible: root.showResults
+                visible: root.showResults && !root.emojiMode
                 Layout.fillWidth: true
                 implicitHeight: Math.min(600, appResults.contentHeight + topMargin + bottomMargin)
                 clip: true
@@ -224,6 +225,78 @@ Item { // Wrapper
                             event.accepted = true;
                             root.focusSearchInput();
                         }
+                    }
+                }
+            }
+
+            GridView { // Emoji results (grid picker)
+                id: emojiGrid
+                visible: root.showResults && root.emojiMode
+                Layout.fillWidth: true
+                Layout.preferredHeight: 360
+                clip: true
+                topMargin: 10
+                bottomMargin: 10
+                cellWidth: 56
+                cellHeight: 56
+                flickableDirection: Flickable.VerticalFlick
+                boundsBehavior: Flickable.StopAtBounds
+                KeyNavigation.up: searchBar
+                highlightMoveDuration: 100
+
+                Connections {
+                    target: root
+                    function onSearchingTextChanged() {
+                        if (emojiGrid.count > 0)
+                            emojiGrid.currentIndex = 0;
+                        emojiDebounce.restart();
+                    }
+                }
+
+                Timer {
+                    id: emojiDebounce
+                    interval: root.typingDebounceInterval
+                    onTriggered: {
+                        emojiResultModel.values = LauncherSearch.results.slice(0, 300);
+                    }
+                }
+
+                Connections {
+                    target: LauncherSearch
+                    function onResultsChanged() {
+                        emojiDebounce.restart();
+                    }
+                }
+
+                model: ScriptModel {
+                    id: emojiResultModel
+                    objectProp: "key"
+                }
+
+                delegate: RippleButton {
+                    id: emojiCell
+                    required property var modelData
+                    implicitWidth: emojiGrid.cellWidth - 4
+                    implicitHeight: emojiGrid.cellHeight - 4
+                    buttonRadius: Appearance.rounding.normal
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colRipple: Appearance.colors.colLayer2Active
+
+                    contentItem: StyledText {
+                        anchors.centerIn: parent
+                        text: modelData.iconName ?? ""
+                        font.pixelSize: Appearance.font.pixelSize.huge + 6
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        GlobalStates.overviewOpen = false
+                        modelData.execute()
+                    }
+
+                    StyledToolTip {
+                        text: modelData.name ?? ""
                     }
                 }
             }

@@ -81,6 +81,10 @@ hl.window_rule({match = {class = "^(steam_app).*" }, immediate = true})
 -- No shadow for tiled windows
 hl.window_rule({match = {float = 0 }, no_shadow = true})
 
+-- WeChat
+hl.window_rule({match = {class = "wechat", title = "negative:^(朋友圈|微信|设置|聊天文件|预览|图片和视频)"}, no_blur = true, no_shadow = true, border_size = 0})
+hl.window_rule({match = {class = "wechat", title = "^微信发送给$"}, no_blur = true, no_shadow = true, border_size = 0})
+
 -- ######## Workspace rules ########
 
 -- Niri-style per-monitor workspaces: each monitor gets its own block of workspaces
