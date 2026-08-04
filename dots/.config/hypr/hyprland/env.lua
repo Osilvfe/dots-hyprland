@@ -3,6 +3,10 @@ local home_dir = os.getenv("HOME")
 -- Wayland
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 
+-- Language (Chinese)
+hl.env("LANG", "zh_CN.UTF-8")
+hl.env("LANGUAGE", "zh_CN")
+
 -- Applications
 local xdg_data_dirs_old = os.getenv("XDG_DATA_DIRS") or ""
 hl.env("XDG_DATA_DIRS", home_dir .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share:" .. xdg_data_dirs_old)
