@@ -31,6 +31,7 @@ ARGS=("$@")
 MANUAL_REGION=""
 SOUND_FLAG=0
 FULLSCREEN_FLAG=0
+GIF_FLAG=0
 for ((i=0;i<${#ARGS[@]};i++)); do
     if [[ "${ARGS[i]}" == "--region" ]]; then
         if (( i+1 < ${#ARGS[@]} )); then
@@ -43,19 +44,38 @@ for ((i=0;i<${#ARGS[@]};i++)); do
         SOUND_FLAG=1
     elif [[ "${ARGS[i]}" == "--fullscreen" ]]; then
         FULLSCREEN_FLAG=1
+    elif [[ "${ARGS[i]}" == "--gif" ]]; then
+        GIF_FLAG=1
     fi
 done
 
 if pgrep wf-recorder > /dev/null; then
+    qs -c ii ipc call recording status none 2>/dev/null &
     notify-send "Recording Stopped" "Stopped" -a 'Recorder' &
-    pkill wf-recorder &
+    pkill -INT wf-recorder &
 else
     if [[ $FULLSCREEN_FLAG -eq 1 ]]; then
-        notify-send "Starting recording" 'recording_'"$(getdate)"'.mp4' -a 'Recorder' & disown
-        if [[ $SOUND_FLAG -eq 1 ]]; then
-            wf-recorder -o "$(getactivemonitor)" --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4' -t --audio="$(getaudiooutput)"
+        if [[ $GIF_FLAG -eq 1 ]]; then
+            notify-send "Starting recording" 'recording_'"$(getdate)"'.gif' -a 'Recorder' & disown
+            qs -c ii ipc call recording status gif 2>/dev/null &
+            tmp_file="./.tmp_recording_$(getdate).mp4"
+            if [[ $SOUND_FLAG -eq 1 ]]; then
+                wf-recorder -o "$(getactivemonitor)" --pixel-format yuv420p -f "$tmp_file" --audio="$(getaudiooutput)"
+            else
+                wf-recorder -o "$(getactivemonitor)" --pixel-format yuv420p -f "$tmp_file"
+            fi
+            ffmpeg -y -i "$tmp_file" -vf "fps=15,scale=-2:720:flags=lanczos" "recording_$(getdate).gif" >/dev/null 2>&1
+            rm -f "$tmp_file"
+            qs -c ii ipc call recording status none 2>/dev/null &
         else
-            wf-recorder -o "$(getactivemonitor)" --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4' -t
+            notify-send "Starting recording" 'recording_'"$(getdate)"'.mp4' -a 'Recorder' & disown
+            qs -c ii ipc call recording status screen 2>/dev/null &
+            if [[ $SOUND_FLAG -eq 1 ]]; then
+                wf-recorder -o "$(getactivemonitor)" --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4' --audio="$(getaudiooutput)"
+            else
+                wf-recorder -o "$(getactivemonitor)" --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4'
+            fi
+            qs -c ii ipc call recording status none 2>/dev/null &
         fi
     else
         # If a manual region was provided via --region, use it; otherwise run slurp as before.
@@ -68,11 +88,27 @@ else
             fi
         fi
 
-        notify-send "Starting recording" 'recording_'"$(getdate)"'.mp4' -a 'Recorder' & disown
-        if [[ $SOUND_FLAG -eq 1 ]]; then
-            wf-recorder --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4' -t --geometry "$region" --audio="$(getaudiooutput)"
+        if [[ $GIF_FLAG -eq 1 ]]; then
+            notify-send "Starting recording" 'recording_'"$(getdate)"'.gif' -a 'Recorder' & disown
+            qs -c ii ipc call recording status gif 2>/dev/null &
+            tmp_file="./.tmp_recording_$(getdate).mp4"
+            if [[ $SOUND_FLAG -eq 1 ]]; then
+                wf-recorder --pixel-format yuv420p -f "$tmp_file" --geometry "$region" --audio="$(getaudiooutput)"
+            else
+                wf-recorder --pixel-format yuv420p -f "$tmp_file" --geometry "$region"
+            fi
+            ffmpeg -y -i "$tmp_file" -vf "fps=15,scale=-2:720:flags=lanczos" "recording_$(getdate).gif" >/dev/null 2>&1
+            rm -f "$tmp_file"
+            qs -c ii ipc call recording status none 2>/dev/null &
         else
-            wf-recorder --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4' -t --geometry "$region"
+            notify-send "Starting recording" 'recording_'"$(getdate)"'.mp4' -a 'Recorder' & disown
+            qs -c ii ipc call recording status screen 2>/dev/null &
+            if [[ $SOUND_FLAG -eq 1 ]]; then
+                wf-recorder --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4' --geometry "$region" --audio="$(getaudiooutput)"
+            else
+                wf-recorder --pixel-format yuv420p -f './recording_'"$(getdate)"'.mp4' --geometry "$region"
+            fi
+            qs -c ii ipc call recording status none 2>/dev/null &
         fi
     fi
 fi

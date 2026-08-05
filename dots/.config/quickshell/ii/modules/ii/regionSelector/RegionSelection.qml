@@ -290,8 +290,8 @@ PanelWindow {
         )
         Quickshell.execDetached(command);
         if (root.action == RegionSelection.SnipAction.Record || root.action == RegionSelection.SnipAction.RecordWithSound) {
-            root.phase = RegionSelection.Phase.Post
-            root.selectionMode = RegionSelection.SelectionMode.RectCorners
+            // 录制状态由顶栏 RecordingIndicator 显示，直接结束选区界面（所有屏幕）
+            root.dismiss();
         } else {
             root.dismiss();
         }

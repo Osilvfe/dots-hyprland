@@ -108,6 +108,11 @@ Item { // Bar content region
         }
         spacing: 4
 
+        RecordingIndicator {
+            anchors.verticalCenter: parent.verticalCenter
+            colText: rightSidebarButton.colText
+        }
+
         BarGroup {
             id: leftCenterGroup
             anchors.verticalCenter: parent.verticalCenter
