@@ -53,13 +53,13 @@ Toolbar {
     }
 
     IconToolbarButton {
-        text: "fullscreen"
+        text: "screen_record"
         onClicked: {
-            Quickshell.execDetached(["bash", "-c", "grim - | wl-copy"]);
+            Quickshell.execDetached(["bash", "-c", Directories.recordScriptPath]);
             root.dismiss();
         }
         StyledToolTip {
-            text: Translation.tr("全屏截图")
+            text: Translation.tr("录屏")
         }
     }
 
