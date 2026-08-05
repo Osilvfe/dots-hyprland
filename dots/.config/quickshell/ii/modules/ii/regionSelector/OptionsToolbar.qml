@@ -55,7 +55,7 @@ Toolbar {
     IconToolbarButton {
         text: "screen_record"
         onClicked: {
-            Quickshell.execDetached(["bash", "-c", Directories.recordScriptPath]);
+            GlobalStates.recordingMenuOpen = true;
             root.dismiss();
         }
         StyledToolTip {

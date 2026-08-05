@@ -19,6 +19,7 @@ Singleton {
     property bool oskOpen: false
     property bool overlayOpen: false
     property bool overviewOpen: false
+    property bool recordingMenuOpen: false
     property bool regionSelectorOpen: false
     property bool searchOpen: false
     property string recordingType: "none"
