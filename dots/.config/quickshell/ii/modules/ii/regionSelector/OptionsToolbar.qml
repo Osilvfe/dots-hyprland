@@ -66,8 +66,7 @@ Toolbar {
     IconToolbarButton {
         text: "gif"
         onClicked: {
-            Quickshell.execDetached(["bash", "-c", Directories.recordScriptPath + " --gif"]);
-            root.dismiss();
+            root.action = RegionSelection.SnipAction.RecordGif
         }
         StyledToolTip {
             text: Translation.tr("录制 GIF")

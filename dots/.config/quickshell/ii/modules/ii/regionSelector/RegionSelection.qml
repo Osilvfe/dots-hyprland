@@ -29,13 +29,16 @@ PanelWindow {
 
     // Modes
     // TODO: Ask: sidebar AI
-    enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound } 
+    enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound, RecordGif } 
     enum SelectionMode { RectCorners, Circle }
     enum Phase { Select, Post }
     property var action: RegionSelection.SnipAction.Copy
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
     property var phase: RegionSelection.Phase.Select
     signal dismiss()
+    signal startRecording(string command)
+    property bool recordSystemAudio: false
+    property bool recordMicAudio: false
 
     // Styles
     property string screenshotDir: Directories.screenshotTemp
@@ -116,9 +119,9 @@ PanelWindow {
 
     // Config
     property bool isCircleSelection: (root.selectionMode === RegionSelection.SelectionMode.Circle)
-    property bool enableWindowRegions: Config.options.regionSelector.targetRegions.windows && !isCircleSelection
-    property bool enableLayerRegions: Config.options.regionSelector.targetRegions.layers && !isCircleSelection
-    property bool enableContentRegions: Config.options.regionSelector.targetRegions.content
+    property bool enableWindowRegions: !root.isRecording && Config.options.regionSelector.targetRegions.windows && !isCircleSelection
+    property bool enableLayerRegions: !root.isRecording && Config.options.regionSelector.targetRegions.layers && !isCircleSelection
+    property bool enableContentRegions: !root.isRecording && Config.options.regionSelector.targetRegions.content
 
     // Target
     property real targetedRegionX: -1
@@ -196,7 +199,7 @@ PanelWindow {
             root.preparationDone = !checkRecordingProc.running;
         }
     }
-    property bool isRecording: root.action === RegionSelection.SnipAction.Record || root.action === RegionSelection.SnipAction.RecordWithSound
+    property bool isRecording: root.action === RegionSelection.SnipAction.Record || root.action === RegionSelection.SnipAction.RecordWithSound || root.action === RegionSelection.SnipAction.RecordGif
     property bool recordingShouldStop: false
     Process {
         id: checkRecordingProc
@@ -263,6 +266,7 @@ PanelWindow {
         if (root.regionWidth <= 0 || root.regionHeight <= 0) {
             console.warn("[Region Selector] Invalid region size, skipping snip.");
             root.dismiss();
+            return;
         }
 
         // Clamp region to screen bounds
@@ -270,6 +274,25 @@ PanelWindow {
         root.regionY = Math.max(0, Math.min(root.regionY, root.screen.height - root.regionHeight));
         root.regionWidth = Math.max(0, Math.min(root.regionWidth, root.screen.width - root.regionX));
         root.regionHeight = Math.max(0, Math.min(root.regionHeight, root.screen.height - root.regionY));
+
+        // Region recording: use the same selection UI, start record.sh after the
+        // frozen-frame ScreencopyView is destroyed to avoid screencopy conflicts.
+        if (root.action === RegionSelection.SnipAction.Record || root.action === RegionSelection.SnipAction.RecordWithSound || root.action === RegionSelection.SnipAction.RecordGif) {
+            const rx = Math.round(root.regionX + root.monitorOffsetX);
+            const ry = Math.round(root.regionY + root.monitorOffsetY);
+            const rw = Math.round(root.regionWidth);
+            const rh = Math.round(root.regionHeight);
+            let recordCmd = `${Directories.recordScriptPath} --region '${rx},${ry} ${rw}x${rh}'`;
+            if (root.action === RegionSelection.SnipAction.RecordGif)
+                recordCmd += " --gif";
+            if (root.action === RegionSelection.SnipAction.RecordWithSound || root.recordSystemAudio)
+                recordCmd += " --audio-src $(pactl get-default-sink).monitor";
+            if (root.recordMicAudio)
+                recordCmd += " --audio-src $(pactl get-default-source)";
+            root.startRecording(recordCmd);
+            root.dismiss();
+            return;
+        }
 
         // Adjust action
         if (root.action === RegionSelection.SnipAction.Copy || root.action === RegionSelection.SnipAction.Edit) {
@@ -337,7 +360,8 @@ PanelWindow {
         }
         onReleased: (mouse) => {
             // Detect if it was a click -> Try to select targeted region
-            if (root.draggingX === root.dragStartX && root.draggingY === root.dragStartY) {
+            // (recording mode requires an explicit drag, a plain click never records)
+            if (!root.isRecording && root.draggingX === root.dragStartX && root.draggingY === root.dragStartY) {
                 if (root.targetedRegionValid()) {
                     root.setRegionToTargeted();
                 }
@@ -496,7 +520,7 @@ PanelWindow {
         Row {
             id: regionSelectionControls
             z: 10
-            visible: root.phase === RegionSelection.Phase.Select
+            visible: root.phase === RegionSelection.Phase.Select && !root.isRecording
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 bottom: parent.bottom

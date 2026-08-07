@@ -31,6 +31,13 @@ Scope {
     }
 
     function startRecording() {
+        if (root.recordArea === "region") {
+            GlobalStates.recordRegionSystem = root.recordSystem;
+            GlobalStates.recordRegionMic = root.recordMic;
+            GlobalStates.recordingMenuOpen = false;
+            GlobalStates.recordRegionRequest = true;
+            return;
+        }
         var cmd = Directories.recordScriptPath;
         if (root.recordSystem) cmd += " --audio-src $(pactl get-default-sink).monitor";
         if (root.recordMic) cmd += " --audio-src $(pactl get-default-source)";

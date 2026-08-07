@@ -25,9 +25,11 @@
 
 ## 录制/音频体系（本项目定制）
 - **截图菜单**（`SUPER+SHIFT+S` → quickshell:regionScreenshot）：选区工具栏含 取色器/录屏/录GIF/录麦克风/录系统声音
-- **录屏**：`record.sh`（slurp 选区 / --fullscreen / --window=hyprctl activewindow；--audio-src 可多个=系统+麦克风混音）
+- **录屏**：`record.sh`（选区走 RegionSelection / --fullscreen / --window=hyprctl activewindow；--audio-src 可多个=系统+麦克风混音；--gif 走 ffmpeg 转 mp4→gif）
   - **不要用 `-t`**（无效参数）；停止用 `pkill -INT wf-recorder`（SIGINT 优雅封装，mp4 完整可播）
-  - 区域录制不要走 RegionSelection 的 Record action（ScreencopyView 冻结帧与会话冲突）——直接 execDetached record.sh
+  - 区域录制走 RegionSelection 覆盖层（与截图同一选区 UI）：录屏菜单"区域"→ GlobalStates.recordRegionRequest + recordRegionSystem/Mic → RegionSelector 开选区；截图菜单"GIF"按钮 → SnipAction.RecordGif 原位切换录制模式；选区确认后 **先发 startRecording 信号（RegionSelector 定时器接管）再 dismiss()**——先 dismiss 会销毁面板导致信号丢失、录制不启动；延迟 600ms 启动 record.sh --region（销毁冻结帧 ScreencopyView，避免 screencopy 会话冲突）；**录制模式只允许拖拽框选**（禁用点击选窗口/图层/内容区域，普通单击直接关选区不录制）；录制模式隐藏底部工具条/关闭按钮（Esc 取消，指示器管理停止）；wf-recorder --geometry 用**全局逻辑坐标**（regionX+monitorOffsetX，不要乘 monitorScale）
+  - RegionSelection 的 `isRecording` 判定：action ∈ {Record, RecordWithSound, RecordGif}；snip() 中记录动作分支构建 recordCmd（--gif 加在 --region 后）
+
 - **录音**：麦克风 `pw-record`（默认源）；系统声音必须用 **`parec --device=$(pactl get-default-sink).monitor`**（`pw-record --target` 不可靠，会录到默认麦克风）。保存到 `~/Music`（mic_/system_ 前缀）
 - **录制指示器**（顶栏，性能指示器左侧）：状态由 **IPC 驱动**（`qs -c ii ipc call recording status <type|none>`，脚本调用）+ RecordingStatusHandler → GlobalStates.recordingType，无文件轮询。计时需可变属性（nowMs + Timer）驱动，readonly 绑定 Date.now() 不刷新。点击指示器停止
 - **蓝牙**：HFP 模式（8kHz）导致听不到声音/录音静音。已通过 `~/.config/wireplumber/wireplumber.conf.d/51-disable-hfp.conf`（`bluez5.headset-roles = [ ]`）禁用；蓝牙重连需手动（wireplumber 重启后不会自动注册设备，重连后正常且 HFP 消失）

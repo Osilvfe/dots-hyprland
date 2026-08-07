@@ -15,7 +15,21 @@ Scope {
 
     property var action: RegionSelection.SnipAction.Copy
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
-    
+    property bool recordSystemAudio: false
+    property bool recordMicAudio: false
+    property string pendingRecordCommand: ""
+
+    Timer {
+        id: startRecordingTimer
+        interval: 600
+        running: root.pendingRecordCommand !== ""
+        onTriggered: {
+            if (root.pendingRecordCommand === "") return;
+            Quickshell.execDetached(["bash", "-c", root.pendingRecordCommand]);
+            root.pendingRecordCommand = "";
+        }
+    }
+
     Variants {
         model: Quickshell.screens
         delegate: Loader {
@@ -28,6 +42,9 @@ Scope {
                 onDismiss: root.dismiss()
                 action: root.action
                 selectionMode: root.selectionMode
+                recordSystemAudio: root.recordSystemAudio
+                recordMicAudio: root.recordMicAudio
+                onStartRecording: (command) => root.pendingRecordCommand = command
             }
         }
     }
@@ -54,9 +71,27 @@ Scope {
         GlobalStates.regionSelectorOpen = true
     }
 
+    function recordRegion() {
+        root.action = RegionSelection.SnipAction.Record
+        root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        if (GlobalStates.regionSelectorOpen) GlobalStates.regionSelectorOpen = false
+        GlobalStates.regionSelectorOpen = true
+    }
+
+    function recordGif() {
+        root.action = RegionSelection.SnipAction.RecordGif
+        root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        root.recordSystemAudio = false
+        root.recordMicAudio = false
+        if (GlobalStates.regionSelectorOpen) GlobalStates.regionSelectorOpen = false
+        GlobalStates.regionSelectorOpen = true
+    }
+
     function record() {
         root.action = RegionSelection.SnipAction.Record
         root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        root.recordSystemAudio = false
+        root.recordMicAudio = false
         // If already open then re-trigger to stop recording
         if (GlobalStates.regionSelectorOpen) GlobalStates.regionSelectorOpen = false
         GlobalStates.regionSelectorOpen = true
@@ -65,6 +100,8 @@ Scope {
     function recordWithSound() {
         root.action = RegionSelection.SnipAction.RecordWithSound
         root.selectionMode = RegionSelection.SelectionMode.RectCorners
+        root.recordSystemAudio = true
+        root.recordMicAudio = false
         // If already open then re-trigger to stop recording
         if (GlobalStates.regionSelectorOpen) GlobalStates.regionSelectorOpen = false
         GlobalStates.regionSelectorOpen = true
@@ -87,6 +124,20 @@ Scope {
         }
         function recordWithSound() {
             root.recordWithSound()
+        }
+        function recordGif() {
+            root.recordGif()
+        }
+    }
+
+    Connections {
+        target: GlobalStates
+        function onRecordRegionRequestChanged() {
+            if (!GlobalStates.recordRegionRequest) return;
+            root.recordSystemAudio = GlobalStates.recordRegionSystem;
+            root.recordMicAudio = GlobalStates.recordRegionMic;
+            root.recordRegion();
+            GlobalStates.recordRegionRequest = false;
         }
     }
 

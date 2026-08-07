@@ -19,6 +19,8 @@ Item {
     case RegionSelection.SnipAction.Record:
     case RegionSelection.SnipAction.RecordWithSound:
         return Translation.tr("Record region");
+    case RegionSelection.SnipAction.RecordGif:
+        return Translation.tr("Record GIF");
     }
     property string materialSymbol: switch (root.action) {
     case RegionSelection.SnipAction.Copy:
@@ -31,6 +33,8 @@ Item {
     case RegionSelection.SnipAction.Record:
     case RegionSelection.SnipAction.RecordWithSound:
         return "videocam";
+    case RegionSelection.SnipAction.RecordGif:
+        return "gif";
     default:
         return "";
     }
