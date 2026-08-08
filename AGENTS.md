@@ -46,7 +46,7 @@
 
 - **录音**：麦克风 `pw-record`（默认源）；系统声音必须用 **`parec --device=$(pactl get-default-sink).monitor`**（`pw-record --target` 不可靠，会录到默认麦克风）。保存到 `~/Music`（mic_/system_ 前缀）
 - **录制指示器**（顶栏，性能指示器左侧）：状态由 **IPC 驱动**（`qs -c ii ipc call recording status <type|none>`，脚本调用）+ RecordingStatusHandler → GlobalStates.recordingType，无文件轮询。计时需可变属性（nowMs + Timer）驱动，readonly 绑定 Date.now() 不刷新。点击指示器停止
-- **蓝牙**：HFP 模式（8kHz）导致听不到声音/录音静音。已通过 `~/.config/wireplumber/wireplumber.conf.d/51-disable-hfp.conf`（`bluez5.headset-roles = [ ]`）禁用；蓝牙重连需手动（wireplumber 重启后不会自动注册设备，重连后正常且 HFP 消失）
+- **蓝牙**：HFP 模式（8kHz）导致听不到声音/录音静音。已通过 wireplumber 配置（`bluez5.headset-roles = [ ]`）禁用 HFP；蓝牙重连需手动（wireplumber 重启后不会自动注册设备，重连后正常且 HFP 消失）
 - **UI 组件**：`StyledComboBox`（下拉框，设备选择同款）、`ConfigSwitch`（设置行：图标+文字+开关）、`IconToolbarButton`/`IconAndTextToolbarButton`、`Toolbar`（Material 3 胶囊）
 
 ## Hypridle
