@@ -2,6 +2,7 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 import qs.modules.common
+import qs.modules.common.functions
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -14,7 +15,7 @@ import QtQuick
 Singleton {
     id: root
 
-    readonly property string cacheDir: `${Directories.state}/holidays`
+    readonly property string cacheDir: FileUtils.trimFileProtocol(`${Directories.state}/holidays`)
     // map "YYYY-MM-DD" -> { name: festival day name or "", isOffDay: bool or null }
     property var data: ({})
     property bool loading: false
