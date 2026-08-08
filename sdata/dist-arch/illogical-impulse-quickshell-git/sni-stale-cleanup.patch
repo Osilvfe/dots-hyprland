@@ -1,0 +1,101 @@
+diff --git a/src/services/status_notifier/host.cpp b/src/services/status_notifier/host.cpp
+index 0e4530a..7db9834 100644
+--- a/src/services/status_notifier/host.cpp
++++ b/src/services/status_notifier/host.cpp
+@@ -23,7 +23,11 @@ QS_LOGGING_CATEGORY(logStatusNotifierHost, "quickshell.service.sni.host", QtWarn
+ namespace qs::service::sni {
+ 
+ StatusNotifierHost::StatusNotifierHost(QObject* parent): QObject(parent) {
+-	StatusNotifierWatcher::instance(); // ensure at least one watcher exists
++	// NOTE: do NOT create our own watcher here. kded6 owns org.kde.
++	// StatusNotifierWatcher (it is stable once its devicenotifications module is
++	// disabled); qs grabbing the watcher role makes every SNI item registered to
++	// our short-lived watcher (fcitx5, Electron apps) vanish on qs restart.
++	// Only act as a host; items come from the external watcher.
+ 
+ 	auto bus = QDBusConnection::sessionBus();
+ 
+@@ -56,7 +60,7 @@ StatusNotifierHost::StatusNotifierHost(QObject* parent): QObject(parent) {
+ 	    &this->serviceWatcher,
+ 	    &QDBusServiceWatcher::serviceUnregistered,
+ 	    this,
+-	    &StatusNotifierHost::onWatcherUnregistered
++	    &StatusNotifierHost::onServiceUnregistered
+ 	);
+ 
+ 	this->serviceWatcher.addWatchedService("org.kde.StatusNotifierWatcher");
+@@ -160,6 +164,14 @@ void StatusNotifierHost::onItemRegistered(const QString& item) {
+ 		return;
+ 	}
+ 
++	// Watch the item's service so we can drop it when the owner goes away
++	// (some apps like fcitx5 re-register under a fresh bus name while qs is
++	// running; without this the stale item lingers forever).
++	const auto splitIdx = item.indexOf('/');
++	const auto service = splitIdx == -1 ? item : item.sliced(0, splitIdx);
++	this->mItemServices.insert(item, service);
++	this->serviceWatcher.addWatchedService(service);
++
+ 	this->mItems.insert(item, dItem);
+ 	QObject::connect(dItem, &StatusNotifierItem::ready, this, &StatusNotifierHost::onItemReady);
+ 	emit this->itemRegistered(dItem);
+@@ -170,6 +182,9 @@ void StatusNotifierHost::onItemUnregistered(const QString& item) {
+ 		this->mItems.remove(item);
+ 		emit this->itemUnregistered(dItem);
+ 		delete dItem;
++		if (const auto service = this->mItemServices.take(item); !service.isEmpty()) {
++			this->serviceWatcher.removeWatchedService(service);
++		}
+ 		qCDebug(logStatusNotifierHost).noquote()
+ 		    << "Unregistered StatusNotifierItem" << item << "from host";
+ 	} else {
+@@ -178,6 +193,29 @@ void StatusNotifierHost::onItemUnregistered(const QString& item) {
+ 	}
+ }
+ 
++void StatusNotifierHost::onServiceUnregistered(const QString& service) {
++	// Our own watcher went away: re-register with the next one.
++	if (service == "org.kde.StatusNotifierWatcher") {
++		this->onWatcherUnregistered();
++		return;
++	}
++
++	// A watched item's bus name disappeared: drop the stale item.
++	QString staleItem;
++	for (auto [item, itemService]: this->mItemServices.asKeyValueRange()) {
++		if (itemService == service) {
++			staleItem = item;
++			break;
++		}
++	}
++	if (!staleItem.isEmpty()) {
++		qCDebug(logStatusNotifierHost).noquote()
++		    << "Dropping stale StatusNotifierItem" << staleItem << "(service" << service << "disappeared)";
++		this->onItemUnregistered(staleItem);
++		return;
++	}
++}
++
+ void StatusNotifierHost::onItemReady() {
+ 	if (auto* item = qobject_cast<StatusNotifierItem*>(this->sender())) {
+ 		emit this->itemReady(item);
+diff --git a/src/services/status_notifier/host.hpp b/src/services/status_notifier/host.hpp
+index 87b3137..f4a12bd 100644
+--- a/src/services/status_notifier/host.hpp
++++ b/src/services/status_notifier/host.hpp
+@@ -36,6 +36,7 @@ signals:
+ private slots:
+ 	void onWatcherRegistered();
+ 	void onWatcherUnregistered();
++	void onServiceUnregistered(const QString& service);
+ 	void onItemRegistered(const QString& item);
+ 	void onItemUnregistered(const QString& item);
+ 	void onItemReady();
+@@ -45,6 +46,7 @@ private:
+ 	QDBusServiceWatcher serviceWatcher;
+ 	DBusStatusNotifierWatcher* watcher = nullptr;
+ 	QHash<QString, StatusNotifierItem*> mItems;
++	QHash<QString, QString> mItemServices;
+ };
+ 
+ } // namespace qs::service::sni

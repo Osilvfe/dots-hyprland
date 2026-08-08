@@ -9,6 +9,7 @@
 import "modules/common"
 import "services"
 import "panelFamilies"
+import qs.modules.common.functions
 
 import QtQuick
 import QtQuick.Window
@@ -22,6 +23,16 @@ ShellRoot {
     // Stuff for every panel family
     ReloadPopup {}
 
+    Timer {
+        id: sniWatcherTimer
+        interval: 3000
+        repeat: false
+        onTriggered: {
+            const sniScript = `${FileUtils.trimFileProtocol(Directories.home)}/.config/hypr/hyprland/scripts/start_sni_watcher.sh`;
+            Quickshell.execDetached(["bash", "-lc", `export PATH=/usr/bin:$PATH; ${sniScript}`])
+        }
+    }
+
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme()
         Hyprsunset.load()
@@ -30,6 +41,11 @@ ShellRoot {
         Cliphist.refresh()
         Wallpapers.load()
         Updates.load()
+        // Ensure kded6 owns org.kde.StatusNotifierWatcher (kded6 starts on login,
+        // but if it is absent we bring it back so that restarting qs never orphans
+        // SNI items — fcitx5, QQ, wechat, etc. qs must stay a pure host.
+        // Delayed so any dying watcher has fully released its name first.
+        sniWatcherTimer.start()
     }
 
 

@@ -58,9 +58,16 @@ conflicts=("$_pkgname" "$_pkgname-git")
 
 _pkgsrc="$_pkgname"
 source=("$_pkgsrc::git+$url.git#commit=$_commit"
-  quickshell-check.hook)
+  quickshell-check.hook
+  sni-stale-cleanup.patch)
 sha256sums=('SKIP'
-  '8543e21aeaaa5441b73a679160e7601a957f16c433e8d6bd9257e80bd0e94083')
+  '8543e21aeaaa5441b73a679160e7601a957f16c433e8d6bd9257e80bd0e94083'
+  '9341f2a73c64e7d854ce08b6e7dddfb62de5026e82c4966beff6454f39d49fc0')
+
+prepare() {
+  cd "$_pkgsrc"
+  patch -Np1 -i "$srcdir/sni-stale-cleanup.patch"
+}
 
 build() {
   cd "$_pkgname"
