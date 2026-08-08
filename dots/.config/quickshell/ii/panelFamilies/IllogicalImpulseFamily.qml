@@ -11,6 +11,7 @@ import qs.modules.ii.mediaControls
 import qs.modules.ii.notificationPopup
 import qs.modules.ii.onScreenDisplay
 import qs.modules.ii.onScreenKeyboard
+import qs.modules.ii.overview
 import qs.modules.ii.polkit
 import qs.modules.ii.recordingMenu
 import qs.modules.ii.recordingStatus
@@ -35,6 +36,7 @@ Scope {
     PanelLoader { component: OnScreenDisplay {} }
     PanelLoader { component: OnScreenKeyboard {} }
     PanelLoader { component: Overlay {} }
+    PanelLoader { component: Overview {} }
     PanelLoader { component: Polkit {} }
     PanelLoader { component: RecordingMenu {} }
     PanelLoader { component: RecordingStatusHandler {} }

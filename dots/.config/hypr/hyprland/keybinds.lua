@@ -14,11 +14,11 @@ hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:searchToggleRelease"))
 hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"))
 hl.bind("SUPER + SUPER_R", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"))
 
-hl.bind("SUPER_L", hl.dsp.global("quickshell:workspaceNumber"), { ignore_mods = true, transparent = true })
-hl.bind("SUPER_R", hl.dsp.global("quickshell:workspaceNumber"), { ignore_mods = true, transparent = true })
-hl.bind("SUPER_L", hl.dsp.global("quickshell:workspaceNumber"),
+hl.bind("SUPER_L", hl.dsp.global("quickshell:searchToggle"), { ignore_mods = true, transparent = true })
+hl.bind("SUPER_R", hl.dsp.global("quickshell:searchToggle"), { ignore_mods = true, transparent = true })
+hl.bind("SUPER_L", hl.dsp.global("quickshell:searchToggleRelease"),
     { ignore_mods = true, transparent = true, release = true })
-hl.bind("SUPER_R", hl.dsp.global("quickshell:workspaceNumber"),
+hl.bind("SUPER_R", hl.dsp.global("quickshell:searchToggleRelease"),
     { ignore_mods = true, transparent = true, release = true })
 hl.bind("SUPER + Tab", function()
     if hl.plugin.scrolloverview then
