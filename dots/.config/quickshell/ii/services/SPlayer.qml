@@ -20,8 +20,10 @@ Singleton {
 
     property var lyricLines: []
     property int positionMs: 0
+    // true when the SPlayer API is unreachable (app closed); clears everything
+    property bool apiDown: false
 
-    function httpGet(url, onDone) {
+    function httpGet(url, onDone, onFail) {
         var xhr = new XMLHttpRequest()
         xhr.open("GET", url)
         xhr.onreadystatechange = function() {
@@ -29,10 +31,31 @@ Singleton {
                 if (xhr.status === 200) {
                     try { onDone(JSON.parse(xhr.responseText)) }
                     catch (e) { console.error(`[SPlayer] parse error: ${e.message}`) }
+                } else if (onFail) {
+                    onFail()
                 }
             }
         }
+        xhr.onerror = function() {
+            if (onFail) onFail()
+        }
         xhr.send()
+    }
+
+    function clearAll() {
+        root.title = ""
+        root.artist = ""
+        root.lyricAvailable = false
+        root.lyricLines = []
+        root.lineText = ""
+        root.loadedTrackId = ""
+    }
+
+    function handleApiDown() {
+        if (!root.apiDown) {
+            root.apiDown = true
+            root.clearAll()
+        }
     }
 
     // Fetch now-playing once per track change; caches lyrics for that track.
@@ -40,12 +63,9 @@ Singleton {
 
     function refreshNowPlaying() {
         root.httpGet(`${root.apiBase}/now-playing`, function(np) {
+            root.apiDown = false
             if (!np?.track) {
-                root.title = ""
-                root.artist = ""
-                root.lyricAvailable = false
-                root.lyricLines = []
-                root.lineText = ""
+                root.clearAll()
                 return
             }
             root.title = np.track.title ?? ""
@@ -55,18 +75,19 @@ Singleton {
                 root.loadedTrackId = np.track.id
                 root.loadLyrics()
             }
-        })
+        }, root.handleApiDown)
     }
 
     function loadLyrics() {
         root.httpGet(`${root.apiBase}/lyrics`, function(res) {
+            root.apiDown = false
             root.lyricLines = Array.isArray(res?.lyric) ? res.lyric : []
             root.updateLine()
-        })
+        }, root.handleApiDown)
     }
 
     function updateLine() {
-        if (root.lyricLines.length === 0) { root.lineText = ""; return }
+        if (root.apiDown || root.lyricLines.length === 0) { root.lineText = ""; return }
         var pos = root.positionMs
         var active = ""
         for (var i = 0; i < root.lyricLines.length; i++) {
@@ -89,9 +110,10 @@ Singleton {
         repeat: true
         onTriggered: {
             root.httpGet(`${root.apiBase}/status`, function(st) {
+                root.apiDown = false
                 root.positionMs = st.position ?? 0
                 root.updateLine()
-            })
+            }, root.handleApiDown)
         }
     }
 
