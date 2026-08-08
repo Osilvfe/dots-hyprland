@@ -4,6 +4,7 @@
 
 ## 同步与发布
 - 修改 `dots/` 下的文件后，手动 `cp` 到 `~/.config/` 对应路径（无自动同步）
+- **`cp -r` 到已存在目录不会覆盖子文件**——同步单文件用 `cp -f <源> <目标路径>`，同步后用 `grep`/`diff` 验证部署内容而非只看文件存在
 - 推送到 `origin`（Osilvfe/dots-hyprland）；`upstream` 是 end-4 原仓库（仅跟踪），`quickshell-sample` 是参考仓库（不合并）
 - 提交前检查 `git status`，只提交本仓库文件
 
@@ -57,6 +58,14 @@
 ## 其他
 - 系统声音录制时若默认输出是蓝牙耳机，确保 A2DP 模式（HFP 已禁用）
 - 键盘快捷键：`Print` 全屏截图、`CTRL+Print` 保存文件、`SUPER+SHIFT+S` 工具菜单、`SUPER+SHIFT+A` 图像搜索、`SUPER+SHIFT+X` OCR
+
+## II Overview / 搜索框（本项目定制）
+- **SUPER 单按**：`keybinds.lua` 里 `SUPER_L` 绑 `quickshell:searchToggle`（`release = true`）——按下松开后 toggle 搜索框（不是按住时显示，也不是 press 时显示）。`workspaceNumber`（按住显示数字）已弃用
+- **搜索框**（`modules/ii/overview/`）：`Overview.qml` 定制 `width: Math.min(680, panelWindow.width - 80)` + `topMargin: height * 0.18`（居中偏下宽搜索框）；`SearchBar.qml` 定制 `implicitHeight: 52` + `font.pixelSize.large`（9f116bcb）
+- **emoji 面板**（128ef10f）：`SearchWidget.qml` 有 `emojiMode`（`searchingText.startsWith(prefix.emojis)`）+ `emojiGrid`（GridView 网格，SUPER+Period 触发 `overviewEmojiToggle`）；`Emojis.qml` 用 word-based matching（空搜索返回全部，每词须出现在条目中，slice 50）
+- **模块恢复经验**（撤销删除时）：从 `upstream/main` 恢复 QML 模块会因版本不兼容不工作，要用**本地仓库历史版本**（`git show <commit^>:<path>`）——Overview 删除是分两步（`4ec200e3` 删 Overview/OverviewWidget/OverviewWindow，`25899354` 删 Search 3 文件 + IllogicalImpulseFamily 注册 + keybinds），恢复时版本要匹配（含定制的用 `25899354^`，死文件 OverviewWidget/OverviewWindow 已删不恢复）
+- **git revert 冲突处理**：revert 旧提交遇到后续改动（如日历节假日）冲突时，保留后续功能的文件（`git checkout --ours`），只恢复目标改动；revert 会带出无关改动（JamesDSP→EasyEffects、persistent_workspaces），需手动排除（`git checkout HEAD -- <file>` 后重新 add）
+- **面板加载验证**：PanelLoader 懒加载，Overview 未打开时 hyprctl layers 看不到；用 `qs -c ii ipc call search toggle` 触发后 `hyprctl layers | grep quickshell:overview` 验证窗口存在
 
 ## hyprpm / Hyprland 插件
 - **插件编译失败排查**：`hyprpm list` 显示 `Plugin failed to build` 时，先看 `hyprpm update -v` 的 g++ 报错。头文件 API 不匹配（`keybinds/Resolver.hpp`、`groupsLocked`、`m_bindInvocationDepth` 等新版 API）说明**插件追新但 Hyprland 版本旧**——插件仓库 `hyprpm.toml` 的 `commit_pins` 只有固定版本，git 版需手动 `hyprpm add <url> <git rev>` 锁兼容 commit
