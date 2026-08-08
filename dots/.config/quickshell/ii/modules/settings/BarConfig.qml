@@ -21,6 +21,48 @@ ContentPage {
     }
     
     ContentSection {
+        icon: "display_settings"
+        title: Translation.tr("Appearance")
+
+        ConfigSwitch {
+            buttonIcon: "panorama"
+            text: Translation.tr("Show background")
+            checked: Config.options.bar.showBackground
+            onCheckedChanged: {
+                Config.options.bar.showBackground = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "shadow"
+            text: Translation.tr("Float style shadow")
+            checked: Config.options.bar.floatStyleShadow
+            onCheckedChanged: {
+                Config.options.bar.floatStyleShadow = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "text_fields"
+            text: Translation.tr("Verbose (show titles)")
+            checked: Config.options.bar.verbose
+            onCheckedChanged: {
+                Config.options.bar.verbose = checked;
+            }
+        }
+
+        MaterialTextArea {
+            Layout.fillWidth: true
+            placeholderText: Translation.tr("Top-left icon (icon name or \"distro\")")
+            text: Config.options.bar.topLeftIcon
+            wrapMode: TextEdit.Wrap
+            onTextChanged: {
+                Config.options.bar.topLeftIcon = text;
+            }
+        }
+    }
+
+    ContentSection {
         icon: "spoke"
         title: Translation.tr("Positioning")
 
@@ -80,6 +122,55 @@ ContentPage {
                             value: true
                         }
                     ]
+                }
+            }
+        }
+
+        ConfigRow {
+            ContentSubsection {
+                title: Translation.tr("Auto-hide options")
+                Layout.fillWidth: false
+
+                ConfigSpinBox {
+                    icon: "mouse"
+                    text: Translation.tr("Hover region width")
+                    value: Config.options.bar.autoHide.hoverRegionWidth
+                    from: 0
+                    to: 20
+                    stepSize: 1
+                    onValueChanged: {
+                        Config.options.bar.autoHide.hoverRegionWidth = value;
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "push_pin"
+                    text: Translation.tr("Push windows aside")
+                    checked: Config.options.bar.autoHide.pushWindows
+                    onCheckedChanged: {
+                        Config.options.bar.autoHide.pushWindows = checked;
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "keyboard_command_key"
+                    text: Translation.tr("Show when pressing Super")
+                    checked: Config.options.bar.autoHide.showWhenPressingSuper.enable
+                    onCheckedChanged: {
+                        Config.options.bar.autoHide.showWhenPressingSuper.enable = checked;
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "timer"
+                    text: Translation.tr("Super press delay (ms)")
+                    value: Config.options.bar.autoHide.showWhenPressingSuper.delay
+                    from: 0
+                    to: 1000
+                    stepSize: 10
+                    onValueChanged: {
+                        Config.options.bar.autoHide.showWhenPressingSuper.delay = value;
+                    }
                 }
             }
         }
@@ -165,6 +256,80 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "speed"
+        title: Translation.tr("Resources")
+
+        ConfigSwitch {
+            buttonIcon: "memory"
+            text: Translation.tr("Always show memory usage")
+            checked: Config.options.bar.resources.alwaysShowMemory
+            onCheckedChanged: {
+                Config.options.bar.resources.alwaysShowMemory = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "memory"
+            text: Translation.tr("Always show CPU usage")
+            checked: Config.options.bar.resources.alwaysShowCpu
+            onCheckedChanged: {
+                Config.options.bar.resources.alwaysShowCpu = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "hard_drive"
+            text: Translation.tr("Always show swap usage")
+            checked: Config.options.bar.resources.alwaysShowSwap
+            onCheckedChanged: {
+                Config.options.bar.resources.alwaysShowSwap = checked;
+            }
+        }
+
+        ConfigSlider {
+            text: Translation.tr("Memory warning threshold")
+            value: Config.options.bar.resources.memoryWarningThreshold
+            usePercentTooltip: false
+            textWidth: 220
+            buttonIcon: "memory"
+            from: 50
+            to: 100
+            stopIndicatorValues: [95]
+            onValueChanged: {
+                Config.options.bar.resources.memoryWarningThreshold = value;
+            }
+        }
+
+        ConfigSlider {
+            text: Translation.tr("Swap warning threshold")
+            value: Config.options.bar.resources.swapWarningThreshold
+            usePercentTooltip: false
+            textWidth: 220
+            buttonIcon: "hard_drive"
+            from: 50
+            to: 100
+            stopIndicatorValues: [85]
+            onValueChanged: {
+                Config.options.bar.resources.swapWarningThreshold = value;
+            }
+        }
+
+        ConfigSlider {
+            text: Translation.tr("CPU warning threshold")
+            value: Config.options.bar.resources.cpuWarningThreshold
+            usePercentTooltip: false
+            textWidth: 220
+            buttonIcon: "speed"
+            from: 50
+            to: 100
+            stopIndicatorValues: [90]
+            onValueChanged: {
+                Config.options.bar.resources.cpuWarningThreshold = value;
+            }
+        }
+    }
+
+    ContentSection {
         icon: "widgets"
         title: Translation.tr("Utility buttons")
 
@@ -235,6 +400,10 @@ ContentPage {
                     Config.options.bar.utilButtons.showScreenRecord = checked;
                 }
             }
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
         }
     }
 
@@ -247,6 +416,46 @@ ContentPage {
             checked: Config.options.bar.weather.enable
             onCheckedChanged: {
                 Config.options.bar.weather.enable = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "my_location"
+            text: Translation.tr("Use GPS-based location")
+            checked: Config.options.bar.weather.enableGPS
+            onCheckedChanged: {
+                Config.options.bar.weather.enableGPS = checked;
+            }
+        }
+
+        MaterialTextArea {
+            Layout.fillWidth: true
+            placeholderText: Translation.tr("City (when GPS is off)")
+            text: Config.options.bar.weather.city
+            wrapMode: TextEdit.Wrap
+            onTextChanged: {
+                Config.options.bar.weather.city = text;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "thermostat"
+            text: Translation.tr("Use US customary units")
+            checked: Config.options.bar.weather.useUSCS
+            onCheckedChanged: {
+                Config.options.bar.weather.useUSCS = checked;
+            }
+        }
+
+        ConfigSpinBox {
+            icon: "refresh"
+            text: Translation.tr("Fetch interval (minutes)")
+            value: Config.options.bar.weather.fetchInterval
+            from: 1
+            to: 120
+            stepSize: 1
+            onValueChanged: {
+                Config.options.bar.weather.fetchInterval = value;
             }
         }
     }
@@ -331,6 +540,15 @@ ContentPage {
                         value: '["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"]'
                     }
                 ]
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "font_download"
+            text: Translation.tr("Use Nerd Font for numbers")
+            checked: Config.options.bar.workspaces.useNerdFont
+            onCheckedChanged: {
+                Config.options.bar.workspaces.useNerdFont = checked;
             }
         }
     }

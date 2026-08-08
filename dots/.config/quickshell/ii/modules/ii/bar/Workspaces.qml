@@ -30,6 +30,7 @@ ButtonMouseArea {
 
     property bool vertical: Config.options.bar.vertical
     property bool superPressAndHeld: false // Relevant modifications at bottom of file
+    property int widgetPadding: 4
 
     property real workspaceButtonWidth: 26
     property real activeWorkspaceMargin: 2

@@ -22,6 +22,10 @@ MouseArea {
         Resource {
             iconName: "memory"
             percentage: ResourceUsage.memoryUsedPercentage
+            shown: Config.options.bar.resources.alwaysShowMemory || 
+                (MprisController.activePlayer?.trackTitle == null) ||
+                root.alwaysShowAllResources
+            Layout.leftMargin: shown ? 6 : 0
             warningThreshold: Config.options.bar.resources.memoryWarningThreshold
         }
 
