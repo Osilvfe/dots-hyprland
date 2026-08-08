@@ -81,16 +81,68 @@ Item {
             }
         }
 
-        StyledText {
-            visible: Config.options.bar.verbose
-            width: rowLayout.width - (CircularProgress.size + rowLayout.spacing * 2)
-            Layout.alignment: Qt.AlignVCenter
-            Layout.fillWidth: true // Ensures the text takes up available space
+        // Marquee text: scrolls when the line is too wide, else centered
+        Item {
+            id: textClip
+            Layout.fillWidth: true
             Layout.rightMargin: rowLayout.spacing
-            horizontalAlignment: Text.AlignHCenter
-            elide: Text.ElideRight // Truncates the text on the right
-            color: Appearance.colors.colOnLayer1
-            text: root.displayText
+            Layout.alignment: Qt.AlignVCenter
+            Layout.fillHeight: true
+            clip: true
+
+            readonly property real scrollDistance: Math.max(0, marqueeText.implicitWidth - width)
+            property real scrollX: 0
+            property bool scrolling: false
+
+            function restartScroll() {
+                scrollAnim.stop()
+                if (textClip.scrollDistance > 0) {
+                    scrollOut.duration = Math.max(1200, textClip.scrollDistance * 25)
+                    scrollBack.duration = Math.max(1200, textClip.scrollDistance * 25)
+                    textClip.scrollX = 0
+                    textClip.scrolling = true
+                    scrollAnim.restart()
+                } else {
+                    textClip.scrolling = false
+                    textClip.scrollX = (width - marqueeText.implicitWidth) / 2
+                }
+            }
+
+            onWidthChanged: textClip.restartScroll()
+
+            StyledText {
+                id: marqueeText
+                anchors.verticalCenter: parent.verticalCenter
+                width: implicitWidth
+                elide: Text.ElideNone
+                horizontalAlignment: Text.AlignLeft
+                color: Appearance.colors.colOnLayer1
+                text: root.displayText
+                x: textClip.scrollX
+                onTextChanged: textClip.restartScroll()
+            }
+
+            SequentialAnimation {
+                id: scrollAnim
+                loops: Animation.Infinite
+                running: false
+                NumberAnimation {
+                    id: scrollOut
+                    target: textClip
+                    property: "scrollX"
+                    to: -textClip.scrollDistance
+                    easing.type: Easing.Linear
+                }
+                PauseAnimation { duration: 900 }
+                NumberAnimation {
+                    id: scrollBack
+                    target: textClip
+                    property: "scrollX"
+                    to: 0
+                    easing.type: Easing.Linear
+                }
+                PauseAnimation { duration: 900 }
+            }
         }
 
     }
