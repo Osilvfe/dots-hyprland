@@ -75,3 +75,23 @@
 - **scrolloverview 兼容版本**：fork 0.56 用 `0972b6b`（8/5，"support latest Hyprland renderer API"），是旧 API（`managers/KeybindManager.hpp`+`event/EventBus.hpp`）最后一个版本；`main`/`new-release` 分支均已切新版 API 不兼容
 - **插件 fallback**：`general.lua` 里 `hl.plugin.xxx` 引用必须包 `if hl.plugin.xxx then`（含 config 段），插件未加载时 else 会 `attempt to index a nil value` 导致 config 解析失败
 - **光标**：Wayland 光标= `hyprctl setcursor <theme> <size>`（当前 24）；XWayland 光标= `XCURSOR_SIZE` env（当前 48，XWayland 程序读这个）
+
+## 顶栏媒体歌词（本项目定制）
+- **歌词数据源**：SPlayer-Next 的 external HTTP API（Hono server，端口 `14558`，默认 `127.0.0.1`，需在设置里开启 externalApi）。接口：`GET /api/now-playing`（track/position/lyricAvailable）、`/api/status`（position ms）、`/api/lyrics`（完整歌词数组，每行 `{words:[{word,startTime,endTime}],startTime,endTime,isBG}`）
+- **歌词同步**：`services/SPlayer.qml` 500ms 轮询 `/api/status` 取 position，在缓存的歌词行里定位当前句（跳过 `isBG` 行），输出 `lineText`；曲目变化时（`track.id` 变化）才拉 `/api/lyrics`
+- **API 断开处理**：SPlayer 退出后请求失败（非 200 或 onerror）——`httpGet` 加 `onFail` 回调，`apiDown` 标记后 `clearAll()` 清空 title/artist/lineText，否则顶栏残留旧歌名
+- **HTTP 请求**：项目里用 `XMLHttpRequest`（参考 `services/Booru.qml`），不用 Process+curl
+- **MPRIS `xesam:asText` 不是实时歌词标准**（无逐行同步机制）；主流歌词靠播放器私有 API 或本地 LRC。quickshell-sample 的做法是 Python 抓 QQ/网易云 LRC + 轮询 position（`lyrics_fetcher.py`）
+- **顶栏长歌词 marquee**（`Media.qml`）：lyricon 式 **ghost 无缝滚动**——主文本 + ghost 副本（间距 `ghostSpacing: 48`），`scrollX` 从 0 线性滚到 `-(文本宽+间距)` 循环，副本顶替主文本视觉无缝；等速（duration = unit*25）；左右 14px 渐变 fading edge。**动画目标用独立属性 `scrollX`，Text.x 绑定它**（避免 x 绑定自身的循环依赖）；短文本居中不滚动
+- 滚动/歌词调试：顶栏 Media 是常驻组件，加 `console.log` 时**用 Edit 工具**，勿用 sed 多行替换（会误改文件导致部署版污染）
+
+## SNI 系统托盘（本项目定制，深坑）
+- **架构**：`watcher`（`org.kde.StatusNotifierWatcher`，维护已注册 item 列表）← item（应用）注册；`host`（显示图标的 shell）从 watcher 读列表。item 注册到 watcher，**不依赖 host**
+- **Quickshell 会抢 watcher**：`StatusNotifierHost` 构造时 `StatusNotifierWatcher::instance()` 强制确保 watcher——若 kded6 未就绪，qs 自己注册 watcher。**qs 当 watcher 的后果**：item 注册到 qs，`pkill -x qs` 重启 → item 全丢
+- **应用行为差异**：fcitx5 监听 watcher 变化、崩溃后自动重注册（新 bus name）→ qs 里累积**重复残留**；QQ/微信（Electron）**只在启动时注册一次**，watcher 消失**永不重注册** → 图标永久丢失
+- **`devicenotifications` 模块崩溃**：kded6 在纯 Hyprland 下该模块 `wl_proxy_get_version` 崩溃（无 KWin 提供的 Wayland 对象）→ 禁用 `~/.config/kded5rc` `[Module-devicenotifications] autoload=false`。**注意 kded6 读的是 `kded5rc` 不是 `kded6rc`**（KDE 源码写死 "kded5rc"）
+- **最终方案**：qs 保持**纯 host**（Quickshell patch 移除 watcher 创建——仓库 `sdata/dist-arch/illogical-impulse-quickshell-git/sni-stale-cleanup.patch`，经 PKGBUILD `prepare()` 应用）；patch 同时让 host **监听每个 item 的 bus name**（`QDBusServiceWatcher`），bus 消失时移除 stale item（修 fcitx5 重复）；`shell.qml` 启动 3s 后跑 `start_sni_watcher.sh` 确保 kded6 活着
+- **`start_sni_watcher.sh`**：检查 `busctl --user status org.kde.StatusNotifierWatcher` 有 owner 就退出；无则 `nohup /usr/bin/kded6 &` 并轮询等待（20×0.25s）。**所有 busctl 加 `timeout 2` 防阻塞**；qs 调用用 `execDetached(["bash","-lc","export PATH=/usr/bin:$PATH; ..."])`（**QProcess 不继承完整 PATH**，直接跑脚本会静默失败）
+- **验证**：`busctl --user get-property org.kde.StatusNotifierWatcher /StatusNotifierWatcher ... RegisteredStatusNotifierItems` 看 items；每个 item 用 `busctl --user status <bus> | grep PID=` 确认归属。qs 侧 items 用临时 Timer 打印 `SystemTray.items.values.map(i=>i.id)`
+- **QML 层无法区分重复 item**：重复的 fcitx5 其 `id/title/icon/hasMenu/status` 全部相同（`SystemTrayItem` 未暴露 bus 地址）——只能靠 C++ patch 修，不能在 QML 侧按属性去重
+- **调试纪律**：反复 `pkill -x qs` 调试会放大 SNI 竞态，观察结论要区分"测试操作导致"和"真实 bug"（用户手动重启验证 kded6 崩溃与 qs 无关——实为 devicenotifications 自身崩溃）
