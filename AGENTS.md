@@ -22,6 +22,20 @@
 - **`TypeError: Property 'xxx' is not a function`**：多半是 qmlcache 损坏的元对象，删缓存重启
 - **图标**：Material 图标用 `MaterialSymbol`（text 为图标名）；`Text + "Material Symbols Rounded"` 字体在 Repeater delegate 中渲染失败
 - **层级/命中**：PanelWindow 子项超出父几何时，父的 z 保护不生效（会被下层 MouseArea 捕获）——浮层必须独立窗口或保持在父几何内
+- **Singleton 懒加载**：`pragma Singleton` 服务只在被引用时才实例化，`Component.onCompleted` 不会在 qs 启动时执行。要在启动时预拉取，从**顶层常驻组件**（如 `GlobalStates.qml`）显式调用一次
+- **Process 信号**：是 `onExited`（不是 `onProcessExited`）；用 `StdioCollector.onStreamFinished` 拿 stdout
+- **JS 函数类型注解坑**：`function foo(x: number): var` 这类注解被信号处理器调用时会报 `should be coerced to void`——quickshell 环境去掉类型注解（项目内服务均无注解）
+- **文件读写**：读用 `FileView`（`text()`），写用 `setText()`，`path` 需 `Qt.resolvedUrl(...)`；`FileUtils` 只有路径工具函数，无 readFile/writeFile。`onLoadFailed` 里 `FileViewError.FileNotFound` 判断文件缺失
+- **设置面板**（`modules/settings/*.qml`）：`ConfigSwitch`/`ConfigSpinBox`/`ConfigSlider`（`textWidth` 默认 120，长文字会挤压滑块，需调大）/`MaterialTextArea`（文本输入）/`ContentSection`（段）/`ContentRow`（并排，`uniform:true` 两列对齐——奇数个开关补 `Item{Layout.fillWidth:true}` 占位对齐）。新文本要补 `translations/zh_CN.json`（保持原 key 顺序追加，勿用 `sorted()` 重排否则 diff 巨大）
+- **设置项遗漏检查**：Config.qml 的 JsonObject 里定义的选项 ≠ 设置 UI 暴露的项。新增选项要确认在对应 Config 页面有开关，否则只能手改 JSON
+
+## 节假日显示（本项目定制）
+- **数据源双轨**（不要用农历公式推算节日当天——`calendar_layout.js` 的农历换算本身有 bug，2026-02-17 会算成腊月十九）：
+  - `Nager.Date`（`date.nager.at/api/v3/PublicHolidays/{year}/CN`）→ **节日当天**（春节/端午/中秋精确日期，直接信任）
+  - `NateScarlet/holiday-cn`（GitHub 静态 `{year}.json`）→ **放假/调休**标记（`isOffDay`）
+  - 合并缓存 `~/.local/state/quickshell/holidays/{year}.json`（离线可用）
+- **显示规则**：节日当天=日期下方节日名+右上角"休"；放假天=右上角"休"（`colPrimary`）；调休补班=右上角"班"（`colError` 红色）
+- 面板高度：`BottomWidgetGroup.qml` 展开固定 `implicitHeight: 430`（原 350，加节假日/农历后内容变高会被 `clip: true` 裁掉）
 
 ## 录制/音频体系（本项目定制）
 - **截图菜单**（`SUPER+SHIFT+S` → quickshell:regionScreenshot）：选区工具栏含 取色器/录屏/录GIF/录麦克风/录系统声音
@@ -43,3 +57,12 @@
 ## 其他
 - 系统声音录制时若默认输出是蓝牙耳机，确保 A2DP 模式（HFP 已禁用）
 - 键盘快捷键：`Print` 全屏截图、`CTRL+Print` 保存文件、`SUPER+SHIFT+S` 工具菜单、`SUPER+SHIFT+A` 图像搜索、`SUPER+SHIFT+X` OCR
+
+## hyprpm / Hyprland 插件
+- **插件编译失败排查**：`hyprpm list` 显示 `Plugin failed to build` 时，先看 `hyprpm update -v` 的 g++ 报错。头文件 API 不匹配（`keybinds/Resolver.hpp`、`groupsLocked`、`m_bindInvocationDepth` 等新版 API）说明**插件追新但 Hyprland 版本旧**——插件仓库 `hyprpm.toml` 的 `commit_pins` 只有固定版本，git 版需手动 `hyprpm add <url> <git rev>` 锁兼容 commit
+- **插件兼容性验证**：`git clone` 插件仓库后，用当前 Hyprland 头文件（`pkg-config --cflags hyprland` 已指向 `/var/cache/hyprpm/*/headersRoot`）本地 `make` 验证，再决定锁哪个 rev
+- **hyprpm 权限坑**：`/var/cache/hyprpm/{user}/` 下若残留 root 所有文件（曾提权构建），`hyprpm remove`/`update` 会报 `failed to create cache dir`/`Failed to write plugin state`——需 `sudo chown -R <user> /var/cache/hyprpm`；且 hyprpm 的 `add` install 步骤走 `sudo`，非交互终端会因要密码失败（交互运行即可）
+- **插件加载失败 `/proc/self/exe`**：若运行中的 Hyprland 二进制是 `(deleted)`（包更新后未重启，`readlink /proc/<pid>/exe` 可见），插件 API 解析自身路径失败——**重启 Hyprland** 让新二进制生效
+- **scrolloverview 兼容版本**：fork 0.56 用 `0972b6b`（8/5，"support latest Hyprland renderer API"），是旧 API（`managers/KeybindManager.hpp`+`event/EventBus.hpp`）最后一个版本；`main`/`new-release` 分支均已切新版 API 不兼容
+- **插件 fallback**：`general.lua` 里 `hl.plugin.xxx` 引用必须包 `if hl.plugin.xxx then`（含 config 段），插件未加载时 else 会 `attempt to index a nil value` 导致 config 解析失败
+- **光标**：Wayland 光标= `hyprctl setcursor <theme> <size>`（当前 24）；XWayland 光标= `XCURSOR_SIZE` env（当前 48，XWayland 程序读这个）
