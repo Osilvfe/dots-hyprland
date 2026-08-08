@@ -51,7 +51,7 @@ Item {
             "elif pgrep -x pw-record >/dev/null 2>&1; then pkill -x pw-record; " +
             "elif pgrep -x parec >/dev/null 2>&1; then pkill -x parec; fi; " +
             "qs -c ii ipc call recording status none 2>/dev/null; " +
-            "notify-send 'Recording Stopped' 'Stopped' -a 'Recorder' &"]
+            "notify-send 'Recording Stopped' 'Stopped' -a 'Recorder'"]
     }
 
     Row {
