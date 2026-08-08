@@ -32,7 +32,26 @@ hl.gesture({
     direction = "horizontal",
     action = "workspace"
 })
-hl.plugin.scrolloverview.gesture({ fingers = 4, direction = "vertical" })
+if hl.plugin.scrolloverview then
+    hl.plugin.scrolloverview.gesture({ fingers = 4, direction = "vertical" })
+    hl.config({
+        plugin = {
+            scrolloverview = {
+                scale = 0.3,
+                workspace_gap = 80,
+                layout = "vertical",
+                wallpaper = 0,
+                blur = false,
+                shadow = {
+                    enabled = true,
+                    range = 30,
+                    render_power = 3,
+                    color = 0xee1a1a1a,
+                },
+            },
+        },
+    })
+end
 
 hl.config({
     gestures = {
@@ -115,25 +134,11 @@ hl.config({
         wrap_swapcol = false,
         direction = "right",
     },
-    plugin = {
-        scrolloverview = {
-            scale = 0.3,
-            workspace_gap = 80,
-            layout = "vertical",
-            wallpaper = 0,
-            blur = false,
-            shadow = {
-                enabled = true,
-                range = 30,
-                render_power = 3,
-                color = 0xee1a1a1a,
-            },
-        },
-    },
     render = {
           cm_auto_hdr = 1,  -- 全屏 HDR 自动切，桌面保持 SDR
     },
 })
+
 -- Curves (Niri animation parity)
 -- window-open: cubic-bezier(0.05, 0.9, 0.1, 1.05)
 hl.curve("niriOpen", {
@@ -153,6 +158,17 @@ hl.curve("niriSpring", {
 hl.curve("standardDecel", {
     type = "bezier",
     points = {{0, 0}, {0, 1}}
+})
+-- plugin (scroll-overview): workspace insert/remove fades
+-- pre-registered so the plugin picks these up instead of its defaults
+-- insert: decelerate (ease in fast, settle) ; remove: quick expo fade-out
+hl.curve("scrolloverviewWorkspaceInsertFade", {
+    type = "bezier",
+    points = {{0, 0}, {0, 1}}
+})
+hl.curve("scrolloverviewWorkspaceRemoveFade", {
+    type = "bezier",
+    points = {{0.16, 1.0}, {0.3, 1.0}}
 })
 -- windows (Niri: window-open 500ms / window-close 150ms)
 hl.animation({
@@ -227,6 +243,40 @@ hl.animation({
     speed = 3.5,
     bezier = "niriSpring",
     style = "slidevert"
+})
+-- fade windows when switching workspaces (Niri slides + fades)
+hl.animation({
+    leaf = "fadeSwitch",
+    enabled = true,
+    speed = 2.0,
+    bezier = "niriClose"
+})
+-- popups (menus, tooltips): fade in/out instead of popping
+hl.animation({
+    leaf = "fadePopupsIn",
+    enabled = true,
+    speed = 2.0,
+    bezier = "niriOpen"
+})
+hl.animation({
+    leaf = "fadePopupsOut",
+    enabled = true,
+    speed = 3.0,
+    bezier = "niriClose"
+})
+-- shadow fades with the window
+hl.animation({
+    leaf = "fadeShadow",
+    enabled = true,
+    speed = 2.0,
+    bezier = "niriOpen"
+})
+-- dim transitions smoothly
+hl.animation({
+    leaf = "fadeDim",
+    enabled = true,
+    speed = 2.0,
+    bezier = "niriOpen"
 })
 
 -- specialWorkspace

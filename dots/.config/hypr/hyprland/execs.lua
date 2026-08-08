@@ -24,7 +24,7 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("wl-paste --type image --watch bash -c 'cliphist store && qs -c $qsConfig ipc call cliphistService update'")
 
     -- Cursor
-    hl.exec_cmd("hyprctl setcursor Bibata-Modern-Classic 48")
+    hl.exec_cmd("hyprctl setcursor Bibata-Modern-Classic 24")
 
     -- hidpi-xprop-git: XWayland HiDPI (see https://github.com/hyprwm/Hyprland/pull/6446)
     hl.exec_cmd("systemctl --user start xsettingsd.service && echo \"Xft.dpi:192\" | xrdb -merge && xprop -root -format _XWAYLAND_GLOBAL_OUTPUT_SCALE 32c -set _XWAYLAND_GLOBAL_OUTPUT_SCALE 2")
