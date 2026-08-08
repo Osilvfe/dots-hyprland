@@ -16,19 +16,6 @@ Scope {
     property bool recordSystem: false
     property bool recordMic: false
     property string recordArea: "region" // region | fullscreen | window
-    property bool areaDropdownOpen: false
-
-    property var areaOptions: [
-        { icon: "crop_free", label: Translation.tr("区域"), value: "region" },
-        { icon: "fullscreen", label: Translation.tr("全屏"), value: "fullscreen" },
-        { icon: "select_window", label: Translation.tr("窗口"), value: "window" },
-    ]
-    readonly property var currentArea: {
-        for (const opt of root.areaOptions) {
-            if (opt.value === root.recordArea) return opt;
-        }
-        return root.areaOptions[0];
-    }
 
     function startRecording() {
         if (root.recordArea === "region") {
@@ -145,23 +132,27 @@ Scope {
                         onClicked: root.recordMic = !root.recordMic
                     }
 
-                    RowLayout {
+                    Item {
                         Layout.topMargin: 8
                         Layout.fillWidth: true
                         implicitHeight: 32
-                        spacing: 10
 
-                        MaterialSymbol {
-                            text: "play_arrow"
-                            iconSize: 20
-                            color: Appearance.colors.colPrimary
-                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            spacing: 10
 
-                        StyledText {
-                            text: Translation.tr("开始录制")
-                            font.pixelSize: Appearance.font.pixelSize.medium
-                            color: Appearance.colors.colPrimary
-                            Layout.fillWidth: true
+                            MaterialSymbol {
+                                text: "play_arrow"
+                                iconSize: 20
+                                color: Appearance.colors.colPrimary
+                            }
+
+                            StyledText {
+                                text: Translation.tr("开始录制")
+                                font.pixelSize: Appearance.font.pixelSize.medium
+                                color: Appearance.colors.colPrimary
+                                Layout.fillWidth: true
+                            }
                         }
 
                         MouseArea {

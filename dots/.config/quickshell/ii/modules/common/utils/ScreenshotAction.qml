@@ -71,7 +71,7 @@ Singleton {
                 return ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}'`]
                 break;
             case ScreenshotAction.Action.RecordWithSound:
-                return ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}' --sound`]
+                return ["bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}' --audio-src $(pactl get-default-sink).monitor`]
                 break;
             default:
                 console.warn("[Region Selector] Unknown snip action, skipping snip.");

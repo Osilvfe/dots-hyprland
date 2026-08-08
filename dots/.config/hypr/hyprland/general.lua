@@ -3,7 +3,7 @@
 hl.monitor({
     output   = "eDP-1",
     mode     = "2560x1600@165",
-    scale    = auto,
+    scale    = "auto",
     bitdepth = 10
 })
 
@@ -282,7 +282,6 @@ hl.config({
         animate_manual_resizes = false,
         animate_mouse_windowdragging = false,
         enable_swallow = false,
-        swallow_regex = "(foot|kitty|allacritty|Alacritty)",
         on_focus_under_fullscreen = 2,
         allow_session_lock_restore = true,
         session_lock_xray = true,
