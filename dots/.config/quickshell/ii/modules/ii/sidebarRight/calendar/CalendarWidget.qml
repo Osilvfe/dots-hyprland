@@ -10,9 +10,14 @@ Item {
     anchors.topMargin: 10
     property int monthShift: 0
     property var viewingDate: CalendarLayout.getDateInXMonthsTime(monthShift)
-    property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0)
+    property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0, Holidays.data)
+    property bool holidaysLoaded: false
     width: calendarColumn.width
     implicitHeight: calendarColumn.height + 10 * 2
+
+    Component.onCompleted: {
+        Holidays.fetchYear(Holidays.currentYear);
+    }
 
     Keys.onPressed: (event) => {
         if ((event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp)
@@ -115,6 +120,9 @@ Item {
                         day: calendarLayout[modelData][index].day
                         isToday: calendarLayout[modelData][index].today
                         lunar: calendarLayout[modelData][index].lunar
+                        holiday: calendarLayout[modelData][index].holiday
+                        holidayOff: calendarLayout[modelData][index].holidayOff
+                        workday: calendarLayout[modelData][index].workday
                     }
                 }
             }

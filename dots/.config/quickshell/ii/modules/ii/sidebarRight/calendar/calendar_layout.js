@@ -213,7 +213,7 @@ function getDateInXMonthsTime(x) {
     return targetDate;
 }
 
-function getCalendarLayout(dateObject, highlight) {
+function getCalendarLayout(dateObject, highlight, holidayData) {
     if (!dateObject) dateObject = new Date();
     const weekday = (dateObject.getDay() + 6) % 7; // MONDAY IS THE FIRST DAY OF THE WEEK
     const day = dateObject.getDate();
@@ -243,12 +243,27 @@ function getCalendarLayout(dateObject, highlight) {
         if (cellMonth < 1) { cellMonth = 12; cellYear--; }
         if (cellMonth > 12) { cellMonth = 1; cellYear++; }
 
+        var holiday = null;
+        var isOffDay = null;
+        if (holidayData) {
+            var hKey = cellYear + "-" + String(cellMonth).padStart(2, "0") + "-" + String(cellDay).padStart(2, "0");
+            holiday = holidayData[hKey] || null;
+        }
+
+        // Nager.Date gives the exact festival day; other off days just get a badge
+        var showHolidayName = holiday && holiday.name !== "";
+        var offBadge = holiday && (holiday.isOffDay || showHolidayName);
+        var workBadge = holiday && !showHolidayName && holiday.isOffDay === false;
+
         calendar[i][j] = {
             "day": toFill,
             "today": ((toFill == day && monthDiff == 0 && highlight) ? 1 : (
                 monthDiff == 0 ? 0 : -1
             )),
-            "lunar": getLunarText(cellYear, cellMonth, cellDay)
+            "lunar": getLunarText(cellYear, cellMonth, cellDay),
+            "holiday": showHolidayName ? holiday.name : "",
+            "holidayOff": offBadge ? "休" : "",
+            "workday": workBadge ? "班" : ""
         };
         // Increment
         toFill++;

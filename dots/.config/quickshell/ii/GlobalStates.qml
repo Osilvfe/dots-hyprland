@@ -22,6 +22,11 @@ Singleton {
     property bool recordingMenuOpen: false
     property bool recordRegionRequest: false
     property bool recordRegionSystem: false
+
+    Component.onCompleted: {
+        // Pre-fetch holiday data so the calendar has it cached before first open
+        Holidays.fetchYear(Holidays.currentYear);
+    }
     property bool recordRegionMic: false
     property bool regionSelectorOpen: false
     property bool searchOpen: false
