@@ -81,7 +81,7 @@ Item {
             }
         }
 
-        // Marquee text: scrolls when the line is too wide, else centered
+        // Marquee text: seamless ghost scroll when the line is too wide, else centered
         Item {
             id: textClip
             Layout.fillWidth: true
@@ -90,21 +90,25 @@ Item {
             Layout.fillHeight: true
             clip: true
 
-            readonly property real scrollDistance: Math.max(0, marqueeText.implicitWidth - width)
+            readonly property real ghostSpacing: 48
+            readonly property real textWidth: marqueeText.implicitWidth
+            readonly property bool overflow: textWidth > width
+            // Scrolls one full "text + gap" unit; the ghost copy makes it loop seamlessly
+            readonly property real unit: textWidth + ghostSpacing
             property real scrollX: 0
             property bool scrolling: false
 
             function restartScroll() {
                 scrollAnim.stop()
-                if (textClip.scrollDistance > 0) {
-                    scrollOut.duration = Math.max(1200, textClip.scrollDistance * 25)
-                    scrollBack.duration = Math.max(1200, textClip.scrollDistance * 25)
-                    textClip.scrollX = 0
+                textClip.scrollX = 0
+                if (textClip.overflow) {
+                    // constant speed (px/ms), like lyricon's ~40dp/s
+                    scrollAnim.duration = Math.max(800, textClip.unit * 25)
                     textClip.scrolling = true
                     scrollAnim.restart()
                 } else {
                     textClip.scrolling = false
-                    textClip.scrollX = (width - marqueeText.implicitWidth) / 2
+                    textClip.scrollX = (width - textWidth) / 2
                 }
             }
 
@@ -122,26 +126,54 @@ Item {
                 onTextChanged: textClip.restartScroll()
             }
 
-            SequentialAnimation {
+            StyledText {
+                id: ghostText
+                anchors.verticalCenter: parent.verticalCenter
+                width: implicitWidth
+                elide: Text.ElideNone
+                horizontalAlignment: Text.AlignLeft
+                color: Appearance.colors.colOnLayer1
+                text: root.displayText
+                visible: textClip.scrolling
+                x: textClip.scrollX + textClip.unit
+            }
+
+            NumberAnimation {
                 id: scrollAnim
+                target: textClip
+                property: "scrollX"
+                from: 0
+                to: -textClip.unit
                 loops: Animation.Infinite
                 running: false
-                NumberAnimation {
-                    id: scrollOut
-                    target: textClip
-                    property: "scrollX"
-                    to: -textClip.scrollDistance
-                    easing.type: Easing.Linear
+                easing.type: Easing.Linear
+            }
+
+            // Fading edges (like lyricon's getLeft/RightFadingEdgeStrength):
+            // semi-transparent gradients over the clipped content
+            Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: 14
+                visible: textClip.scrolling
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "black" }
+                    GradientStop { position: 1.0; color: "transparent" }
                 }
-                PauseAnimation { duration: 900 }
-                NumberAnimation {
-                    id: scrollBack
-                    target: textClip
-                    property: "scrollX"
-                    to: 0
-                    easing.type: Easing.Linear
+                opacity: 0.35
+            }
+            Rectangle {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: 14
+                visible: textClip.scrolling
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 1.0; color: "black" }
                 }
-                PauseAnimation { duration: 900 }
+                opacity: 0.35
             }
         }
 
