@@ -15,6 +15,15 @@ Item {
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property string cleanedTitle: StringUtils.cleanMusicTitle(activePlayer?.trackTitle) || Translation.tr("No media")
 
+    // SPlayer-Next lyric line, else title • artist
+    readonly property string splayerTitle: SPlayer.title
+    readonly property string splayerArtist: SPlayer.artist
+    readonly property string displayText: SPlayer.lineText
+        ? SPlayer.lineText
+        : (splayerTitle
+            ? `${splayerTitle}${splayerArtist ? ' • ' + splayerArtist : ''}`
+            : `${cleanedTitle}${activePlayer?.trackArtist ? ' • ' + activePlayer.trackArtist : ''}`)
+
     Layout.fillHeight: true
     implicitWidth: rowLayout.implicitWidth + rowLayout.spacing * 2
     implicitHeight: Appearance.sizes.barHeight
@@ -81,7 +90,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight // Truncates the text on the right
             color: Appearance.colors.colOnLayer1
-            text: `${cleanedTitle}${activePlayer?.trackArtist ? ' • ' + activePlayer.trackArtist : ''}`
+            text: root.displayText
         }
 
     }
