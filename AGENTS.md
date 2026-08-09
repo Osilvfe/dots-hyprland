@@ -2,96 +2,138 @@
 
 本项目是基于 end-4/dots-hyprland 的 Hyprland 配置（Hyprland 0.56 Lua 配置 + Quickshell/II shell，仅 Arch Linux）。
 
+## 项目结构
+
+### 仓库布局
+- `dots/.config/` —— 全部配置（**部署源**），子目录即 `~/.config/<name>/`
+- `sdata/dist-arch/` —— 自维护的 AUR 包 PKGBUILD 与 patch（`illogical-impulse-*`）
+- `AGENTS.md` —— 本文档
+- 远端：`origin`=Osilvfe/dots-hyprland（推送）、`upstream`=end-4 原仓库（仅跟踪）、`quickshell-sample`=StatIndet/quickshell（参考，不合并）
+
+### Hyprland 配置（`dots/.config/hypr/`）
+- `hyprland.lua` —— 入口，逐段 require 下面各 lua
+- `hyprland/` 下的 lua 模块：
+  - `variables.lua` / `env.lua`（环境变量：XCURSOR_SIZE、OZONE 等）/ `colors.lua`（色板）/ `general.lua`（通用+动画+插件守卫）/ `rules.lua`（窗口规则+XWayland no_blur）/ `keybinds.lua`（快捷键）/ `execs.lua`（hyprland.start 启动项）/ `services.lua`（hypridle 等服务）/ `shellOverrides.lua`
+  - `scripts/` —— shell 脚本（截图、录音、SNI watcher 等）
+  - `custom/` —— 自维护补充
+- `hyprland.conf` / `hypridle.conf` / `hyprlock.conf` —— 部分老式配置仍保留
+
+### Quickshell/II shell（`dots/.config/quickshell/ii/`）
+- 入口 `shell.qml`（`qs -c ii` 加载），`settings.qml`（设置应用），`welcome.qml`
+- `services/` —— Singleton 服务（`pragma Singleton`）：
+  - 系统类：Audio/Brightness/Cliphist/Battery/Network/Wallpapers/Notifications/Idle/Updates/Weather
+  - 定制类：`SPlayer.qml`（歌词）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`
+- `modules/`：
+  - `common/` —— 共享基础：`Config.qml`（配置定义 JsonObject）、`Directories.qml`（路径，带 file://）、`Appearance.qml`（主题/颜色/字体）、`functions/FileUtils.qml`、`widgets/`（通用组件）、`panels/`（lock 等）
+  - `ii/` —— 主面板族：`bar/`（顶栏，含 Media/SysTray/Workspaces/Resources 等）、`sidebarLeft/`、`sidebarRight/`（日历/节假日）、`overview/`（搜索框+emoji）、`overlay/`（截图/录屏区域）、`recordingStatus/`、`mediaControls/`、`background/` 等
+  - `settings/` —— 设置面板页面（BarConfig/GeneralConfig/InterfaceConfig 等）
+  - `waffle/` —— 另一个面板族（可切换）
+- `translations/zh_CN.json` —— 中文翻译
+- `assets/`、`defaults/`、`scripts/`（shell 内脚本）
+
+## 接口信息
+
+### qs IPC（`qs -c ii ipc call <target> <func> [args]`）
+按 `IpcHandler.target` 划分：
+- `bar`、`search`（Overview 搜索框）、`cheatsheet`、`overlay`、`region`（截图/录屏选区）、`recording`（录制指示器状态 `recording status <type|none>`）、`mediaControls`、`osdVolume`、`osk`、`sidebarLeft`、`sidebarRight`、`session`、`screenTranslator`、`wallpaperSelector`、`lock`、`theme`、`cliphistService`、`brightness`、`mpris`（pauseAll/playPause/previous/next）、`wallpapers`
+- 面板懒加载：未打开时 hyprctl layers 看不到，先触发再验证
+
+### SPlayer-Next 歌词 API（`services/SPlayer.qml`）
+- 端口 `14558`，默认 `127.0.0.1`，需在 SPlayer 设置开启 externalApi
+- `GET /api/now-playing` → `{track:{id,title,artists[]}, position, playing, lyricAvailable}`
+- `GET /api/status` → `{state, position(ms), duration}`
+- `GET /api/lyrics` → `{lyric:[{words:[{word,startTime,endTime}], startTime, endTime, isBG}]}`
+- `POST /api/play|pause|stop|next|prev|seek|volume`；`WS /ws` 事件推送
+
+### SNI 系统托盘
+- `org.kde.StatusNotifierWatcher`（kded6 持有）← item 注册；qs 作 host 显示
+- 验证命令：`busctl --user get-property org.kde.StatusNotifierWatcher /StatusNotifierWatcher org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems`；每个 item `busctl --user status <bus> | grep PID=`
+
+### 快捷键（`keybinds.lua`）
+- `SUPER` 单按=搜索框 toggle（release 触发）；`SUPER+Tab` 概览；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件
+
+### 常用脚本（`hyprland/scripts/`）
+- `start_sni_watcher.sh` —— 确保 kded6 持有 SNI watcher（qs 启动时调用）
+- `gamepad-active.py` —— 手柄检测（hypridle 用）
+- `fuzzel-emoji.sh`、`snip_to_search.sh`、`launch_first_available.sh`、`switchfloatfocus.sh`
+
 ## 同步与发布
-- 修改 `dots/` 下的文件后，手动 `cp` 到 `~/.config/` 对应路径（无自动同步）
-- **`cp -r` 到已存在目录不会覆盖子文件**——同步单文件用 `cp -f <源> <目标路径>`，同步后用 `grep`/`diff` 验证部署内容而非只看文件存在
-- 推送到 `origin`（Osilvfe/dots-hyprland）；`upstream` 是 end-4 原仓库（仅跟踪），`quickshell-sample` 是参考仓库（不合并）
-- 提交前检查 `git status`，只提交本仓库文件
+- 修改 `dots/` 下文件后，手动 `cp -f <源> <目标路径>` 到 `~/.config/` 对应路径（无自动同步）
+- **`cp -r` 到已存在目录不会覆盖子文件**——同步后用 `grep`/`diff` 验证部署内容而非只看文件存在
+- 提交前检查 `git status`，只提交本仓库文件；改 qs 组件后需清 qmlcache 重启（见下）
 
-## Quickshell/II 开发经验（踩坑记录）
-- **qmlcache 缓存**：`~/.cache/quickshell/qmlcache/` 缓存 import 模块的编译结果，**自动 reload 不会失效**。修改 import 的组件后必须 `rm -rf ~/.cache/quickshell/qmlcache` + 重启 qs（`pkill -x qs; nohup qs -c ii &`），否则一直加载旧代码
-- **pgrep 自匹配**：`bash -c` 命令行里 `pgrep -f 'pattern'` 会匹配执行命令的 bash 自身。`[m]ic_` 技巧也会被正则匹配到字面。正确做法：`pgrep -x <进程名>`（精确匹配进程名）
-- **组件 import 归属**：
-  - `PanelWindow`/`GlobalShortcut`：`import Quickshell`（PanelWindow 经 `Quickshell._Window` 默认导入）+ `Quickshell.Hyprland`（GlobalShortcut）
-  - `WlrLayershell`：`Quickshell.Wayland`
-  - `IpcHandler`：`Quickshell.Io`
-  - `Translation`：`import qs.services`
-- **Repeater 限制**（quickshell 环境）：
-  - JS 对象数组作为 model 不创建 delegate——用 `ListModel`/字符串/数字数组
-  - QtQuick.Controls 组件（RippleButton 等）作 delegate 动态创建失败——用 `Rectangle + MouseArea` 或静态书写
-- **自绘组件必须显式 implicitWidth/implicitHeight**（不随内容自动计算）
-- **`TypeError: Property 'xxx' is not a function`**：多半是 qmlcache 损坏的元对象，删缓存重启
-- **图标**：Material 图标用 `MaterialSymbol`（text 为图标名）；`Text + "Material Symbols Rounded"` 字体在 Repeater delegate 中渲染失败
-- **层级/命中**：PanelWindow 子项超出父几何时，父的 z 保护不生效（会被下层 MouseArea 捕获）——浮层必须独立窗口或保持在父几何内
-- **Singleton 懒加载**：`pragma Singleton` 服务只在被引用时才实例化，`Component.onCompleted` 不会在 qs 启动时执行。要在启动时预拉取，从**顶层常驻组件**（如 `GlobalStates.qml`）显式调用一次
-- **Process 信号**：是 `onExited`（不是 `onProcessExited`）；用 `StdioCollector.onStreamFinished` 拿 stdout
-- **JS 函数类型注解坑**：`function foo(x: number): var` 这类注解被信号处理器调用时会报 `should be coerced to void`——quickshell 环境去掉类型注解（项目内服务均无注解）
-- **文件读写**：读用 `FileView`（`text()`），写用 `setText()`，`path` 需 `Qt.resolvedUrl(...)`；`FileUtils` 只有路径工具函数，无 readFile/writeFile。`onLoadFailed` 里 `FileViewError.FileNotFound` 判断文件缺失
-- **设置面板**（`modules/settings/*.qml`）：`ConfigSwitch`/`ConfigSpinBox`/`ConfigSlider`（`textWidth` 默认 120，长文字会挤压滑块，需调大）/`MaterialTextArea`（文本输入）/`ContentSection`（段）/`ContentRow`（并排，`uniform:true` 两列对齐——奇数个开关补 `Item{Layout.fillWidth:true}` 占位对齐）。新文本要补 `translations/zh_CN.json`（保持原 key 顺序追加，勿用 `sorted()` 重排否则 diff 巨大）
-- **设置项遗漏检查**：Config.qml 的 JsonObject 里定义的选项 ≠ 设置 UI 暴露的项。新增选项要确认在对应 Config 页面有开关，否则只能手改 JSON
+## 踩坑记录
 
-## 节假日显示（本项目定制）
-- **数据源双轨**（不要用农历公式推算节日当天——`calendar_layout.js` 的农历换算本身有 bug，2026-02-17 会算成腊月十九）：
-  - `Nager.Date`（`date.nager.at/api/v3/PublicHolidays/{year}/CN`）→ **节日当天**（春节/端午/中秋精确日期，直接信任）
-  - `NateScarlet/holiday-cn`（GitHub 静态 `{year}.json`）→ **放假/调休**标记（`isOffDay`）
+### Quickshell/II 开发经验
+- **qmlcache 缓存**：`~/.cache/quickshell/qmlcache/` 缓存 import 模块编译结果，**自动 reload 不会失效**。修改 import 的组件后必须 `rm -rf ~/.cache/quickshell/qmlcache` + 重启 qs（`pkill -x qs; nohup qs -c ii &`）
+- **pgrep 自匹配**：`bash -c` 里 `pgrep -f 'pattern'` 匹配 bash 自身；用 `pgrep -x <进程名>`（精确匹配）
+- **组件 import 归属**：`PanelWindow`/`GlobalShortcut`=`Quickshell`(+`Quickshell.Hyprland`)；`WlrLayershell`=`Quickshell.Wayland`；`IpcHandler`=`Quickshell.Io`；`Translation`=`qs.services`
+- **Repeater 限制**：JS 对象数组作 model 不创建 delegate（用 ListModel/字符串数组）；QtQuick.Controls 组件作 delegate 动态创建失败（用 Rectangle+MouseArea）
+- **自绘组件必须显式 implicitWidth/implicitHeight**
+- **`TypeError: Property 'xxx' is not a function`**：多半是 qmlcache 损坏元对象，删缓存重启
+- **图标**：Material 图标用 `MaterialSymbol`；`Text+"Material Symbols Rounded"` 在 Repeater delegate 渲染失败
+- **层级/命中**：PanelWindow 子项超出父几何时父 z 保护失效——浮层须独立窗口或留在父几何内
+- **Singleton 懒加载**：`pragma Singleton` 只在被引用时实例化，`Component.onCompleted` 不在 qs 启动时执行——预拉取须从顶层常驻组件（`GlobalStates.qml`）显式调用
+- **Process 信号**：`onExited`（非 `onProcessExited`）；stdout 用 `StdioCollector.onStreamFinished`
+- **JS 类型注解坑**：`function foo(x: number): var` 被信号处理器调用报 `should be coerced to void`——去掉注解
+- **文件读写**：读 `FileView.text()`、写 `setText()`，`path` 需 `Qt.resolvedUrl(...)`；`FileUtils` 只有路径函数。**`Directories.state` 等带 `file://` 前缀**，实际路径须 `FileUtils.trimFileProtocol(...)`，否则 mkdir/setText 会在 cwd 下建 `file:` 目录
+- **设置面板**：`ConfigSwitch`/`ConfigSpinBox`/`ConfigSlider`（`textWidth` 默认 120，长文字挤压滑块需调大）/`MaterialTextArea`/`ContentSection`/`ContentRow`（`uniform:true` 对齐，奇数补 `Item{Layout.fillWidth:true}`）。新文本补 `translations/zh_CN.json`（保持原 key 顺序追加，勿 sorted() 重排）
+- **设置项遗漏检查**：Config.qml JsonObject 定义 ≠ 设置 UI 暴露项，新增要确认有开关
+
+### 节假日显示（本项目定制）
+- **数据源双轨**（勿用农历公式推算节日当天——`calendar_layout.js` 农历换算有 bug，2026-02-17 算成腊月十九）：
+  - `Nager.Date`（`date.nager.at/api/v3/PublicHolidays/{year}/CN`）→ 节日当天精确日期
+  - `NateScarlet/holiday-cn`（GitHub 静态 `{year}.json`）→ 放假/调休（isOffDay）
   - 合并缓存 `~/.local/state/quickshell/holidays/{year}.json`（离线可用）
-- **显示规则**：节日当天=日期下方节日名+右上角"休"；放假天=右上角"休"（`colPrimary`）；调休补班=右上角"班"（`colError` 红色）
-- 面板高度：`BottomWidgetGroup.qml` 展开固定 `implicitHeight: 430`（原 350，加节假日/农历后内容变高会被 `clip: true` 裁掉）
+- **显示规则**：节日当天=日期下节日名+右上角"休"；放假="休"（colPrimary）；调休补班="班"（colError 红）
+- `BottomWidgetGroup.qml` 展开 `implicitHeight: 430`（原 350，内容变高会被 clip 裁掉）
 
-## 录制/音频体系（本项目定制）
-- **截图菜单**（`SUPER+SHIFT+S` → quickshell:regionScreenshot）：选区工具栏含 取色器/录屏/录GIF/录麦克风/录系统声音
-- **录屏**：`record.sh`（选区走 RegionSelection / --fullscreen / --window=hyprctl activewindow；--audio-src 可多个=系统+麦克风混音；--gif 走 ffmpeg 转 mp4→gif）
-  - **不要用 `-t`**（无效参数）；停止用 `pkill -INT wf-recorder`（SIGINT 优雅封装，mp4 完整可播）
-  - 区域录制走 RegionSelection 覆盖层（与截图同一选区 UI）：录屏菜单"区域"→ GlobalStates.recordRegionRequest + recordRegionSystem/Mic → RegionSelector 开选区；截图菜单"GIF"按钮 → SnipAction.RecordGif 原位切换录制模式；选区确认后 **先发 startRecording 信号（RegionSelector 定时器接管）再 dismiss()**——先 dismiss 会销毁面板导致信号丢失、录制不启动；延迟 600ms 启动 record.sh --region（销毁冻结帧 ScreencopyView，避免 screencopy 会话冲突）；**录制模式只允许拖拽框选**（禁用点击选窗口/图层/内容区域，普通单击直接关选区不录制）；录制模式隐藏底部工具条/关闭按钮（Esc 取消，指示器管理停止）；wf-recorder --geometry 用**全局逻辑坐标**（regionX+monitorOffsetX，不要乘 monitorScale）
-  - RegionSelection 的 `isRecording` 判定：action ∈ {Record, RecordWithSound, RecordGif}；snip() 中记录动作分支构建 recordCmd（--gif 加在 --region 后）
+### 录制/音频体系（本项目定制）
+- **截图菜单**（SUPER+SHIFT+S → quickshell:regionScreenshot）：选区工具栏含 取色器/录屏/录GIF/录麦克风/录系统声音
+- **录屏**：`record.sh`（--region/--fullscreen/--window；--audio-src 可多个混音；--gif 走 ffmpeg 转）。**勿用 `-t`**；停止 `pkill -INT wf-recorder`（SIGINT 优雅封装）。区域录制先发 startRecording 信号（RegionSelector 定时器接管）再 dismiss()；延迟 600ms 启动（销毁冻结帧 ScreencopyView）；录制模式只允许拖拽框选；wf-recorder --geometry 用**全局逻辑坐标**（regionX+monitorOffsetX，勿乘 monitorScale）
+- **录音**：麦克风 `pw-record`；系统声音 **`parec --device=$(pactl get-default-sink).monitor`**（pw-record --target 不可靠）。存 `~/Music`（mic_/system_ 前缀）
+- **录制指示器**：状态由 IPC 驱动（`qs -c ii ipc call recording status <type|none>`），无文件轮询；计时需可变属性（nowMs+Timer）驱动，readonly 绑 Date.now() 不刷新
+- **蓝牙**：HFP（8kHz）导致无声/静音，wireplumber 配置 `bluez5.headset-roles = [ ]` 禁用；重连需手动
+- **UI 组件**：`StyledComboBox`/`ConfigSwitch`/`IconToolbarButton`/`IconAndTextToolbarButton`/`Toolbar`
 
-- **录音**：麦克风 `pw-record`（默认源）；系统声音必须用 **`parec --device=$(pactl get-default-sink).monitor`**（`pw-record --target` 不可靠，会录到默认麦克风）。保存到 `~/Music`（mic_/system_ 前缀）
-- **录制指示器**（顶栏，性能指示器左侧）：状态由 **IPC 驱动**（`qs -c ii ipc call recording status <type|none>`，脚本调用）+ RecordingStatusHandler → GlobalStates.recordingType，无文件轮询。计时需可变属性（nowMs + Timer）驱动，readonly 绑定 Date.now() 不刷新。点击指示器停止
-- **蓝牙**：HFP 模式（8kHz）导致听不到声音/录音静音。已通过 wireplumber 配置（`bluez5.headset-roles = [ ]`）禁用 HFP；蓝牙重连需手动（wireplumber 重启后不会自动注册设备，重连后正常且 HFP 消失）
-- **UI 组件**：`StyledComboBox`（下拉框，设备选择同款）、`ConfigSwitch`（设置行：图标+文字+开关）、`IconToolbarButton`/`IconAndTextToolbarButton`、`Toolbar`（Material 3 胶囊）
+### Hypridle
+- 关屏后挂起死锁——已改**不黑屏直接挂起**（无 DPMS off listener）；唤醒 `after_sleep_cmd`+`on-resume` 里 `hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'`
+- 手柄检测 `gamepad-active.py`（EVIOCGBIT 并行 select，避免 pgrep 自匹配/窗口耗尽）
 
-## Hypridle
-- 关屏后挂起会死锁（GPU runtime resume rpm_get_suppliers，kworker blocked）——已改为**不黑屏直接挂起**（无 DPMS off listener）
-- 唤醒恢复：`after_sleep_cmd` + listener `on-resume` 里 `hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'`
-- 手柄检测 `gamepad-active.py`（EVIOCGBIT 查询手柄键位，并行 select 监控，避免 pgrep 自匹配/窗口耗尽）
+### II Overview / 搜索框（本项目定制）
+- **SUPER 单按**：`keybinds.lua` 里 `SUPER_L` 绑 `quickshell:searchToggle`（`release=true`）——按下松开后 toggle
+- **搜索框**：`Overview.qml` `width: Math.min(680, panelWindow.width-80)`+`topMargin: height*0.18`；`SearchBar.qml` `implicitHeight: 52`+`font.pixelSize.large`
+- **emoji 面板**：`SearchWidget.qml` 有 `emojiMode`（`searchingText.startsWith(prefix.emojis)`）+`emojiGrid`（GridView）；`Emojis.qml` word-based matching（空搜全返、每词须出现、slice 50）
+- **模块恢复**：从 `upstream/main` 恢复 QML 因版本不兼容不工作，用**本地历史版本**（`git show <commit^>:<path>`）；Overview 删除分两步（`4ec200e3`+`25899354`），恢复版本要匹配
+- **git revert 冲突**：保留后续功能文件（`git checkout --ours`）；revert 带出无关改动（JamesDSP、persistent_workspaces）需手动排除
+- **面板加载验证**：PanelLoader 懒加载，`qs -c ii ipc call search toggle` 后 `hyprctl layers | grep quickshell:overview`
 
-## 其他
+### 顶栏媒体歌词（本项目定制）
+- **数据源**：SPlayer-Next external HTTP API（见接口信息），XMLHttpRequest 请求（参考 `services/Booru.qml`）
+- **同步**：500ms 轮询 `/api/status` 取 position，在缓存歌词行定位当前句（跳过 isBG），输出 lineText；曲目变化（track.id）才拉 `/api/lyrics`
+- **API 断开**：请求失败（非 200/onerror）→ `onFail` 回调 → `apiDown` 标记 + `clearAll()`，否则顶栏残留旧歌名
+- **MPRIS `xesam:asText` 不是实时歌词标准**；主流靠播放器私有 API 或本地 LRC（quickshell-sample 是 Python 抓 QQ/网易云 LRC+轮询 position）
+- **marquee**（`Media.qml`）：lyricon 式 **ghost 无缝滚动**——主文本+ghost 副本（`ghostSpacing:48`），`scrollX` 从 0 线性滚到 `-(文本宽+间距)` 循环，副本顶替主文本视觉无缝；等速（duration=unit*25）；左右 14px 渐变 fading edge。**动画目标用独立属性 `scrollX`，Text.x 绑定它**（避免循环依赖）；短文本居中不滚动
+- 调试：Media 是常驻组件，加日志**用 Edit 工具**，勿用 sed 多行替换（会误改文件污染部署版）
+
+### SNI 系统托盘（本项目定制，深坑）
+- **架构**：watcher（kded6）维护 item 列表 ← item 注册；host（qs）从 watcher 读列表。item 注册到 watcher，**不依赖 host**
+- **Quickshell 抢 watcher**：`StatusNotifierHost` 构造时 `StatusNotifierWatcher::instance()` 强制确保 watcher——若 kded6 未就绪 qs 自己注册。**qs 当 watcher 的后果**：item 注册到 qs，`pkill -x qs` 重启 → item 全丢
+- **应用行为差异**：fcitx5 监听 watcher 变化、自动重注册（新 bus name）→ qs 累积**重复残留**；QQ/微信（Electron）**只在启动时注册一次**，watcher 消失**永不重注册** → 图标永久丢失
+- **`devicenotifications` 崩溃**：kded6 纯 Hyprland 下该模块 `wl_proxy_get_version` 崩溃 → 禁用 `~/.config/kded5rc` `[Module-devicenotifications] autoload=false`。**kded6 读 `kded5rc` 不是 `kded6rc`**（KDE 源码写死）
+- **最终方案**：qs 保持**纯 host**（patch 移除 watcher 创建——`sdata/dist-arch/illogical-impulse-quickshell-git/sni-stale-cleanup.patch`，经 PKGBUILD `prepare()` 应用）；patch 同时让 host **监听每个 item 的 bus name**（QDBusServiceWatcher），bus 消失移除 stale item（修 fcitx5 重复）；`shell.qml` 启动 3s 后跑 `start_sni_watcher.sh`
+- **`start_sni_watcher.sh`**：watcher 有 owner 就退出；无则 `nohup /usr/bin/kded6 &` 轮询等待（20×0.25s）。**busctl 加 `timeout 2` 防阻塞**；qs 调用用 `execDetached(["bash","-lc","export PATH=/usr/bin:$PATH; ..."])`（**QProcess 不继承完整 PATH**，直接跑脚本静默失败）
+- **QML 层无法区分重复 item**：重复 fcitx5 的 id/title/icon/hasMenu/status 全相同（未暴露 bus 地址）——只能 C++ patch 修
+- **调试纪律**：反复 `pkill -x qs` 会放大 SNI 竞态，区分"测试操作导致"和"真实 bug"（kded6 崩溃实为 devicenotifications 自身崩溃，与 qs 无关）
+
+### hyprpm / Hyprland 插件
+- **编译失败排查**：先看 `hyprpm update -v` 的 g++ 报错。头文件 API 不匹配（`keybinds/Resolver.hpp`、`groupsLocked`、`m_bindInvocationDepth`）说明插件追新但 Hyprland 旧——手动 `hyprpm add <url> <git rev>` 锁兼容 commit
+- **兼容性验证**：clone 后 `pkg-config --cflags hyprland`（指向 `/var/cache/hyprpm/*/headersRoot`）本地 `make` 验证
+- **hyprpm 权限坑**：`/var/cache/hyprpm/{user}/` 残留 root 文件报 cache dir/plugin state 错误——`sudo chown -R <user>`；add 的 install 走 sudo（非交互失败）
+- **加载失败 `/proc/self/exe`**：二进制是 `(deleted)`（包更新未重启）时插件解析路径失败——**重启 Hyprland**
+- **scrolloverview 兼容版本**：fork 0.56 用 `0972b6b`（旧 API `KeybindManager.hpp`+`EventBus.hpp` 最后版本）；`main`/`new-release` 已切新版 API 不兼容
+- **插件 fallback**：`general.lua` 里 `hl.plugin.xxx` 必须包 `if hl.plugin.xxx then`（含 config 段），否则 nil index 崩溃
+- **光标**：Wayland=`hyprctl setcursor <theme> <size>`（24）；XWayland=`XCURSOR_SIZE` env（48）
+
+### 其他
 - 系统声音录制时若默认输出是蓝牙耳机，确保 A2DP 模式（HFP 已禁用）
-- 键盘快捷键：`Print` 全屏截图、`CTRL+Print` 保存文件、`SUPER+SHIFT+S` 工具菜单、`SUPER+SHIFT+A` 图像搜索、`SUPER+SHIFT+X` OCR
-
-## II Overview / 搜索框（本项目定制）
-- **SUPER 单按**：`keybinds.lua` 里 `SUPER_L` 绑 `quickshell:searchToggle`（`release = true`）——按下松开后 toggle 搜索框（不是按住时显示，也不是 press 时显示）。`workspaceNumber`（按住显示数字）已弃用
-- **搜索框**（`modules/ii/overview/`）：`Overview.qml` 定制 `width: Math.min(680, panelWindow.width - 80)` + `topMargin: height * 0.18`（居中偏下宽搜索框）；`SearchBar.qml` 定制 `implicitHeight: 52` + `font.pixelSize.large`（9f116bcb）
-- **emoji 面板**（128ef10f）：`SearchWidget.qml` 有 `emojiMode`（`searchingText.startsWith(prefix.emojis)`）+ `emojiGrid`（GridView 网格，SUPER+Period 触发 `overviewEmojiToggle`）；`Emojis.qml` 用 word-based matching（空搜索返回全部，每词须出现在条目中，slice 50）
-- **模块恢复经验**（撤销删除时）：从 `upstream/main` 恢复 QML 模块会因版本不兼容不工作，要用**本地仓库历史版本**（`git show <commit^>:<path>`）——Overview 删除是分两步（`4ec200e3` 删 Overview/OverviewWidget/OverviewWindow，`25899354` 删 Search 3 文件 + IllogicalImpulseFamily 注册 + keybinds），恢复时版本要匹配（含定制的用 `25899354^`，死文件 OverviewWidget/OverviewWindow 已删不恢复）
-- **git revert 冲突处理**：revert 旧提交遇到后续改动（如日历节假日）冲突时，保留后续功能的文件（`git checkout --ours`），只恢复目标改动；revert 会带出无关改动（JamesDSP→EasyEffects、persistent_workspaces），需手动排除（`git checkout HEAD -- <file>` 后重新 add）
-- **面板加载验证**：PanelLoader 懒加载，Overview 未打开时 hyprctl layers 看不到；用 `qs -c ii ipc call search toggle` 触发后 `hyprctl layers | grep quickshell:overview` 验证窗口存在
-
-## hyprpm / Hyprland 插件
-- **插件编译失败排查**：`hyprpm list` 显示 `Plugin failed to build` 时，先看 `hyprpm update -v` 的 g++ 报错。头文件 API 不匹配（`keybinds/Resolver.hpp`、`groupsLocked`、`m_bindInvocationDepth` 等新版 API）说明**插件追新但 Hyprland 版本旧**——插件仓库 `hyprpm.toml` 的 `commit_pins` 只有固定版本，git 版需手动 `hyprpm add <url> <git rev>` 锁兼容 commit
-- **插件兼容性验证**：`git clone` 插件仓库后，用当前 Hyprland 头文件（`pkg-config --cflags hyprland` 已指向 `/var/cache/hyprpm/*/headersRoot`）本地 `make` 验证，再决定锁哪个 rev
-- **hyprpm 权限坑**：`/var/cache/hyprpm/{user}/` 下若残留 root 所有文件（曾提权构建），`hyprpm remove`/`update` 会报 `failed to create cache dir`/`Failed to write plugin state`——需 `sudo chown -R <user> /var/cache/hyprpm`；且 hyprpm 的 `add` install 步骤走 `sudo`，非交互终端会因要密码失败（交互运行即可）
-- **插件加载失败 `/proc/self/exe`**：若运行中的 Hyprland 二进制是 `(deleted)`（包更新后未重启，`readlink /proc/<pid>/exe` 可见），插件 API 解析自身路径失败——**重启 Hyprland** 让新二进制生效
-- **scrolloverview 兼容版本**：fork 0.56 用 `0972b6b`（8/5，"support latest Hyprland renderer API"），是旧 API（`managers/KeybindManager.hpp`+`event/EventBus.hpp`）最后一个版本；`main`/`new-release` 分支均已切新版 API 不兼容
-- **插件 fallback**：`general.lua` 里 `hl.plugin.xxx` 引用必须包 `if hl.plugin.xxx then`（含 config 段），插件未加载时 else 会 `attempt to index a nil value` 导致 config 解析失败
-- **光标**：Wayland 光标= `hyprctl setcursor <theme> <size>`（当前 24）；XWayland 光标= `XCURSOR_SIZE` env（当前 48，XWayland 程序读这个）
-
-## 顶栏媒体歌词（本项目定制）
-- **歌词数据源**：SPlayer-Next 的 external HTTP API（Hono server，端口 `14558`，默认 `127.0.0.1`，需在设置里开启 externalApi）。接口：`GET /api/now-playing`（track/position/lyricAvailable）、`/api/status`（position ms）、`/api/lyrics`（完整歌词数组，每行 `{words:[{word,startTime,endTime}],startTime,endTime,isBG}`）
-- **歌词同步**：`services/SPlayer.qml` 500ms 轮询 `/api/status` 取 position，在缓存的歌词行里定位当前句（跳过 `isBG` 行），输出 `lineText`；曲目变化时（`track.id` 变化）才拉 `/api/lyrics`
-- **API 断开处理**：SPlayer 退出后请求失败（非 200 或 onerror）——`httpGet` 加 `onFail` 回调，`apiDown` 标记后 `clearAll()` 清空 title/artist/lineText，否则顶栏残留旧歌名
-- **HTTP 请求**：项目里用 `XMLHttpRequest`（参考 `services/Booru.qml`），不用 Process+curl
-- **MPRIS `xesam:asText` 不是实时歌词标准**（无逐行同步机制）；主流歌词靠播放器私有 API 或本地 LRC。quickshell-sample 的做法是 Python 抓 QQ/网易云 LRC + 轮询 position（`lyrics_fetcher.py`）
-- **顶栏长歌词 marquee**（`Media.qml`）：lyricon 式 **ghost 无缝滚动**——主文本 + ghost 副本（间距 `ghostSpacing: 48`），`scrollX` 从 0 线性滚到 `-(文本宽+间距)` 循环，副本顶替主文本视觉无缝；等速（duration = unit*25）；左右 14px 渐变 fading edge。**动画目标用独立属性 `scrollX`，Text.x 绑定它**（避免 x 绑定自身的循环依赖）；短文本居中不滚动
-- 滚动/歌词调试：顶栏 Media 是常驻组件，加 `console.log` 时**用 Edit 工具**，勿用 sed 多行替换（会误改文件导致部署版污染）
-
-## SNI 系统托盘（本项目定制，深坑）
-- **架构**：`watcher`（`org.kde.StatusNotifierWatcher`，维护已注册 item 列表）← item（应用）注册；`host`（显示图标的 shell）从 watcher 读列表。item 注册到 watcher，**不依赖 host**
-- **Quickshell 会抢 watcher**：`StatusNotifierHost` 构造时 `StatusNotifierWatcher::instance()` 强制确保 watcher——若 kded6 未就绪，qs 自己注册 watcher。**qs 当 watcher 的后果**：item 注册到 qs，`pkill -x qs` 重启 → item 全丢
-- **应用行为差异**：fcitx5 监听 watcher 变化、崩溃后自动重注册（新 bus name）→ qs 里累积**重复残留**；QQ/微信（Electron）**只在启动时注册一次**，watcher 消失**永不重注册** → 图标永久丢失
-- **`devicenotifications` 模块崩溃**：kded6 在纯 Hyprland 下该模块 `wl_proxy_get_version` 崩溃（无 KWin 提供的 Wayland 对象）→ 禁用 `~/.config/kded5rc` `[Module-devicenotifications] autoload=false`。**注意 kded6 读的是 `kded5rc` 不是 `kded6rc`**（KDE 源码写死 "kded5rc"）
-- **最终方案**：qs 保持**纯 host**（Quickshell patch 移除 watcher 创建——仓库 `sdata/dist-arch/illogical-impulse-quickshell-git/sni-stale-cleanup.patch`，经 PKGBUILD `prepare()` 应用）；patch 同时让 host **监听每个 item 的 bus name**（`QDBusServiceWatcher`），bus 消失时移除 stale item（修 fcitx5 重复）；`shell.qml` 启动 3s 后跑 `start_sni_watcher.sh` 确保 kded6 活着
-- **`start_sni_watcher.sh`**：检查 `busctl --user status org.kde.StatusNotifierWatcher` 有 owner 就退出；无则 `nohup /usr/bin/kded6 &` 并轮询等待（20×0.25s）。**所有 busctl 加 `timeout 2` 防阻塞**；qs 调用用 `execDetached(["bash","-lc","export PATH=/usr/bin:$PATH; ..."])`（**QProcess 不继承完整 PATH**，直接跑脚本会静默失败）
-- **验证**：`busctl --user get-property org.kde.StatusNotifierWatcher /StatusNotifierWatcher ... RegisteredStatusNotifierItems` 看 items；每个 item 用 `busctl --user status <bus> | grep PID=` 确认归属。qs 侧 items 用临时 Timer 打印 `SystemTray.items.values.map(i=>i.id)`
-- **QML 层无法区分重复 item**：重复的 fcitx5 其 `id/title/icon/hasMenu/status` 全部相同（`SystemTrayItem` 未暴露 bus 地址）——只能靠 C++ patch 修，不能在 QML 侧按属性去重
-- **调试纪律**：反复 `pkill -x qs` 调试会放大 SNI 竞态，观察结论要区分"测试操作导致"和"真实 bug"（用户手动重启验证 kded6 崩溃与 qs 无关——实为 devicenotifications 自身崩溃）
