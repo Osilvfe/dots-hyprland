@@ -116,6 +116,8 @@
 - **`import QtWebSockets` 深坑**：WebSocket **静态声明在 Singleton 内（或作 QtObject 子对象）永远不连接**（qml_rs 下状态停在 Connecting）——必须独立组件文件 `wsclient.qml` 以 WebSocket 为**根类型**、`Qt.createComponent` + `createObject(null)` 创建、事件在组件内部 handler 转发给 `SPlayer.onWsStatus/onWsMessage`（同目录 import 可见）；**外部 `.connect()` 与自定义 property 均不可靠**（property 会导致连接失败）
 - **同步**：缓存歌词行定位当前句（跳过 isBG），输出 lineText；WS `track` 事件切歌时先清行再 `loadLyrics()` HTTP 兜底（`lyric` 事件通常随后到覆盖）
 - **间奏检测**（本项目定制）：SPlayer API **无 intro/interlude 标记字段**——照抄 SPlayer 前端 `detectInterlude`（`LyricLine` 只有 startTime/endTime/words/isBG/isDuet）：position 落在某行 `endTime` 到下一行 `startTime-250ms` 之间且间隙 ≥`minInterludeGap`（默认 4000ms）即视为间奏（含首行前=前奏），`lineText` 显示 `♪ ♪ ♪`。真实歌词里只有大器乐段（如 45s gap）才触发，2-3s 行间停顿不触发
+- **尾部 outro**：存 `durationMs`（status 事件/轮询带），最后一行 `endTime` → `durationMs` 的 gap ≥阈值也算间奏（蓝莲花尾部 96s 纯音乐）；无 duration 时不判
+- **`♪` 渲染坑**：`♪`（U+266A）在 CJK 正文 fallback 成小符号——Media.qml 用三个 `music_note` **MaterialSymbol**（`iconSize: small` 与歌词同号）并排显示间奏指示；静态书写（Repeater delegate 图标字体渲染失败）
 - **API 断开**：WS Error/Closed 或 HTTP 请求失败（非 200/onerror）→ `handleApiDown` → `apiDown` 标记 + `clearAll()`，否则顶栏残留旧歌名；`reconnectTimer` 3s 重连
 - **MPRIS `xesam:asText` 不是实时歌词标准**；主流靠播放器私有 API 或本地 LRC（quickshell-sample 是 Python 抓 QQ/网易云 LRC+轮询 position）
 - **marquee**（`Media.qml`）：lyricon 式 **ghost 无缝滚动**——主文本+ghost 副本（`ghostSpacing:48`），`scrollX` 从 0 线性滚到 `-(文本宽+间距)` 循环，副本顶替主文本视觉无缝；等速（duration=unit*25）；左右 14px 渐变 fading edge。**动画目标用独立属性 `scrollX`，Text.x 绑定它**（避免循环依赖）；短文本居中不滚动
