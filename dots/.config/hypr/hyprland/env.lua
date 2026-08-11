@@ -14,6 +14,7 @@ hl.env("XDG_DATA_DIRS", home_dir .. "/.local/share/flatpak/exports/share:/var/li
 -- Input method
 hl.env("QT_IM_MODULE", "fcitx")
 hl.env("XMODIFIERS", "@im=fcitx")
+
 -- Themes
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("QT_QPA_PLATFORMTHEME", "kde")

@@ -9,7 +9,7 @@
 version: "1.0"
 user_preferences:
   shell: "fish" # fish | zsh
-  terminal: "foot" # kitty | foot
+  terminal: "kitty" # kitty | foot
   keybindings: "default" # default | vim
 patterns:
   # Always install these files
@@ -30,12 +30,6 @@ patterns:
     condition:
       type: "shell"
       value: "zsh"
-  - from: "dots/.config/foot"
-    to: "$XDG_CONFIG_HOME/foot"
-    mode: "sync"
-    condition:
-      type: "terminal"
-      value: "foot"
   - from: "dots/.config/kitty"
     to: "$XDG_CONFIG_HOME/kitty"
     mode: "sync"
@@ -70,9 +64,6 @@ patterns:
     mode: "sync"
   - from: "dots/.config/kde-material-you-colors"
     to: "$XDG_CONFIG_HOME/kde-material-you-colors"
-    mode: "sync"
-  - from: "dots/.config/Kvantum"
-    to: "$XDG_CONFIG_HOME/Kvantum"
     mode: "sync"
   - from: "dots/.config/matugen"
     to: "$XDG_CONFIG_HOME/matugen"
