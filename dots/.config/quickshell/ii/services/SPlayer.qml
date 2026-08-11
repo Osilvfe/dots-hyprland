@@ -3,14 +3,27 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import QtWebSockets
 
-// SPlayer-Next external HTTP API integration
+// SPlayer-Next external API integration
 // (https://github.com/SPlayer-Dev/SPlayer-Next, external API server)
 // Provides now-playing title/artist and synced lyric line for the bar media widget.
+// Primary channel is the WebSocket (/ws): the server pushes track/lyric/status
+// events. It does NOT push continuous position (HIGH_FREQ_EVENTS filter), so we
+// extrapolate position from the last status anchor with a local clock, and keep
+// a low-frequency HTTP /api/status poll as a calibration/failure fallback.
+// If the WebSocket is unavailable (only HTTP enabled), we degrade to plain HTTP
+// polling (old behavior) driven by nowPlayingTimer.
+//
+// NOTE: a WebSocket declared inside a Singleton (or as a child QtObject) never
+// connects under quickshell/qml_rs. It is therefore created dynamically via
+// createComponent from wsclient.qml (root type WebSocket, events forwarded to
+// the SPlayer singleton from its own signal handlers).
 Singleton {
     id: root
 
     readonly property string apiBase: "http://127.0.0.1:14558/api"
+    readonly property string wsUrl: "ws://127.0.0.1:14558/ws"
 
     // current line text (synced), or empty when no lyrics / no player
     property string lineText: ""
@@ -22,6 +35,15 @@ Singleton {
     property int positionMs: 0
     // true when the SPlayer API is unreachable (app closed); clears everything
     property bool apiDown: false
+
+    // local-clock position extrapolation anchor (set by any status event/poll)
+    property int anchorPos: 0
+    property double anchorAt: 0
+    property bool playing: false
+
+    // dynamically created WebSocket (see NOTE above)
+    property var socket: null
+    property bool wsConnected: false
 
     function httpGet(url, onDone, onFail) {
         var xhr = new XMLHttpRequest()
@@ -49,6 +71,7 @@ Singleton {
         root.lyricLines = []
         root.lineText = ""
         root.loadedTrackId = ""
+        root.playing = false
     }
 
     function handleApiDown() {
@@ -86,6 +109,21 @@ Singleton {
         }, root.handleApiDown)
     }
 
+    function setAnchor(pos) {
+        root.anchorPos = pos
+        root.anchorAt = Date.now()
+        root.positionMs = pos
+    }
+
+    function refreshStatus() {
+        root.httpGet(`${root.apiBase}/status`, function(st) {
+            root.apiDown = false
+            root.playing = st.state === "playing"
+            root.setAnchor(st.position ?? 0)
+            root.updateLine()
+        }, root.handleApiDown)
+    }
+
     function updateLine() {
         if (root.apiDown || root.lyricLines.length === 0) { root.lineText = ""; return }
         var pos = root.positionMs
@@ -103,26 +141,133 @@ Singleton {
         if (root.lineText !== active) root.lineText = active
     }
 
-    // Poll /api/status for position (cheap), and refresh now-playing periodically
-    Timer {
-        interval: 500
-        running: true
-        repeat: true
-        onTriggered: {
-            root.httpGet(`${root.apiBase}/status`, function(st) {
-                root.apiDown = false
-                root.positionMs = st.position ?? 0
-                root.updateLine()
-            }, root.handleApiDown)
+    // ---- WebSocket (primary channel) ----
+    function connectWs() {
+        if (root.socket) {
+            root.socket.active = false
+            root.socket.destroy()
+            root.socket = null
+        }
+        var comp = Qt.createComponent("wsclient.qml")
+        if (comp.status !== Component.Ready) {
+            console.error("[SPlayer] wsclient.qml compile error:", comp.errorString())
+            reconnectTimer.restart()
+            return
+        }
+        root.socket = comp.createObject(null)
+        if (!root.socket) {
+            console.error("[SPlayer] failed to create WebSocket")
+            reconnectTimer.restart()
         }
     }
 
+    function onWsStatus(status) {
+        if (status === WebSocket.Open) {
+            root.wsConnected = true
+            root.apiDown = false
+            // server only sends hello on connect; pull current state once
+            root.refreshNowPlaying()
+            root.refreshStatus()
+        } else if (status === WebSocket.Error || status === WebSocket.Closed) {
+            root.wsConnected = false
+            // WS down (SPlayer exited, or WS not enabled) - HTTP fallback
+            // will confirm whether the API itself is gone.
+            reconnectTimer.restart()
+        }
+    }
+
+    function onWsMessage(message) {
+        var msg
+        try { msg = JSON.parse(message) } catch (e) { return }
+        if (msg.kind === "hello") return
+        if (msg.kind !== "event") return
+        switch (msg.type) {
+        case "track": {
+            root.apiDown = false
+            var t = msg.data?.track ?? null
+            if (!t) { root.clearAll(); return }
+            root.title = t.title ?? ""
+            root.artist = (t.artists || []).map(a => a.name).join("/") ?? ""
+            root.lyricAvailable = true
+            if (t.id !== root.loadedTrackId) {
+                root.loadedTrackId = t.id
+                root.lyricLines = []
+                root.lineText = ""
+                // lyric event usually follows; HTTP fetch as fallback
+                root.loadLyrics()
+            }
+            break
+        }
+        case "lyric": {
+            root.apiDown = false
+            root.lyricLines = Array.isArray(msg.data?.lyric) ? msg.data.lyric : []
+            root.lyricAvailable = root.lyricLines.length > 0
+            root.updateLine()
+            break
+        }
+        case "status": {
+            root.apiDown = false
+            var st = msg.data ?? {}
+            root.playing = st.state === "playing"
+            root.setAnchor(st.position ?? root.positionMs)
+            root.updateLine()
+            break
+        }
+        case "ended":
+            root.playing = false
+            break
+        }
+    }
+
+    // Retry the WebSocket when it drops (SPlayer restarting, etc.)
     Timer {
-        interval: 5000
+        id: reconnectTimer
+        interval: 3000
+        repeat: true
+        onTriggered: {
+            if (root.wsConnected) {
+                reconnectTimer.stop()
+                return
+            }
+            root.connectWs()
+        }
+    }
+
+    // Local-clock extrapolation while playing (WS does not push position).
+    // Re-anchored by every status event / status poll.
+    Timer {
+        interval: 200
+        running: root.playing
+        repeat: true
+        onTriggered: {
+            root.positionMs = root.anchorPos + Math.round(Date.now() - root.anchorAt)
+            root.updateLine()
+        }
+    }
+
+    // Low-frequency HTTP status poll: calibrates the local clock (fixes drift /
+    // seeks done outside WS control) and detects API-down when WS is unavailable.
+    Timer {
+        interval: 1000
         running: true
+        repeat: true
+        onTriggered: root.refreshStatus()
+    }
+
+    // HTTP-only fallback: when the WS never connects (only HTTP enabled),
+    // drive now-playing like the old implementation.
+    Timer {
+        id: nowPlayingTimer
+        interval: 5000
+        running: !root.wsConnected
         repeat: true
         onTriggered: root.refreshNowPlaying()
     }
 
-    Component.onCompleted: root.refreshNowPlaying()
+    Component.onCompleted: {
+        // prime the state immediately; WS connect will refresh anyway
+        root.refreshNowPlaying()
+        root.refreshStatus()
+        root.connectWs()
+    }
 }

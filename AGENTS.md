@@ -109,9 +109,13 @@
 - **面板加载验证**：PanelLoader 懒加载，`qs -c ii ipc call search toggle` 后 `hyprctl layers | grep quickshell:overview`
 
 ### 顶栏媒体歌词（本项目定制）
-- **数据源**：SPlayer-Next external HTTP API（见接口信息），XMLHttpRequest 请求（参考 `services/Booru.qml`）
-- **同步**：500ms 轮询 `/api/status` 取 position，在缓存歌词行定位当前句（跳过 isBG），输出 lineText；曲目变化（track.id）才拉 `/api/lyrics`
-- **API 断开**：请求失败（非 200/onerror）→ `onFail` 回调 → `apiDown` 标记 + `clearAll()`，否则顶栏残留旧歌名
+- **数据源**：SPlayer-Next external API，XMLHttpRequest 请求（参考 `services/Booru.qml`）。WS 事件驱动 + HTTP 兜底双轨：
+  - **WebSocket 主通道**（`services/wsclient.qml`，根类型 WebSocket）：服务端推 `track`/`lyric`/`status`/`ended` 事件——切歌/歌词/播放态即时更新，**不推连续 position**（`HIGH_FREQ_EVENTS` 过滤 `position`/`fftData`），`lineChange` 只在插件通道不经 WS
+  - **position 本地推算**：收到 status 事件（play/pause/seek 时带 position）`setAnchor`，播放中用 200ms Timer `anchorPos + (Date.now()-anchorAt)` 推算歌词行；1s HTTP `/api/status` 轮询校准漂移
+  - **降级**：WS 不可用（只开了 HTTP）时 `nowPlayingTimer` 5s 轮询 now-playing 走旧逻辑
+- **`import QtWebSockets` 深坑**：WebSocket **静态声明在 Singleton 内（或作 QtObject 子对象）永远不连接**（qml_rs 下状态停在 Connecting）——必须独立组件文件 `wsclient.qml` 以 WebSocket 为**根类型**、`Qt.createComponent` + `createObject(null)` 创建、事件在组件内部 handler 转发给 `SPlayer.onWsStatus/onWsMessage`（同目录 import 可见）；**外部 `.connect()` 与自定义 property 均不可靠**（property 会导致连接失败）
+- **同步**：缓存歌词行定位当前句（跳过 isBG），输出 lineText；WS `track` 事件切歌时先清行再 `loadLyrics()` HTTP 兜底（`lyric` 事件通常随后到覆盖）
+- **API 断开**：WS Error/Closed 或 HTTP 请求失败（非 200/onerror）→ `handleApiDown` → `apiDown` 标记 + `clearAll()`，否则顶栏残留旧歌名；`reconnectTimer` 3s 重连
 - **MPRIS `xesam:asText` 不是实时歌词标准**；主流靠播放器私有 API 或本地 LRC（quickshell-sample 是 Python 抓 QQ/网易云 LRC+轮询 position）
 - **marquee**（`Media.qml`）：lyricon 式 **ghost 无缝滚动**——主文本+ghost 副本（`ghostSpacing:48`），`scrollX` 从 0 线性滚到 `-(文本宽+间距)` 循环，副本顶替主文本视觉无缝；等速（duration=unit*25）；左右 14px 渐变 fading edge。**动画目标用独立属性 `scrollX`，Text.x 绑定它**（避免循环依赖）；短文本居中不滚动
 - 调试：Media 是常驻组件，加日志**用 Edit 工具**，勿用 sed 多行替换（会误改文件污染部署版）
