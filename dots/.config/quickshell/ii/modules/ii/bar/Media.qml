@@ -24,6 +24,9 @@ Item {
             ? `${splayerTitle}${splayerArtist ? ' • ' + splayerArtist : ''}`
             : `${cleanedTitle}${activePlayer?.trackArtist ? ' • ' + activePlayer.trackArtist : ''}`)
 
+    readonly property bool isInterlude: SPlayer.lineText === SPlayer.interludeText
+    readonly property int barHeight: Appearance.sizes.barHeight
+
     Layout.fillHeight: true
     implicitWidth: rowLayout.implicitWidth + rowLayout.spacing * 2
     implicitHeight: Appearance.sizes.barHeight
@@ -121,7 +124,7 @@ Item {
                 elide: Text.ElideNone
                 horizontalAlignment: Text.AlignLeft
                 color: Appearance.colors.colOnLayer1
-                text: root.displayText
+                text: root.isInterlude ? "" : root.displayText
                 x: textClip.scrollX
                 onTextChanged: textClip.restartScroll()
             }
@@ -133,9 +136,39 @@ Item {
                 elide: Text.ElideNone
                 horizontalAlignment: Text.AlignLeft
                 color: Appearance.colors.colOnLayer1
-                text: root.displayText
+                text: root.isInterlude ? "" : root.displayText
                 visible: textClip.scrolling
                 x: textClip.scrollX + textClip.unit
+            }
+
+            // Interlude/instrumental indicator: render ♪ ♪ ♪ via the Material
+            // icon font (the ♪ glyph falls back to a tiny symbol in the CJK
+            // body font otherwise). Stated statically: Repeater delegates with
+            // the icon font fail to render under quickshell.
+            Row {
+                id: interludeRow
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 4
+                visible: root.isInterlude
+                MaterialSymbol {
+                    text: "music_note"
+                    iconSize: Appearance.font.pixelSize.small
+                    fill: 1
+                    color: Appearance.colors.colOnLayer1
+                }
+                MaterialSymbol {
+                    text: "music_note"
+                    iconSize: Appearance.font.pixelSize.small
+                    fill: 1
+                    color: Appearance.colors.colOnLayer1
+                }
+                MaterialSymbol {
+                    text: "music_note"
+                    iconSize: Appearance.font.pixelSize.small
+                    fill: 1
+                    color: Appearance.colors.colOnLayer1
+                }
             }
 
             NumberAnimation {

@@ -33,6 +33,9 @@ Singleton {
 
     property var lyricLines: []
     property int positionMs: 0
+    // track duration (ms), used to detect a long instrumental outro after the
+    // last lyric line
+    property int durationMs: 0
     // true when the SPlayer API is unreachable (app closed); clears everything
     property bool apiDown: false
 
@@ -124,6 +127,7 @@ Singleton {
         root.httpGet(`${root.apiBase}/status`, function(st) {
             root.apiDown = false
             root.playing = st.state === "playing"
+            if (st.duration) root.durationMs = st.duration
             root.setAnchor(st.position ?? 0)
             root.updateLine()
         }, root.handleApiDown)
@@ -131,7 +135,8 @@ Singleton {
 
     // Mirror SPlayer's detectInterlude: when the position is inside a gap of
     // >= minInterludeGap between lyric lines (or before the first line), we are
-    // in an intro/interlude instrumental section.
+    // in an intro/interlude instrumental section. Extended: a long gap after
+    // the last lyric line (up to track end) is also an instrumental outro.
     function inInterlude(pos) {
         var lines = root.lyricLines
         if (lines.length === 0) return false
@@ -142,6 +147,12 @@ Singleton {
             var gapEnd = Math.max(gapStart, (lines[i].startTime ?? 0) - 250)
             if (gapEnd - gapStart < root.minInterludeGap) continue
             if (t > gapStart && t < gapEnd) return true
+        }
+        // outro: after the last lyric line until the track ends
+        if (root.durationMs > 0) {
+            var lastEnd = lines[lines.length - 1].endTime ?? 0
+            var outroEnd = Math.max(lastEnd, root.durationMs)
+            if (outroEnd - lastEnd >= root.minInterludeGap && t > lastEnd && t < outroEnd) return true
         }
         return false
     }
@@ -235,6 +246,7 @@ Singleton {
             root.apiDown = false
             var st = msg.data ?? {}
             root.playing = st.state === "playing"
+            if (st.duration) root.durationMs = st.duration
             root.setAnchor(st.position ?? root.positionMs)
             root.updateLine()
             break
