@@ -79,9 +79,3 @@ hyprpm enable scrolloverview
 - **#3135 Android 16 风格快捷设置**：[@fb24m](https://github.com/fb24m)
 - **#3484 songrec 识别修复**：[@xleb-normal](https://github.com/xleb-normal)
 
-### 上游的灵感来源与许可
-（继承自 [上游](https://github.com/end-4/dots-hyprland) 的 inspirations/copying 声明）
-
-- **灵感来源**：osu!lazer（Hybrid）、Windows 11（Windoes）、AvdanOS（NovelKnock）、Material Design 3（m3ww 及后续）
-- **复制**：完全自由，遵循许可证即可
-
