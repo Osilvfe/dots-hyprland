@@ -73,7 +73,6 @@ hyprpm enable scrolloverview
 本项目基于以下开源项目与贡献，特此致谢：
 
 - **上游基础**：[end-4/dots-hyprland](https://github.com/end-4/dots-hyprland) — 本项目的一切来源于此，Quickshell/II shell 与 Hyprland 配置框架均继承自上游
-- **滚动概览**：[yayuuu/hyprland-scroll-overview](https://github.com/yayuuu/hyprland-scroll-overview) — Hyprland 滚动平铺插件
 
 ### 合并自上游的 PR 贡献者
 - **#3497 设置侧栏**（WiFi/蓝牙/VPN/显示器）：[@Xlini22](https://github.com/Xlini22)
