@@ -36,6 +36,11 @@ Singleton {
     // true when the SPlayer API is unreachable (app closed); clears everything
     property bool apiDown: false
 
+    // text shown in the bar while inside an instrumental gap (interlude/intro)
+    property string interludeText: "♪ ♪ ♪"
+    // minimum gap (ms) between lyric lines that counts as an interlude
+    property int minInterludeGap: 4000
+
     // local-clock position extrapolation anchor (set by any status event/poll)
     property int anchorPos: 0
     property double anchorAt: 0
@@ -124,9 +129,30 @@ Singleton {
         }, root.handleApiDown)
     }
 
+    // Mirror SPlayer's detectInterlude: when the position is inside a gap of
+    // >= minInterludeGap between lyric lines (or before the first line), we are
+    // in an intro/interlude instrumental section.
+    function inInterlude(pos) {
+        var lines = root.lyricLines
+        if (lines.length === 0) return false
+        var t = pos + 20
+        // candidate gap = between line[i-1].endTime and line[i].startTime-250
+        for (var i = 0; i < lines.length; i++) {
+            var gapStart = i === 0 ? 0 : (lines[i - 1].endTime ?? 0)
+            var gapEnd = Math.max(gapStart, (lines[i].startTime ?? 0) - 250)
+            if (gapEnd - gapStart < root.minInterludeGap) continue
+            if (t > gapStart && t < gapEnd) return true
+        }
+        return false
+    }
+
     function updateLine() {
         if (root.apiDown || root.lyricLines.length === 0) { root.lineText = ""; return }
         var pos = root.positionMs
+        if (root.inInterlude(pos)) {
+            if (root.lineText !== root.interludeText) root.lineText = root.interludeText
+            return
+        }
         var active = ""
         for (var i = 0; i < root.lyricLines.length; i++) {
             var line = root.lyricLines[i]
