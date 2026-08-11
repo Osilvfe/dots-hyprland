@@ -111,6 +111,3 @@ patterns:
   - from: "dots/.config/starship.toml"
     to: "$XDG_CONFIG_HOME/starship.toml"
     mode: "soft"
-  - from: "dots/.config/thorium-flags.conf"
-    to: "$XDG_CONFIG_HOME/thorium-flags.conf"
-    mode: "soft"
