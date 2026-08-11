@@ -56,7 +56,13 @@ Singleton {
 			}
 
 			Component.onDestruction: {
-				if (root.trackedPlayer == null || !root.trackedPlayer.isPlaying) {
+				// If the destroyed player is the one we're tracking, drop it
+				// first so activePlayer doesn't keep pointing at a dead player
+				// (ghost media: title/artist linger after the app quits).
+				if (root.trackedPlayer === modelData) {
+					root.trackedPlayer = null;
+				}
+				if (root.trackedPlayer == null) {
 					for (const player of Mpris.players.values) {
 						if (player.playbackState.isPlaying) {
 							root.trackedPlayer = player;
