@@ -62,6 +62,20 @@
 - **`cp -r` 到已存在目录不会覆盖子文件**——同步后用 `grep`/`diff` 验证部署内容而非只看文件存在
 - 提交前检查 `git status`，只提交本仓库文件；改 qs 组件后需清 qmlcache 重启（见下）
 
+## 上游合并记录
+从 end-4/dots-hyprland 合并进本仓库的 PR（用 `git fetch <pr-remote> <branch>` + `git merge --no-commit` 合入，勿逐个 cherry-pick 中间提交）：
+- **#3484**（`eea9a660`）— songrec 音乐识别：`recognize-music.sh` 匹配 `"matches": [`（带空格）→ `"track":`，修紧凑 JSON 识别静默失败
+- **#3497**（`af766d4d`）— 设置侧栏：settings.qml `pages`→`iiPages` + `categories` 分层（illogical-impulse/Connectivity/Monitor/KDE），新增 `modules/settings/system/`（WifiConfig/BluetoothConfig/VpnConfig/MonitorConfig/KdeConfig 等 7 页）+ SettingsHome + NavigationRailButton 扩展 + illogical-impulse-symbolic.svg
+- **#3135**（`c7639efb`）— Android 16 风格快捷设置弹窗：蓝牙/夜间/音量/WiFi 对话框卡片化（`Section` 组件，colSurfaceContainerHighest），Appearance 加 `expressiveTitle`，WindowDialog 背景改 colLayer2Base；含 end-4 审查改进意见（见下）
+- 修复 #3497 合并带出的上游 bug：WifiDialog.qml 删 WindowDialogSeparator 残留孤儿 `visible` 行导致 QML 语法错误（`83125c42`）
+
+### #3135 待改善（end-4 意见，未做）
+- 蓝牙对话框提示文字 `pixelSize.smaller`（13px）过小 → 应调大
+- 蓝牙设备按 Gmail 式分组（可识别名称组 / MAC 地址组），参考 `waffle/startMenu/searchPage/SearchResults.qml`
+- 分区头左 padding 对齐分区圆角
+- 底部按钮 padding 收紧（WindowDialogButtonRow `margins:-8` + 各框 `margins:4`）
+- 设备颜色已实现（Discussion #3133 结论）：input=primary、audio=tertiary、其他=secondary（BluetoothDeviceItem.qml:45-47）
+
 ## 踩坑记录
 
 ### Quickshell/II 开发经验
