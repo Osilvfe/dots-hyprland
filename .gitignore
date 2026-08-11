@@ -17,3 +17,6 @@ __pycache__/
 *~
 
 .patches
+
+# Test scripts
+/test
