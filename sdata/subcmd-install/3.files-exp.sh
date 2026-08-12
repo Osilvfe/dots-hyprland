@@ -276,3 +276,10 @@ for pattern in "${patterns[@]}"; do
       ;;
   esac
 done
+
+# Prevent kded6 from grabbing org.kde.StatusNotifierWatcher (qs acts as the
+# SNI watcher). Safe to run on every install: it no-ops on KDE sessions.
+if [[ -x "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland/scripts/mask_kded6.sh" ]]; then
+  echo "Masking kded6 SNI watcher..."
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprland/scripts/mask_kded6.sh"
+fi

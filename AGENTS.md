@@ -53,7 +53,7 @@
 - `SUPER` 单按=搜索框 toggle（release 触发）；`SUPER+Tab` 概览；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件
 
 ### 常用脚本（`hyprland/scripts/`）
-- `start_sni_watcher.sh` —— 确保 kded6 持有 SNI watcher（qs 启动时调用）
+- `mask_kded6.sh` —— 屏蔽 kded6 抢 SNI watcher（qs 当 watcher；安装时执行一次，KDE 会话自动还原）
 - `gamepad-active.py` —— 手柄检测（hypridle 用）
 - `fuzzel-emoji.sh`、`snip_to_search.sh`、`launch_first_available.sh`、`switchfloatfocus.sh`
 
@@ -138,14 +138,11 @@
 - 调试：Media 是常驻组件，加日志**用 Edit 工具**，勿用 sed 多行替换（会误改文件污染部署版）
 
 ### SNI 系统托盘（本项目定制，深坑）
-- **架构**：watcher（kded6）维护 item 列表 ← item 注册；host（qs）从 watcher 读列表。item 注册到 watcher，**不依赖 host**
-- **Quickshell 抢 watcher**：`StatusNotifierHost` 构造时 `StatusNotifierWatcher::instance()` 强制确保 watcher——若 kded6 未就绪 qs 自己注册。**qs 当 watcher 的后果**：item 注册到 qs，`pkill -x qs` 重启 → item 全丢
-- **应用行为差异**：fcitx5 监听 watcher 变化、自动重注册（新 bus name）→ qs 累积**重复残留**；QQ/微信（Electron）**只在启动时注册一次**，watcher 消失**永不重注册** → 图标永久丢失
+- **架构（当前）**：**qs 自建 watcher**（vanilla quickshell，`StatusNotifierWatcher::instance()`），`mask_kded6.sh` 手动执行一次屏蔽 kded6（假 D-Bus service `Exec=/bin/false` + `systemctl --user mask plasma-kded6.service`，KDE 会话时还原）——kded6 永不抢 watcher 角色。**注意**：qs 当 watcher 的代价是 `pkill -x qs` 重启会丢 QQ/微信（Electron 只注册一次）图标
+- **旧方案（已废弃）**：qs 纯 host + kded6 当 watcher（`sni-stale-cleanup.patch` 移除了 watcher 创建 + `start_sni_watcher.sh` 拉起 kded6）。patch 已从 PKGBUILD 删除，qs 恢复原版
+- **应用行为差异**：fcitx5 监听 watcher 变化、自动重注册（新 bus name）→ 可能累积重复残留；QQ/微信（Electron）只在启动时注册一次，watcher 消失永不重注册 → 图标永久丢失
 - **`devicenotifications` 崩溃**：kded6 纯 Hyprland 下该模块 `wl_proxy_get_version` 崩溃 → 禁用 `~/.config/kded5rc` `[Module-devicenotifications] autoload=false`。**kded6 读 `kded5rc` 不是 `kded6rc`**（KDE 源码写死）
-- **最终方案**：qs 保持**纯 host**（patch 移除 watcher 创建——`sdata/dist-arch/illogical-impulse-quickshell-git/sni-stale-cleanup.patch`，经 PKGBUILD `prepare()` 应用）；patch 同时让 host **监听每个 item 的 bus name**（QDBusServiceWatcher），bus 消失移除 stale item（修 fcitx5 重复）；`shell.qml` 启动 3s 后跑 `start_sni_watcher.sh`
-- **`start_sni_watcher.sh`**：watcher 有 owner 就退出；无则 `nohup /usr/bin/kded6 &` 轮询等待（20×0.25s）。**busctl 加 `timeout 2` 防阻塞**；qs 调用用 `execDetached(["bash","-lc","export PATH=/usr/bin:$PATH; ..."])`（**QProcess 不继承完整 PATH**，直接跑脚本静默失败）
-- **QML 层无法区分重复 item**：重复 fcitx5 的 id/title/icon/hasMenu/status 全相同（未暴露 bus 地址）——只能 C++ patch 修
-- **调试纪律**：反复 `pkill -x qs` 会放大 SNI 竞态，区分"测试操作导致"和"真实 bug"（kded6 崩溃实为 devicenotifications 自身崩溃，与 qs 无关）
+- **验证**：`busctl --user status org.kde.StatusNotifierWatcher | grep PID=` 看 watcher 归属；`busctl --user get-property ... RegisteredStatusNotifierItems` 看 items；每个 item `busctl --user status <bus> | grep PID=` 确认归属
 
 ### hyprpm / Hyprland 插件
 - **编译失败排查**：先看 `hyprpm update -v` 的 g++ 报错。头文件 API 不匹配（`keybinds/Resolver.hpp`、`groupsLocked`、`m_bindInvocationDepth`）说明插件追新但 Hyprland 旧——手动 `hyprpm add <url> <git rev>` 锁兼容 commit
