@@ -18,7 +18,23 @@ Singleton {
 	id: root;
 	property list<MprisPlayer> players: Mpris.players.values.filter(player => isRealPlayer(player));
 	property MprisPlayer trackedPlayer: null;
-	property MprisPlayer activePlayer: trackedPlayer ?? Mpris.players.values[0] ?? null;
+	// Bumped whenever a player appears/disappears. computeActivePlayer reads it
+	// so the activePlayer binding re-evaluates even when a non-tracked fallback
+	// player dies (otherwise a dead player would linger as activePlayer forever).
+	property int playersRevision: 0;
+	function computeActivePlayer() {
+		root.playersRevision; // dependency
+		const t = root.trackedPlayer;
+		if (t != null && root.isRealPlayer(t)) return t;
+		for (const p of Mpris.players.values) {
+			if (root.isRealPlayer(p) && p.playbackState.isPlaying) return p;
+		}
+		for (const p of Mpris.players.values) {
+			if (root.isRealPlayer(p)) return p;
+		}
+		return null;
+	}
+	property MprisPlayer activePlayer: root.computeActivePlayer();
 	signal trackChanged(reverse: bool);
 
 	property bool __reverse: false;
@@ -47,36 +63,49 @@ Singleton {
 
 		Connections {
 			required property MprisPlayer modelData;
+			// modelData is cleared to null before Component.onDestruction runs,
+			// so capture the player at creation time for use during destruction.
+			property MprisPlayer playerRef: null;
 			target: modelData;
 
 			Component.onCompleted: {
+				root.playersRevision++;
+				playerRef = modelData;
+				if (!root.isRealPlayer(modelData)) return;
 				if (root.trackedPlayer == null || modelData.isPlaying) {
 					root.trackedPlayer = modelData;
 				}
 			}
 
 			Component.onDestruction: {
+				root.playersRevision++;
 				// If the destroyed player is the one we're tracking, drop it
 				// first so activePlayer doesn't keep pointing at a dead player
 				// (ghost media: title/artist linger after the app quits).
-				if (root.trackedPlayer === modelData) {
+				if (playerRef != null && root.trackedPlayer === playerRef) {
 					root.trackedPlayer = null;
 				}
 				if (root.trackedPlayer == null) {
 					for (const player of Mpris.players.values) {
-						if (player.playbackState.isPlaying) {
+						if (player !== playerRef && root.isRealPlayer(player) && player.playbackState.isPlaying) {
 							root.trackedPlayer = player;
 							break;
 						}
 					}
 
-					if (trackedPlayer == null && Mpris.players.values.length != 0) {
-						trackedPlayer = Mpris.players.values[0];
+					if (trackedPlayer == null) {
+						for (const player of Mpris.players.values) {
+							if (player !== playerRef && root.isRealPlayer(player)) {
+								trackedPlayer = player;
+								break;
+							}
+						}
 					}
 				}
 			}
 
 			function onPlaybackStateChanged() {
+				if (!root.isRealPlayer(modelData)) return;
 				if (root.trackedPlayer !== modelData) root.trackedPlayer = modelData;
 			}
 		}
@@ -160,7 +189,7 @@ Singleton {
 	}
 
 	function setActivePlayer(player: MprisPlayer) {
-		const targetPlayer = player ?? Mpris.players[0];
+		const targetPlayer = player ?? root.computeActivePlayer();
 		console.log(`[Mpris] Active player ${targetPlayer} << ${activePlayer}`)
 
 		if (targetPlayer && this.activePlayer) {

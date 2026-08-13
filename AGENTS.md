@@ -137,6 +137,12 @@
 - **marquee**（`Media.qml`）：lyricon 式 **ghost 无缝滚动**——主文本+ghost 副本（`ghostSpacing:48`），`scrollX` 从 0 线性滚到 `-(文本宽+间距)` 循环，副本顶替主文本视觉无缝；等速（duration=unit*25）；左右 14px 渐变 fading edge。**动画目标用独立属性 `scrollX`，Text.x 绑定它**（避免循环依赖）；短文本居中不滚动
 - 调试：Media 是常驻组件，加日志**用 Edit 工具**，勿用 sed 多行替换（会误改文件污染部署版）
 
+### MPRIS 幽灵标题（MprisController，本项目定制，深坑）
+- **症状**：播放器（SPlayer/浏览器）退出后顶栏残留旧标题
+- **根因 1（主因）**：`Instantiator` delegate 里 `Component.onDestruction` 触发时 **`required property modelData` 已被清空为 null**（QML 销毁时清 context property）——`trackedPlayer === modelData` 比较永远 false，死 player 引用永不清除。**修法：onCompleted 里捕获 `property MprisPlayer playerRef = modelData`，onDestruction 用 playerRef 比较**（死亡 C++ 对象的 QML wrapper 身份比较仍有效，但读其属性如 dbusName 已返回 undefined）
+- **根因 2（帮凶）**：**playerctld 僵尸镜像**——playerctld 受控的最后一个 player 消失时**只发 `ActivePlayerChangeBegin("")`、不发 PropertiesChanged**（playerctl-daemon.c 源码实证），qs 里 playerctld 的 MprisPlayer 对象永久缓存旧 title + Playing 状态；重选 fallback（`Mpris.players.values[0]`）会选中它。**修法：tracking/fallback/activePlayer 全部经 `isRealPlayer` 过滤（含 playerctld），activePlayer 改用 `computeActivePlayer()` 函数绑定 + `playersRevision` 计数（player 出现/消失时自增，触发重算，否则 fallback player 死亡时绑定不重算）**
+- **验证手段**：`/tmp/opencode/fakempris.py` 假 MPRIS player（python-dbus，注册 `org.mpris.MediaPlayer2.faketest` + GetAll 完整属性，playerctld 会镜像它）——跑 N 秒退出，观察 qs 日志 tracked/active 变化；playerctld 镜像状态用 `busctl get-property org.mpris.MediaPlayer2.playerctld` 验证
+
 ### SNI 系统托盘（本项目定制，深坑）
 - **架构（当前）**：**qs 自建 watcher**（vanilla quickshell，`StatusNotifierWatcher::instance()`），`mask_kded6.sh` 手动执行一次屏蔽 kded6（假 D-Bus service `Exec=/bin/false` + `systemctl --user mask plasma-kded6.service`，KDE 会话时还原）——kded6 永不抢 watcher 角色。**注意**：qs 当 watcher 的代价是 `pkill -x qs` 重启会丢 QQ/微信（Electron 只注册一次）图标
 - **旧方案（已废弃）**：qs 纯 host + kded6 当 watcher（`sni-stale-cleanup.patch` 移除了 watcher 创建 + `start_sni_watcher.sh` 拉起 kded6）。patch 已从 PKGBUILD 删除，qs 恢复原版
