@@ -26,6 +26,6 @@ QuickToggleButton {
     }
 
     StyledToolTip {
-        text: "JamesDSP | Right-click to configure"
+        text: Translation.tr("JamesDSP | Right-click to configure")
     }
 }

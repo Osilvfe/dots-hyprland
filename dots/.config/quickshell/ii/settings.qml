@@ -88,11 +88,6 @@ ApplicationWindow {
                     name: Translation.tr("Bluetooth"),
                     icon: "bluetooth",
                     component: "modules/settings/system/BluetoothConfig.qml"
-                },
-                {
-                    name: Translation.tr("VPN"),
-                    icon: "vpn_key",
-                    component: "modules/settings/system/VpnConfig.qml"
                 }
             ]
         },

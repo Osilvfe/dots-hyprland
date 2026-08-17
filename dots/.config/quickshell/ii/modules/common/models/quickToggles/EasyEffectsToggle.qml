@@ -7,7 +7,7 @@ import qs.modules.common.functions
 import qs.modules.common.widgets
 
 QuickToggleModel {
-    name: "JamesDSP"
+    name: Translation.tr("JamesDSP")
 
     available: EasyEffects.available
     toggled: EasyEffects.active
@@ -26,5 +26,5 @@ QuickToggleModel {
         GlobalStates.sidebarRightOpen = false
     }
 
-    tooltipText: "JamesDSP | Right-click to configure"
+    tooltipText: Translation.tr("JamesDSP | Right-click to configure")
 }

@@ -11,6 +11,7 @@ import qs.modules.common.widgets
 import qs.modules.waffle.looks
 import qs.modules.waffle.actionCenter.bluetooth
 import qs.modules.waffle.actionCenter.nightLight
+import qs.modules.waffle.actionCenter.clashVerge
 import qs.modules.waffle.actionCenter.volumeControl
 import qs.modules.waffle.actionCenter.wifi
 
@@ -41,10 +42,24 @@ DelegateChooser {
         }
     }
     DelegateChoice {
+        roleValue: "clashVerge"
+        ActionCenterToggleButton {
+            toggleModel: ClashVergeToggle {}
+            icon: "shield"
+            menu: Component {
+                ClashVergeControl {}
+            }
+        }
+    }
+    // Old configs still store type "cloudflareWarp"; map it to Clash Verge.
+    DelegateChoice {
         roleValue: "cloudflareWarp"
         ActionCenterToggleButton {
-            toggleModel: CloudflareWarpToggle {}
-            icon: "cloudflare"
+            toggleModel: ClashVergeToggle {}
+            icon: "shield"
+            menu: Component {
+                ClashVergeControl {}
+            }
         }
     }
     DelegateChoice {

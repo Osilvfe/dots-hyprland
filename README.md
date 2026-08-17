@@ -37,11 +37,14 @@
 
 ### 系统托盘（SNI）
 - **qs 自建 StatusNotifierWatcher**；安装后执行 `mask_kded6.sh`，避免 kded6 抢 watcher
-- `pkill -x qs` 重启会丢掉 QQ/微信（Electron 只注册一次）图标，需重开对应应用
 - 已禁用 kded6 `devicenotifications`（纯 Hyprland 下崩溃；kded6 读的是 `kded5rc`）
 
 ### 日历 / 节假日
 - 侧栏日历显示中文节假日：节日名 + 休/班标记（Nager.Date 定节日当天，holiday-cn 定放假/调休，离线缓存）
+
+### Clash Verge Rev
+- 右侧栏 / 操作中心快捷图块控制 TUN 与系统代理（经 Clash Verge 托盘菜单，窗口状态同步）
+- 单击默认开 TUN；右键可单独开关系统代理
 
 ### 其他
 - 窗口阴影 `render_power = 4`

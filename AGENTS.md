@@ -23,11 +23,11 @@
 - 入口 `shell.qml`（`qs -c ii` 加载），`settings.qml`（设置应用），`welcome.qml`
 - `services/` —— Singleton 服务（`pragma Singleton`）：
   - 系统类：Audio/Brightness/Cliphist/Battery/Network/BluetoothStatus/Wallpapers/Notifications/Idle/Updates/Weather/HyprlandData/HyprlandXkb/Hyprsunset
-  - 定制类：`SPlayer.qml`（歌词）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`
+  - 定制类：`SPlayer.qml`（歌词）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`、`ClashVerge.qml`（Clash Verge Rev TUN/系统代理）
 - `modules/`：
   - `common/` —— 共享基础：`Config.qml`（配置定义 JsonObject）、`Directories.qml`（路径，带 file://）、`Appearance.qml`（主题/颜色/字体）、`functions/FileUtils.qml`、`widgets/`（通用组件）、`panels/`（lock 等）
   - `ii/` —— 主面板族：`bar/`（顶栏，含 Media/SysTray/Workspaces/Resources 等）、`sidebarLeft/`、`sidebarRight/`（日历/节假日）、`overview/`（搜索框+emoji）、`overlay/`（截图/录屏区域）、`recordingStatus/`、`mediaControls/`、`background/` 等
-  - `settings/` —— 设置页（BarConfig/GeneralConfig/InterfaceConfig）+ `settings/system/`（Wifi/Bluetooth/VPN/Monitor/KDE）
+  - `settings/` —— 设置页（BarConfig/GeneralConfig/InterfaceConfig）+ `settings/system/`（Wifi/Bluetooth/Monitor/KDE）
   - `waffle/` —— 另一个面板族（可切换）
 - `translations/zh_CN.json` —— 中文翻译（新 key 追加到文件末尾，勿 `sorted()` 重排）
 - `assets/`、`defaults/`、`scripts/`（含 `launch-detached-qs.sh`：清 qs crash 环境变量后再 `qs -p` 开设置/欢迎页）
@@ -70,7 +70,7 @@
 
 ### 整支 merge
 - **#3484**（`eea9a660`）— songrec 音乐识别：`recognize-music.sh` 匹配 `"matches": [`（带空格）→ `"track":`，修紧凑 JSON 识别静默失败
-- **#3497**（`af766d4d`）— 设置侧栏：settings.qml `pages`→`iiPages` + `categories` 分层（illogical-impulse/Connectivity/Monitor/KDE），新增 `modules/settings/system/`（WifiConfig/BluetoothConfig/VpnConfig/MonitorConfig/KdeConfig 等 7 页）+ SettingsHome + NavigationRailButton 扩展 + illogical-impulse-symbolic.svg
+- **#3497**（`af766d4d`）— 设置侧栏：settings.qml `pages`→`iiPages` + `categories` 分层（illogical-impulse/Connectivity/Monitor/KDE），新增 `modules/settings/system/`（WifiConfig/BluetoothConfig/MonitorConfig/KdeConfig 等；**未保留 VpnConfig**）+ SettingsHome + NavigationRailButton 扩展 + illogical-impulse-symbolic.svg
 - **#3135**（`c7639efb`）— Android 16 风格快捷设置弹窗：蓝牙/夜间/音量/WiFi 对话框卡片化（`Section` 组件，colSurfaceContainerHighest），Appearance 加 `expressiveTitle`，WindowDialog 背景改 colLayer2Base
 - 修复 #3497 合并带出的上游 bug：WifiDialog.qml 删 WindowDialogSeparator 残留孤儿 `visible` 行导致 QML 语法错误（`83125c42`）
 
@@ -172,10 +172,17 @@
 - **根因 2（帮凶）**：**playerctld 僵尸镜像**——playerctld 受控的最后一个 player 消失时**只发 `ActivePlayerChangeBegin("")`、不发 PropertiesChanged**（playerctl-daemon.c 源码实证），qs 里 playerctld 的 MprisPlayer 对象永久缓存旧 title + Playing 状态。**修法：`isRealPlayer` 无条件丢掉 playerctld**（即使 `filterDuplicatePlayers` 关闭）；tracking/fallback/activePlayer 全部经 `isRealPlayer`；activePlayer 用 `computeActivePlayer()` + `playersRevision`（player 出现/消失时自增，否则 fallback 死亡时绑定不重算）
 - **验证**：用假 MPRIS bus（`org.mpris.MediaPlayer2.faketest`，GetAll 完整属性，playerctld 会镜像）跑几秒退出，看 tracked/active；镜像状态用 `busctl get-property org.mpris.MediaPlayer2.playerctld`
 
+### Clash Verge Rev 图块（本项目定制）
+- 替换原 Cloudflare Warp 快捷开关（类型 `clashVerge`；旧配置里的 `cloudflareWarp` 仍映射到同一图块）
+- `services/ClashVerge.qml`：状态读 Mihomo HTTP。`secret` 和 `external-controller` 来自 `~/.local/share/io.github.clash-verge-rev.clash-verge-rev/clash-verge.yaml`（默认 `127.0.0.1:9097`）。**secret 只读配置，永不写进仓库或硬编码**
+- **开关必须走 Clash Verge 托盘菜单**（`SystemTray.items` → `QsMenuOpener` → 文案匹配「系统代理」/「TUN 模式」→ `QsMenuEntry.triggered()`）。这会跑 `patch_verge` + `refresh_verge`，窗口才能同步。直接 `PATCH /configs` 或改 `verge.yaml` **不会**刷新 GUI。托盘未就绪时才 fallback HTTP/`gsettings`
+- 图块单击默认开 **TUN**；再点关系统代理 + TUN。右键对话框可单独开关
+- 改组件后清 qmlcache 重启 qs
+
 ### SNI 系统托盘（本项目定制，深坑）
-- **架构（当前）**：**qs 自建 watcher**（vanilla quickshell，`StatusNotifierWatcher::instance()`），`mask_kded6.sh` 屏蔽 kded6——kded6 不抢 watcher。**代价**：`pkill -x qs` 会丢 QQ/微信（Electron 只注册一次）图标
+- **架构（当前）**：**qs 自建 watcher**（vanilla quickshell，`StatusNotifierWatcher::instance()`），`mask_kded6.sh` 屏蔽 kded6——kded6 不抢 watcher
 - **旧方案（已废弃）**：qs 纯 host + kded6 当 watcher（`sni-stale-cleanup.patch` + `start_sni_watcher.sh`）。patch 已从 PKGBUILD 删除，仓库里也没有该脚本
-- **应用行为差异**：fcitx5 监听 watcher 变化、自动重注册（新 bus name）→ 可能累积重复残留；QQ/微信（Electron）只在启动时注册一次，watcher 消失永不重注册 → 图标永久丢失
+- **应用行为差异**：fcitx5 监听 watcher 变化、自动重注册（新 bus name）→ 可能累积重复残留。QQ/微信会随 watcher 重建重新挂上，重启 qs 不必重开应用
 - **`devicenotifications` 崩溃**：kded6 纯 Hyprland 下该模块 `wl_proxy_get_version` 崩溃 → 仓库 `dots/.config/kded5rc` `[Module-devicenotifications] autoload=false`。**kded6 读 `kded5rc` 不是 `kded6rc`**
 - **验证**：`busctl --user status org.kde.StatusNotifierWatcher | grep PID=` 看是否为 qs
 
@@ -190,3 +197,4 @@
 
 ### 其他
 - 系统声音录制时若默认输出是蓝牙耳机，确保 A2DP 模式（HFP 已禁用）
+- **GitHub 故障**：raw/API 容易返回 404，**不代表仓库或文件不存在**。优先用本地已有源码/缓存，勿据此删功能或改实现

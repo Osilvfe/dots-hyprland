@@ -14,6 +14,7 @@ import qs.modules.ii.sidebarRight.quickToggles
 import qs.modules.ii.sidebarRight.quickToggles.classicStyle
 
 import qs.modules.ii.sidebarRight.bluetoothDevices
+import qs.modules.ii.sidebarRight.clashVerge
 import qs.modules.ii.sidebarRight.nightLight
 import qs.modules.ii.sidebarRight.volumeMixer
 import qs.modules.ii.sidebarRight.wifiNetworks
@@ -28,6 +29,7 @@ Item {
     property bool showBluetoothDialog: false
     property bool showNightLightDialog: false
     property bool showWifiDialog: false
+    property bool showClashVergeDialog: false
     property bool editMode: false
 
     Connections {
@@ -38,6 +40,7 @@ Item {
                 root.showBluetoothDialog = false;
                 root.showAudioOutputDialog = false;
                 root.showAudioInputDialog = false;
+                root.showClashVergeDialog = false;
             }
         }
     }
@@ -145,6 +148,11 @@ Item {
     }
 
     ToggleDialog {
+        shownPropertyString: "showClashVergeDialog"
+        dialog: ClashVergeDialog {}
+    }
+
+    ToggleDialog {
         shownPropertyString: "showWifiDialog"
         dialog: WifiDialog {}
         onShownChanged: {
@@ -204,6 +212,9 @@ Item {
             }
             function onOpenWifiDialog() {
                 root.showWifiDialog = true;
+            }
+            function onOpenClashVergeDialog() {
+                root.showClashVergeDialog = true;
             }
         }
     }

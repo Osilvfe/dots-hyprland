@@ -34,6 +34,10 @@ AbstractQuickPanel {
         GameMode {}
         IdleInhibitor {}
         EasyEffectsToggle {}
-        CloudflareWarp {}
+        ClashVerge {
+            altAction: () => {
+                root.openClashVergeDialog();
+            }
+        }
     }
 }

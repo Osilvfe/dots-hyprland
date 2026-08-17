@@ -124,7 +124,7 @@ Item {
 
         WChoiceButton {
             visible: EasyEffects.available && root.output
-            text: "JamesDSP"
+            text: Translation.tr("JamesDSP")
             checked: EasyEffects.active
             onClicked: EasyEffects.enable()
         }

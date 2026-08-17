@@ -19,6 +19,7 @@ DelegateChooser {
     signal openBluetoothDialog()
     signal openNightLightDialog()
     signal openWifiDialog()
+    signal openClashVergeDialog()
 
     role: "type"
 
@@ -70,7 +71,7 @@ DelegateChooser {
         }
     } }
 
-    DelegateChoice { roleValue: "cloudflareWarp"; AndroidCloudflareWarpToggle {
+    DelegateChoice { roleValue: "clashVerge"; AndroidClashVergeToggle {
         required property int index
         required property var modelData
         buttonIndex: root.startingIndex + index
@@ -81,6 +82,26 @@ DelegateChooser {
         baseCellHeight: root.baseCellHeight
         cellSpacing: root.spacing
         cellSize: modelData.size
+        onOpenMenu: {
+            root.openClashVergeDialog()
+        }
+    } }
+
+    // Old configs still store type "cloudflareWarp"; map it to Clash Verge.
+    DelegateChoice { roleValue: "cloudflareWarp"; AndroidClashVergeToggle {
+        required property int index
+        required property var modelData
+        buttonIndex: root.startingIndex + index
+        buttonData: modelData
+        editMode: root.editMode
+        expandedSize: modelData.size > 1
+        baseCellWidth: root.baseCellWidth
+        baseCellHeight: root.baseCellHeight
+        cellSpacing: root.spacing
+        cellSize: modelData.size
+        onOpenMenu: {
+            root.openClashVergeDialog()
+        }
     } }
 
     DelegateChoice { roleValue: "colorPicker"; AndroidColorPickerToggle {
