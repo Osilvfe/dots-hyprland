@@ -151,9 +151,18 @@ hl.curve("niriClose", {
     points = {{0.16, 1.0}, {0.3, 1.0}}
 })
 -- spring damping=0.8 stiffness=400 approximation (with visible bounce)
+-- used for window moves; workspace switch uses a real spring below
 hl.curve("niriSpring", {
     type = "bezier",
     points = {{0.12, 1.12}, {0.04, 1.04}}
+})
+-- Niri workspace-switch: mass=1, k=1000, ζ=1 (critically damped, no bounce)
+-- dampening = 2 * sqrt(stiffness * mass); duration is physics-based (speed unused)
+hl.curve("niriWorkspace", {
+    type = "spring",
+    mass = 1,
+    stiffness = 1000,
+    dampening = 63.2,
 })
 hl.curve("standardDecel", {
     type = "bezier",
@@ -170,29 +179,29 @@ hl.curve("scrolloverviewWorkspaceRemoveFade", {
     type = "bezier",
     points = {{0.16, 1.0}, {0.3, 1.0}}
 })
--- windows (Niri: window-open 500ms / window-close 150ms)
+-- Hyprland speed is ds (1 = 100ms). Overshoot curves need ~350ms to read.
 hl.animation({
     leaf = "windowsIn",
     enabled = true,
-    speed = 2.0,
+    speed = 3.5,
     bezier = "niriOpen",
 })
 hl.animation({
     leaf = "fadeIn",
     enabled = true,
-    speed = 2.0,
+    speed = 3.5,
     bezier = "niriOpen"
 })
 hl.animation({
     leaf = "windowsOut",
     enabled = true,
-    speed = 2.0,
+    speed = 1.5,
     bezier = "niriClose",
 })
 hl.animation({
     leaf = "fadeOut",
     enabled = true,
-    speed = 2.0,
+    speed = 1.5,
     bezier = "niriClose"
 })
 hl.animation({
@@ -209,42 +218,42 @@ hl.animation({
     bezier = "niriSpring"
 })
 
--- layers
+-- layers: open a bit slower than close so sidebars don't feel sticky on dismiss
 hl.animation({
     leaf = "layersIn",
     enabled = true,
-    speed = 2.0,
+    speed = 2.5,
     bezier = "niriOpen",
 })
 hl.animation({
     leaf = "layersOut",
     enabled = true,
-    speed = 3.0,
+    speed = 2.0,
     bezier = "niriClose",
     style = "slide"
 })
 hl.animation({
     leaf = "fadeLayersIn",
     enabled = true,
-    speed = 2.0,
+    speed = 2.5,
     bezier = "niriOpen"
 })
 hl.animation({
     leaf = "fadeLayersOut",
     enabled = true,
-    speed = 3.0,
+    speed = 2.0,
     bezier = "niriClose"
 })
 
--- workspaces (Niri: spring damping=0.8 stiffness=400)
+-- workspaces: real spring (Niri default), vertical stack with gaps_workspaces
 hl.animation({
     leaf = "workspaces",
     enabled = true,
-    speed = 3.5,
-    bezier = "niriSpring",
+    speed = 4,
+    spring = "niriWorkspace",
     style = "slidevert"
 })
--- fade windows when switching workspaces (Niri slides + fades)
+-- fade on active-window / inactive-opacity change (not the workspace slide)
 hl.animation({
     leaf = "fadeSwitch",
     enabled = true,
@@ -261,7 +270,7 @@ hl.animation({
 hl.animation({
     leaf = "fadePopupsOut",
     enabled = true,
-    speed = 3.0,
+    speed = 2.0,
     bezier = "niriClose"
 })
 -- shadow fades with the window
@@ -279,19 +288,12 @@ hl.animation({
     bezier = "niriOpen"
 })
 
--- specialWorkspace
+-- specialWorkspace (scratchpad): same spring so it matches workspace switch
 hl.animation({
-    leaf = "specialWorkspaceIn",
+    leaf = "specialWorkspace",
     enabled = true,
-    speed = 2.0,
-    bezier = "niriOpen",
-    style = "slidevert"
-})
-hl.animation({
-    leaf = "specialWorkspaceOut",
-    enabled = true,
-    speed = 3.5,
-    bezier = "niriClose",
+    speed = 4,
+    spring = "niriWorkspace",
     style = "slidevert"
 })
 

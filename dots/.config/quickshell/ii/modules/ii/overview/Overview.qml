@@ -18,9 +18,12 @@ Scope {
     PanelWindow {
         id: panelWindow
         property string searchingText: ""
+        property bool keepSearchMounted: false
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
         property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
-        visible: GlobalStates.overviewOpen
+        readonly property int revealDuration: GlobalStates.overviewOpen ? 280 : 160
+        readonly property var revealCurve: GlobalStates.overviewOpen ? Appearance.animationCurves.emphasizedDecel : Appearance.animationCurves.emphasizedAccel
+        visible: keepSearchMounted || GlobalStates.overviewOpen
 
         WlrLayershell.namespace: "quickshell:overview"
         WlrLayershell.layer: WlrLayer.Top
@@ -38,6 +41,13 @@ Scope {
             right: true
         }
 
+        Timer {
+            id: unmountTimer
+            interval: 180
+            repeat: false
+            onTriggered: panelWindow.keepSearchMounted = false
+        }
+
         Connections {
             target: GlobalStates
             function onOverviewOpenChanged() {
@@ -45,7 +55,10 @@ Scope {
                     searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;
                     GlobalFocusGrab.dismiss();
+                    unmountTimer.restart();
                 } else {
+                    unmountTimer.stop();
+                    panelWindow.keepSearchMounted = true;
                     if (!overviewScope.dontAutoCancelSearch) {
                         searchWidget.cancelSearch();
                     }
@@ -63,6 +76,12 @@ Scope {
         implicitWidth: columnLayout.implicitWidth
         implicitHeight: columnLayout.implicitHeight
 
+        component RevealAnim: NumberAnimation {
+            duration: panelWindow.revealDuration
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: panelWindow.revealCurve
+        }
+
         function setSearchingText(text) {
             searchWidget.setSearchingText(text);
             searchWidget.focusFirstItem();
@@ -70,14 +89,17 @@ Scope {
 
         Column {
             id: columnLayout
-            visible: GlobalStates.overviewOpen
             width: Math.min(680, panelWindow.width - 80)
-            anchors {
-                horizontalCenter: parent.horizontalCenter
-                top: parent.top
-                topMargin: panelWindow.height * 0.18
-            }
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: panelWindow.height * 0.18 + (GlobalStates.overviewOpen ? 0 : 16)
             spacing: -8
+            opacity: GlobalStates.overviewOpen ? 1 : 0
+            scale: GlobalStates.overviewOpen ? 1 : 0.94
+            transformOrigin: Item.Top
+
+            Behavior on opacity { RevealAnim {} }
+            Behavior on scale { RevealAnim {} }
+            Behavior on y { RevealAnim {} }
 
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Escape) {

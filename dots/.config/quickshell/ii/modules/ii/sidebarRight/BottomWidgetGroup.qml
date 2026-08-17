@@ -40,9 +40,9 @@ Rectangle {
 
     Behavior on implicitHeight {
         NumberAnimation {
-            duration: Appearance.animation.elementMove.duration
-            easing.type: Appearance.animation.elementMove.type
-            easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+            duration: Appearance.animation.elementMoveSmall.duration
+            easing.type: Appearance.animation.elementMoveSmall.type
+            easing.bezierCurve: Appearance.animation.elementMoveSmall.bezierCurve
         }
     }
 
@@ -58,7 +58,7 @@ Rectangle {
 
     Timer {
         id: collapseCleanFadeTimer
-        interval: Appearance.animation.elementMove.duration / 2
+        interval: Appearance.animation.elementMoveSmall.duration / 2
         repeat: false
         onTriggered: {
             if (collapsed)
