@@ -3,17 +3,27 @@ pragma ComponentBehavior: Bound
 
 import Quickshell
 import Quickshell.Bluetooth
-import Quickshell.Io
 import QtQuick
+import QtQml.Models
 
 Singleton {
     id: root
 
+    // BlueZ often adds Battery1 after Connected=true. JS .filter/.some on
+    // Bluetooth.devices.values does not re-run when a device property changes,
+    // so bump this from per-device Connections.
+    property int deviceRevision: 0
+
     readonly property bool available: Bluetooth.adapters.values.length > 0
     readonly property bool enabled: Bluetooth.defaultAdapter?.enabled ?? false
-    readonly property BluetoothDevice firstActiveDevice: Bluetooth.defaultAdapter?.devices.values.find(device => device.connected) ?? null
-    readonly property int activeDeviceCount: Bluetooth.defaultAdapter?.devices.values.filter(device => device.connected).length ?? 0
-    readonly property bool connected: Bluetooth.devices.values.some(d => d.connected)
+    readonly property BluetoothDevice firstActiveDevice: {
+        var _ = root.deviceRevision;
+        return Bluetooth.devices.values.find(device => device.connected) ?? null;
+    }
+    readonly property int activeDeviceCount: connectedDevices.length
+    readonly property bool connected: connectedDevices.length > 0
+    readonly property var connectedBatteryDevices: connectedDevices.filter(d => d.batteryAvailable)
+    readonly property bool hasConnectedBattery: connectedBatteryDevices.length > 0
 
     function isMacName(name) {
         return /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(name ?? "");
@@ -28,9 +38,37 @@ Singleton {
         // Alphabetical by name
         return a.name.localeCompare(b.name);
     }
-    property list<var> connectedDevices: Bluetooth.devices.values.filter(d => d.connected).sort(sortFunction)
-    property list<var> pairedButNotConnectedDevices: Bluetooth.devices.values.filter(d => d.paired && !d.connected).sort(sortFunction)
-    property list<var> unpairedDevices: Bluetooth.devices.values.filter(d => !d.paired && !d.connected).sort(sortFunction)
+
+    function refresh() {
+        root.deviceRevision++;
+    }
+
+    Instantiator {
+        model: Bluetooth.devices
+        Connections {
+            required property var modelData
+            target: modelData
+            function onConnectedChanged() { root.refresh(); }
+            function onPairedChanged() { root.refresh(); }
+            function onBatteryAvailableChanged() { root.refresh(); }
+            function onBatteryChanged() { root.refresh(); }
+            Component.onCompleted: root.refresh()
+            Component.onDestruction: root.refresh()
+        }
+    }
+
+    property list<var> connectedDevices: {
+        var _ = root.deviceRevision;
+        return Bluetooth.devices.values.filter(d => d.connected).sort(sortFunction);
+    }
+    property list<var> pairedButNotConnectedDevices: {
+        var _ = root.deviceRevision;
+        return Bluetooth.devices.values.filter(d => d.paired && !d.connected).sort(sortFunction);
+    }
+    property list<var> unpairedDevices: {
+        var _ = root.deviceRevision;
+        return Bluetooth.devices.values.filter(d => !d.paired && !d.connected).sort(sortFunction);
+    }
     property list<var> friendlyDeviceList: [
         ...connectedDevices,
         ...pairedButNotConnectedDevices,

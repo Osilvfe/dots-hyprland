@@ -193,19 +193,21 @@ Item { // Bar content region
                 }
 
                 Revealer {
-                    reveal: Config.options.bar.indicators.showBluetoothBattery && BluetoothStatus.connectedDevices.some(d => d.batteryAvailable)
+                    reveal: Config.options.bar.indicators.showBluetoothBattery && BluetoothStatus.hasConnectedBattery
                     Layout.alignment: Qt.AlignVCenter
 
                     MouseArea {
                         id: btBatteryHover
-                        width: btBattery.width
-                        height: btBattery.height
+                        implicitWidth: btBattery.implicitWidth
+                        implicitHeight: btBattery.implicitHeight
+                        width: implicitWidth
+                        height: implicitHeight
                         hoverEnabled: true
                         onPressed: mouse => mouse.accepted = true
 
                         ClippedProgressBar {
                             id: btBattery
-                            readonly property var btDevices: BluetoothStatus.connectedDevices.filter(d => d.batteryAvailable)
+                            readonly property var btDevices: BluetoothStatus.connectedBatteryDevices
                             value: btDevices.length > 0 ? btDevices[0].battery : 0
                             highlightColor: Appearance.colors.colOnSecondaryContainer
                             valueBarWidth: 40
@@ -245,11 +247,9 @@ Item { // Bar content region
                                     label: Translation.tr("Bluetooth")
                                 }
                                 Repeater {
-                                    model: BluetoothStatus.connectedDevices
+                                    model: BluetoothStatus.connectedBatteryDevices
                                     StyledPopupValueRow {
                                         required property var modelData
-                                        visible: modelData?.batteryAvailable ?? false
-                                        Layout.preferredHeight: visible ? implicitHeight : 0
                                         icon: "battery_android_full"
                                         label: (modelData?.name ?? "") + ":"
                                         value: Math.round((modelData?.battery ?? 0) * 100) + "%"
