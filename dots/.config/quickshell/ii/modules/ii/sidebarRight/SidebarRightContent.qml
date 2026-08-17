@@ -1,6 +1,7 @@
 import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Controls
@@ -21,7 +22,7 @@ Item {
     id: root
     property int sidebarWidth: Appearance.sizes.sidebarWidth
     property int sidebarPadding: 10
-    property string settingsQmlPath: Quickshell.shellPath("settings.qml")
+    property string settingsQmlPath: FileUtils.trimFileProtocol(Quickshell.shellPath("settings.qml"))
     property bool showAudioOutputDialog: false
     property bool showAudioInputDialog: false
     property bool showBluetoothDialog: false
@@ -280,7 +281,10 @@ Item {
                 buttonIcon: "settings"
                 onClicked: {
                     GlobalStates.sidebarRightOpen = false;
-                    Quickshell.execDetached(["qs", "-p", root.settingsQmlPath]);
+                    Quickshell.execDetached([
+                        FileUtils.trimFileProtocol(`${Directories.scriptPath}/launch-detached-qs.sh`),
+                        root.settingsQmlPath
+                    ]);
                 }
                 StyledToolTip {
                     text: Translation.tr("Settings")

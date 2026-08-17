@@ -27,7 +27,10 @@ Singleton {
 
     function handleFirstRun() {
         Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, root.defaultWallpaperPath])
-        Quickshell.execDetached(["bash", "-c", `qs -p '${root.welcomeQmlPath}'`])
+        Quickshell.execDetached([
+            FileUtils.trimFileProtocol(`${Directories.scriptPath}/launch-detached-qs.sh`),
+            root.welcomeQmlPath
+        ])
     }
 
     FileView {

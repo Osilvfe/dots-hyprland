@@ -43,7 +43,10 @@ FooterRectangle {
 
         onClicked: {
             GlobalStates.sidebarLeftOpen = false;
-            Quickshell.execDetached(["qs", "-p", Quickshell.shellPath("settings.qml")]);
+            Quickshell.execDetached([
+                FileUtils.trimFileProtocol(`${Directories.scriptPath}/launch-detached-qs.sh`),
+                FileUtils.trimFileProtocol(Quickshell.shellPath("settings.qml"))
+            ]);
         }
 
         contentItem: FluentIcon {
