@@ -66,43 +66,38 @@
 - 提交前检查 `git status`，只提交本仓库文件；改 qs 组件后需清 qmlcache 重启（见下）
 
 ## 上游合并记录
-从 end-4/dots-hyprland 合入本仓库的 PR。**整支 PR**（#3484/#3497/#3135）用 `git fetch <pr-remote> <branch>` + `git merge --no-commit`，勿逐个 cherry-pick 中间提交。**后续因 `record.sh` / hypridle / bar 已分叉**，改为对照 PR diff 作本地补丁，勿整支 merge 上游分支。
+
+早期整支 PR：`git fetch <pr-remote> <branch>` + `git merge --no-commit`（勿 cherry-pick 中间提交）。`record.sh` / hypridle / bar 分叉之后改为对照 PR diff 作本地补丁，**勿再整支 merge 上游分支**。
 
 ### 整支 merge
-- **#3484**（`eea9a660`）— songrec 音乐识别：`recognize-music.sh` 匹配 `"matches": [`（带空格）→ `"track":`，修紧凑 JSON 识别静默失败
-- **#3497**（`af766d4d`）— 设置侧栏：settings.qml `pages`→`iiPages` + `categories` 分层（illogical-impulse/Connectivity/Monitor/KDE），新增 `modules/settings/system/`（WifiConfig/BluetoothConfig/MonitorConfig/KdeConfig 等；**未保留 VpnConfig**）+ SettingsHome + NavigationRailButton 扩展 + illogical-impulse-symbolic.svg
-- **#3135**（`c7639efb`）— Android 16 风格快捷设置弹窗：蓝牙/夜间/音量/WiFi 对话框卡片化（`Section` 组件，colSurfaceContainerHighest），Appearance 加 `expressiveTitle`，WindowDialog 背景改 colLayer2Base
-- 修复 #3497 合并带出的上游 bug：WifiDialog.qml 删 WindowDialogSeparator 残留孤儿 `visible` 行导致 QML 语法错误（`83125c42`）
+- **#3484** `eea9a660` — songrec：`recognize-music.sh` `"matches": [` → `"track":`（紧凑 JSON）
+- **#3497** `af766d4d` — 设置侧栏分层（`iiPages` + Connectivity/Monitor/KDE）；`settings/system/` 有 Wifi/Bluetooth/Monitor/KDE，**未留 VpnConfig**。合并带出的 WifiDialog 孤儿 `visible` 已在 `83125c42` 修掉
+- **#3135** `c7639efb` — Android 16 快捷设置弹窗卡片化。已跟进：设备色 input=primary / audio=tertiary / 其他=secondary；蓝牙按名称/MAC 分组；提示字号 `pixelSize.small`；分区头 `Layout.leftMargin: 12`（`399352bd`）。**未做**：底部按钮 padding 收紧（`WindowDialogButtonRow` `margins:-8` + 各框 `margins:4`）
 
 ### 本地补丁 · bugfix（`c7c5790c`）
-- **#3517** — 翻译复制按钮挂到 `ButtonGroup.groupData`（原先写 `actions.data`，按钮不进内部 RowLayout）
-- **#3518** — 待办 `StyledListView` 使用 `listBottomPadding`，最后一项不再被 FAB 挡住
-- **#3465** — AI 代码块未知语言不再崩
-- **#3587** — 录屏 `yuvj420p`，颜色不再发灰（**未**合入上游的 `-t`，本仓库 `record.sh` 禁止 `-t`）
-- **#3592** — `HyprlandXkb` 只跟主键盘 layout，避免 fcitx 虚拟设备抢布局（仅多 layout 时有感）
-- **#3500** — Wi-Fi `nmcli monitor` 连发不再把还在跑的 Process 重开打崩
-- **#3585** — 开着 VPN 不再显示 Wi-Fi 警告图标
-- **#3479** — 关右侧栏后角触发不会马上再打开
-- **#3451** — 启动器 `Terminal=true` 桌面项按参数转义，不再 `join(' ')` 整串塞给 `-e`
-- **#3560** — `windowtitle` 只刷新 client 列表，避免标题狂刷 5 次 hyprctl
-- **#3526** — 通知堆积时整组关闭 CPU 打满
+- **#3517** 翻译复制按钮挂 `ButtonGroup.groupData`（不是 `actions.data`）
+- **#3518** 待办 `listBottomPadding`，最后一项不被 FAB 挡住
+- **#3465** AI 代码块未知语言不再崩
+- **#3587** 录屏 `yuvj420p`（**不合**上游 `-t`，本仓库禁止 `-t`）
+- **#3592** `HyprlandXkb` 只跟主键盘 layout（避开 fcitx 虚拟设备）
+- **#3500** Wi-Fi `nmcli monitor` 连发不再重开还在跑的 Process
+- **#3585** 开着 VPN 不再显示 Wi-Fi 警告图标
+- **#3479** 关右侧栏后角触发不会马上再打开
+- **#3451** 启动器 `Terminal=true` 按参数转义，不 `join(' ')` 整串给 `-e`
+- **#3560** `windowtitle` 只刷新 client 列表
+- **#3526** 通知堆积时整组关闭不再打满 CPU
 
-### 本地补丁 · 功能（含设置项；Gemini 无开关）
-- **#3533** — OSD / 顶栏滚轮音量上限可配（`Config.options.audio.osdMaxPercent`，默认 150；设置 → 通用 → 音频）。不影响键盘 `wpctl -l 1.5`
-- **#3535** — 勿休眠时顶栏咖啡杯图标（`bar.indicators.showIdleInhibitor`，默认开；设置 → 顶栏 → 指示器）
-- **#3538** — 顶栏蓝牙电量（`bar.indicators.showBluetoothBattery`，默认开；悬停看各设备）。工作区右键 MouseArea 加 `propagateComposedEvents`
-- **#3581** — 可选通知提示音（`sounds.notifications`，默认关；设置 → 通用 → 声音）。按 urgency 播系统音，500ms 防连发
-- **#3144** — Gemini 函数调用保存/回传 `thought_signature`，并发送完整 `functionCall` 对象（API 协议，无设置开关）
+### 本地补丁 · 功能
+- **#3533** OSD/顶栏滚轮音量上限（`audio.osdMaxPercent`，默认 150；不影响键盘 `wpctl -l 1.5`）
+- **#3535** 勿休眠顶栏咖啡杯（`bar.indicators.showIdleInhibitor`，默认开）
+- **#3538** 顶栏蓝牙电量（`bar.indicators.showBluetoothBattery`，默认开）
+- **#3581** 可选通知提示音（`sounds.notifications`，默认关）
+- **#3144** Gemini `thought_signature` + 完整 `functionCall`（无设置开关）
 
-### #3135 跟进
-- 设备颜色已实现（Discussion #3133）：input=primary、audio=tertiary、其他=secondary（BluetoothDeviceItem.qml）
-- 已做（`399352bd`）：蓝牙按有名称 / MAC 地址分组（`namedDeviceList` / `unnamedDeviceList`）；对话框提示字号调到 `pixelSize.small`；分区头 `Layout.leftMargin: 12`
-- 未做：底部按钮 padding 收紧（WindowDialogButtonRow `margins:-8` + 各框 `margins:4`）
-
-### 对照上游 issue 的本地修复（非 PR）
-- **`c2de877c`** — 设置/欢迎走 `launch-detached-qs.sh`，避免继承 `__QUICKSHELL_CRASH_*` 导致 `qs -p` 变成第二根顶栏
-- **`ac34923b`** — `notifications.forceMonitor` 与 UI 对齐（上游 #3593）；SearchItem `entry?.`；夜间模式关 hyprsunset；HyprlandData 忽略高频 layout 事件并 debounce；`XDG_DATA_DIRS` 去重；锁屏 Caps Lock 改 `hyprctl devices -j`；亮度保底 5%；封面 URL 被清空时保留上一张
-- **`399352bd`** — 农历位运算、SPlayer 空闲退避、playerctld 始终过滤、蓝牙分组
+### 本地修复（无对应 PR）
+- **`c2de877c`** 设置/欢迎走 `launch-detached-qs.sh`，避免 `__QUICKSHELL_CRASH_*` 让 `qs -p` 再开一根顶栏
+- **`ac34923b`** `notifications.forceMonitor`（上游 #3593）；SearchItem `entry?.`；关夜间模式停 hyprsunset；HyprlandData debounce layout；`XDG_DATA_DIRS` 去重；锁屏 Caps Lock；亮度保底 5%；封面 URL 清空时保留上一张
+- **`399352bd`** 农历位运算、SPlayer 空闲退避、playerctld 始终过滤、蓝牙分组
 
 ## 踩坑记录
 
@@ -197,4 +192,3 @@
 
 ### 其他
 - 系统声音录制时若默认输出是蓝牙耳机，确保 A2DP 模式（HFP 已禁用）
-- **GitHub 故障**：raw/API 容易返回 404，**不代表仓库或文件不存在**。优先用本地已有源码/缓存，勿据此删功能或改实现
