@@ -16,10 +16,18 @@ Singleton {
     id: root
 
     readonly property string cacheDir: FileUtils.trimFileProtocol(`${Directories.state}/holidays`)
+    readonly property int cacheMaxAgeMs: 7 * 24 * 3600 * 1000
     // map "YYYY-MM-DD" -> { name: festival day name or "", isOffDay: bool or null }
     property var data: ({})
     property bool loading: false
     property int currentYear: new Date().getFullYear()
+    property int pendingYear: 0
+    property var fetchQueue: []
+    property var yearsLoaded: ({})
+    property bool offDone: false
+    property bool festivalDone: false
+    property var offData: ({})
+    property var festivalData: ({})
 
     function cachePath(year) {
         return `${root.cacheDir}/${year}.json`;
@@ -36,20 +44,93 @@ Singleton {
     }
 
     function fetchYear(year) {
-        if (root.loading)
+        year = Number(year);
+        if (!year)
             return;
+        if (root.pendingYear === year)
+            return;
+        if (root.fetchQueue.indexOf(year) !== -1)
+            return;
+        if (root.yearsLoaded[year])
+            return;
+        if (root.loading) {
+            root.fetchQueue = [...root.fetchQueue, year];
+            return;
+        }
+        root.startFetch(year);
+    }
+
+    function startFetch(year) {
         root.loading = true;
+        root.pendingYear = year;
+        root.offDone = false;
+        root.festivalDone = false;
+        root.offData = {};
+        root.festivalData = {};
         cacheFileView.path = Qt.resolvedUrl(root.cachePath(String(year)));
         cacheFileView.reload();
     }
 
+    function dequeue() {
+        root.loading = false;
+        root.pendingYear = 0;
+        if (root.fetchQueue.length > 0) {
+            const next = root.fetchQueue[0];
+            root.fetchQueue = root.fetchQueue.slice(1);
+            root.startFetch(next);
+        }
+    }
+
+    function stripMeta(obj) {
+        const out = {};
+        for (const key in obj) {
+            if (key !== "_meta")
+                out[key] = obj[key];
+        }
+        return out;
+    }
+
+    function isCacheStale(obj) {
+        const ts = obj?._meta?.fetchedAt;
+        if (!ts)
+            return true;
+        return (Date.now() - ts) > root.cacheMaxAgeMs;
+    }
+
+    function mergeIntoData(dayMap) {
+        const merged = Object.assign({}, root.data);
+        for (const key in dayMap) {
+            merged[key] = dayMap[key];
+        }
+        root.data = merged;
+    }
+
+    function markYearLoaded(year) {
+        const loaded = Object.assign({}, root.yearsLoaded);
+        loaded[year] = true;
+        root.yearsLoaded = loaded;
+    }
+
+    function writeYearCache(year, dayMap) {
+        const payload = JSON.stringify(Object.assign({
+            _meta: {
+                fetchedAt: Date.now(),
+                year: year
+            }
+        }, dayMap));
+        const path = root.cachePath(year);
+        Quickshell.execDetached(["bash", "-c", "printf '%s' \"$1\" > \"$2\"", "_", payload, path]);
+    }
+
     // Fetch both sources; merge into root.data
     function loadRemote(year) {
+        root.offDone = false;
+        root.festivalDone = false;
         offFetcher.command = ["bash", "-c",
-            `curl -s --max-time 15 "https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/${year}.json"`];
-        offFetcher.running = true;
+            `curl -sS --fail --max-time 15 "https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/${year}.json"`];
         festivalFetcher.command = ["bash", "-c",
-            `curl -s --max-time 15 "https://date.nager.at/api/v3/PublicHolidays/${year}/CN"`];
+            `curl -sS --fail --max-time 15 "https://date.nager.at/api/v3/PublicHolidays/${year}/CN"`];
+        offFetcher.running = true;
         festivalFetcher.running = true;
     }
 
@@ -98,34 +179,49 @@ Singleton {
         return merged;
     }
 
-    // Read cached file; if missing, fetch remote
+    function applyCache(text) {
+        if (!text)
+            return {};
+        const parsed = root.parseMergedCache(text);
+        const days = root.stripMeta(parsed);
+        if (Object.keys(days).length > 0)
+            root.mergeIntoData(days);
+        return parsed;
+    }
+
+    // Read cached file; if missing or stale, fetch remote
     FileView {
         id: cacheFileView
         path: Qt.resolvedUrl(root.cachePath(String(root.currentYear)))
         onLoadFailed: (error) => {
-            if (error == FileViewError.FileNotFound) {
-                root.loadRemote(root.currentYear);
-            } else {
+            if (!root.pendingYear) {
                 root.loading = false;
+                return;
+            }
+            if (error == FileViewError.FileNotFound) {
+                root.loadRemote(root.pendingYear);
+            } else {
+                root.dequeue();
             }
         }
         onFileChanged: {
-            const content = cacheFileView.text();
-            if (content) {
-                root.data = root.parseMergedCache(content);
-            }
-            root.loading = false;
+            // Writes go through execDetached, not this FileView
         }
         onLoaded: {
+            if (!root.pendingYear)
+                return;
             const content = cacheFileView.text();
-            if (content) {
-                root.data = root.parseMergedCache(content);
+            const parsed = root.applyCache(content);
+            if (content && Object.keys(root.stripMeta(parsed)).length > 0 && !root.isCacheStale(parsed)) {
+                root.markYearLoaded(root.pendingYear);
+                root.dequeue();
+                return;
             }
-            root.loading = false;
+            root.loadRemote(root.pendingYear);
         }
     }
 
-    // Cache stores a merged JSON: { "date": { name, isOffDay }, ... }
+    // Cache stores a merged JSON: { "_meta": { fetchedAt, year }, "date": { name, isOffDay }, ... }
     function parseMergedCache(text) {
         try {
             return JSON.parse(text) ?? {};
@@ -135,18 +231,17 @@ Singleton {
         }
     }
 
-    property var offData: ({})
-    property var festivalData: ({})
-
     Process {
         id: offFetcher
         command: ["bash", "-c", ""]
         stdout: StdioCollector {
-            onStreamFinished: {
-                if (text.length > 0)
-                    root.offData = root.parseOffData(text);
-                root.maybeFinishLoad();
-            }
+            id: offOut
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (offOut.text.length > 0)
+                root.offData = root.parseOffData(offOut.text);
+            root.offDone = true;
+            root.maybeFinishLoad();
         }
     }
 
@@ -154,31 +249,34 @@ Singleton {
         id: festivalFetcher
         command: ["bash", "-c", ""]
         stdout: StdioCollector {
-            onStreamFinished: {
-                if (text.length > 0)
-                    root.festivalData = root.parseFestivalData(text);
-                root.maybeFinishLoad();
-            }
+            id: festivalOut
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (festivalOut.text.length > 0)
+                root.festivalData = root.parseFestivalData(festivalOut.text);
+            root.festivalDone = true;
+            root.maybeFinishLoad();
         }
     }
 
     function maybeFinishLoad() {
-        if (offFetcher.running || festivalFetcher.running)
+        if (!root.offDone || !root.festivalDone)
             return;
-        root.data = root.mergeData(root.offData, root.festivalData);
-        cacheFileView.setText(JSON.stringify(root.data));
-        root.loading = false;
-    }
-
-    onLoadingChanged: {
-        if (root.loading) {
-            root.offData = {};
-            root.festivalData = {};
+        const merged = root.mergeData(root.offData, root.festivalData);
+        if (Object.keys(merged).length > 0) {
+            root.mergeIntoData(merged);
+            root.writeYearCache(root.pendingYear, merged);
         }
+        root.markYearLoaded(root.pendingYear);
+        root.dequeue();
     }
 
     Component.onCompleted: {
         root.ensureCacheDir();
-        root.fetchYear(root.currentYear);
+        const year = new Date().getFullYear();
+        root.currentYear = year;
+        root.fetchYear(year);
+        root.fetchYear(year - 1);
+        root.fetchYear(year + 1);
     }
 }

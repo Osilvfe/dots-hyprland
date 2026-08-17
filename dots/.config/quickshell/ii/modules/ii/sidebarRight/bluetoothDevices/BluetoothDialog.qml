@@ -2,20 +2,39 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
-import qs.modules.common.functions
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
-import Qt5Compat.GraphicalEffects
-import Quickshell.Io
 import Quickshell.Bluetooth
 import Quickshell
-import Quickshell.Wayland
-import Quickshell.Hyprland
 
 WindowDialog {
     id: root
     backgroundHeight: 600
+
+    component MaterialSectionHeader: WindowDialogSectionHeader {
+        color: Appearance.colors.colPrimary
+        font.pixelSize: Appearance.font.pixelSize.small
+        Layout.fillWidth: true
+        Layout.leftMargin: 12
+    }
+
+    component Section: Rectangle {
+        id: sectionRoot
+        default property alias content: inner.data
+
+        color: Appearance.colors.colSurfaceContainerHighest
+        implicitHeight: inner.implicitHeight + inner.anchors.margins * 2
+        Layout.fillWidth: true
+        radius: 12
+
+        Column {
+            id: inner
+            anchors.fill: parent
+            anchors.margins: 8
+            width: parent.width
+            spacing: 4
+        }
+    }
 
     WindowDialogTitle {
         text: Translation.tr("Bluetooth devices")
@@ -23,7 +42,7 @@ WindowDialog {
     }
     Text {
         text: Translation.tr("Tap to connect or disconnect a device")
-        font.pixelSize: Appearance.font.pixelSize.smaller
+        font.pixelSize: Appearance.font.pixelSize.small
         anchors.horizontalCenter: parent.horizontalCenter
         color: Appearance.colors.colOnSurface
         Layout.topMargin: -8
@@ -34,24 +53,55 @@ WindowDialog {
         anchors.horizontalCenter: parent.horizontalCenter
         Layout.topMargin: -4
         Layout.bottomMargin: -8
-        
     }
-    StyledListView {
+    Flickable {
         Layout.fillHeight: true
         Layout.fillWidth: true
         clip: true
-        spacing: 8
-        animateAppearance: false
+        contentHeight: deviceColumn.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
 
-        model: ScriptModel {
-            values: BluetoothStatus.friendlyDeviceList
-        }
-        delegate: BluetoothDeviceItem {
-            required property BluetoothDevice modelData
-            device: modelData
-            anchors {
-                left: parent?.left
-                right: parent?.right
+        ColumnLayout {
+            id: deviceColumn
+            width: parent.width
+            spacing: 8
+
+            MaterialSectionHeader {
+                visible: namedRepeater.count > 0
+                text: Translation.tr("Named devices")
+            }
+            Section {
+                visible: namedRepeater.count > 0
+                Repeater {
+                    id: namedRepeater
+                    model: ScriptModel {
+                        values: BluetoothStatus.namedDeviceList
+                    }
+                    BluetoothDeviceItem {
+                        required property BluetoothDevice modelData
+                        device: modelData
+                        width: parent?.width ?? 0
+                    }
+                }
+            }
+
+            MaterialSectionHeader {
+                visible: unnamedRepeater.count > 0
+                text: Translation.tr("Unnamed devices")
+            }
+            Section {
+                visible: unnamedRepeater.count > 0
+                Repeater {
+                    id: unnamedRepeater
+                    model: ScriptModel {
+                        values: BluetoothStatus.unnamedDeviceList
+                    }
+                    BluetoothDeviceItem {
+                        required property BluetoothDevice modelData
+                        device: modelData
+                        width: parent?.width ?? 0
+                    }
+                }
             }
         }
     }

@@ -10,14 +10,12 @@ Item {
     anchors.topMargin: 10
     property int monthShift: 0
     property var viewingDate: CalendarLayout.getDateInXMonthsTime(monthShift)
+    readonly property int viewingYear: viewingDate.getFullYear()
     property var calendarLayout: CalendarLayout.getCalendarLayout(viewingDate, monthShift === 0, Holidays.data)
-    property bool holidaysLoaded: false
     width: calendarColumn.width
     implicitHeight: calendarColumn.height + 10 * 2
 
-    Component.onCompleted: {
-        Holidays.fetchYear(Holidays.currentYear);
-    }
+    onViewingYearChanged: Holidays.fetchYear(viewingYear)
 
     Keys.onPressed: (event) => {
         if ((event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp)

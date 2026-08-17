@@ -35,7 +35,7 @@ Item {
         running: activePlayer?.playbackState == MprisPlaybackState.Playing
         interval: Config.options.resources.updateInterval
         repeat: true
-        onTriggered: activePlayer.positionChanged()
+        onTriggered: activePlayer?.positionChanged()
     }
 
     MouseArea {
@@ -43,11 +43,11 @@ Item {
         acceptedButtons: Qt.MiddleButton | Qt.BackButton | Qt.ForwardButton | Qt.RightButton | Qt.LeftButton
         onPressed: (event) => {
             if (event.button === Qt.MiddleButton) {
-                activePlayer.togglePlaying();
+                activePlayer?.togglePlaying();
             } else if (event.button === Qt.BackButton) {
-                activePlayer.previous();
+                activePlayer?.previous();
             } else if (event.button === Qt.ForwardButton || event.button === Qt.RightButton) {
-                activePlayer.next();
+                activePlayer?.next();
             } else if (event.button === Qt.LeftButton) {
                 GlobalStates.mediaControlsOpen = !GlobalStates.mediaControlsOpen
             }

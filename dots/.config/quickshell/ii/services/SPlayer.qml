@@ -13,7 +13,7 @@ import QtWebSockets
 // extrapolate position from the last status anchor with a local clock, and keep
 // a low-frequency HTTP /api/status poll as a calibration/failure fallback.
 // If the WebSocket is unavailable (only HTTP enabled), we degrade to plain HTTP
-// polling (old behavior) driven by nowPlayingTimer.
+// polling (old behavior) driven by the same status timer.
 //
 // NOTE: a WebSocket declared inside a Singleton (or as a child QtObject) never
 // connects under quickshell/qml_rs. It is therefore created dynamically via
@@ -24,6 +24,10 @@ Singleton {
 
     readonly property string apiBase: "http://127.0.0.1:14558/api"
     readonly property string wsUrl: "ws://127.0.0.1:14558/ws"
+    readonly property int httpTimeoutMs: 3000
+    readonly property int statusPollWhenWsMs: 8000
+    readonly property int backoffMinMs: 3000
+    readonly property int backoffMaxMs: 30000
 
     // current line text (synced), or empty when no lyrics / no player
     property string lineText: ""
@@ -53,9 +57,13 @@ Singleton {
     property var socket: null
     property bool wsConnected: false
 
+    property int failBackoffMs: 3000
+    property double lastBackoffAt: 0
+
     function httpGet(url, onDone, onFail) {
         var xhr = new XMLHttpRequest()
         xhr.open("GET", url)
+        xhr.timeout = root.httpTimeoutMs
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
@@ -69,7 +77,16 @@ Singleton {
         xhr.onerror = function() {
             if (onFail) onFail()
         }
+        xhr.ontimeout = function() {
+            if (onFail) onFail()
+        }
         xhr.send()
+    }
+
+    function markApiUp() {
+        root.apiDown = false
+        root.failBackoffMs = root.backoffMinMs
+        root.lastBackoffAt = 0
     }
 
     function clearAll() {
@@ -80,12 +97,20 @@ Singleton {
         root.lineText = ""
         root.loadedTrackId = ""
         root.playing = false
+        root.durationMs = 0
+        root.positionMs = 0
+        root.anchorPos = 0
+        root.anchorAt = 0
     }
 
     function handleApiDown() {
         if (!root.apiDown) {
             root.apiDown = true
             root.clearAll()
+        }
+        if (Date.now() - root.lastBackoffAt > 2000) {
+            root.lastBackoffAt = Date.now()
+            root.failBackoffMs = Math.min(root.failBackoffMs * 2, root.backoffMaxMs)
         }
     }
 
@@ -94,7 +119,7 @@ Singleton {
 
     function refreshNowPlaying() {
         root.httpGet(`${root.apiBase}/now-playing`, function(np) {
-            root.apiDown = false
+            root.markApiUp()
             if (!np?.track) {
                 root.clearAll()
                 return
@@ -104,6 +129,7 @@ Singleton {
             root.lyricAvailable = !!np.lyricAvailable
             if (np.track.id !== root.loadedTrackId) {
                 root.loadedTrackId = np.track.id
+                root.durationMs = 0
                 root.loadLyrics()
             }
         }, root.handleApiDown)
@@ -111,8 +137,9 @@ Singleton {
 
     function loadLyrics() {
         root.httpGet(`${root.apiBase}/lyrics`, function(res) {
-            root.apiDown = false
+            root.markApiUp()
             root.lyricLines = Array.isArray(res?.lyric) ? res.lyric : []
+            root.lyricAvailable = root.lyricLines.length > 0
             root.updateLine()
         }, root.handleApiDown)
     }
@@ -125,7 +152,7 @@ Singleton {
 
     function refreshStatus() {
         root.httpGet(`${root.apiBase}/status`, function(st) {
-            root.apiDown = false
+            root.markApiUp()
             root.playing = st.state === "playing"
             if (st.duration) root.durationMs = st.duration
             root.setAnchor(st.position ?? 0)
@@ -201,7 +228,8 @@ Singleton {
     function onWsStatus(status) {
         if (status === WebSocket.Open) {
             root.wsConnected = true
-            root.apiDown = false
+            root.markApiUp()
+            reconnectTimer.stop()
             // server only sends hello on connect; pull current state once
             root.refreshNowPlaying()
             root.refreshStatus()
@@ -220,12 +248,13 @@ Singleton {
         if (msg.kind !== "event") return
         switch (msg.type) {
         case "track": {
-            root.apiDown = false
+            root.markApiUp()
             var t = msg.data?.track ?? null
             if (!t) { root.clearAll(); return }
             root.title = t.title ?? ""
             root.artist = (t.artists || []).map(a => a.name).join("/") ?? ""
-            root.lyricAvailable = true
+            root.lyricAvailable = false
+            root.durationMs = 0
             if (t.id !== root.loadedTrackId) {
                 root.loadedTrackId = t.id
                 root.lyricLines = []
@@ -236,14 +265,14 @@ Singleton {
             break
         }
         case "lyric": {
-            root.apiDown = false
+            root.markApiUp()
             root.lyricLines = Array.isArray(msg.data?.lyric) ? msg.data.lyric : []
             root.lyricAvailable = root.lyricLines.length > 0
             root.updateLine()
             break
         }
         case "status": {
-            root.apiDown = false
+            root.markApiUp()
             var st = msg.data ?? {}
             root.playing = st.state === "playing"
             if (st.duration) root.durationMs = st.duration
@@ -260,7 +289,7 @@ Singleton {
     // Retry the WebSocket when it drops (SPlayer restarting, etc.)
     Timer {
         id: reconnectTimer
-        interval: 3000
+        interval: root.failBackoffMs
         repeat: true
         onTriggered: {
             if (root.wsConnected) {
@@ -283,23 +312,17 @@ Singleton {
         }
     }
 
-    // Low-frequency HTTP status poll: calibrates the local clock (fixes drift /
-    // seeks done outside WS control) and detects API-down when WS is unavailable.
+    // HTTP status poll: calibrates the local clock while WS is up, and is the
+    // now-playing/failure probe when WS is down. Backs off while the API is gone.
     Timer {
-        interval: 1000
+        interval: root.wsConnected ? root.statusPollWhenWsMs : root.failBackoffMs
         running: true
         repeat: true
-        onTriggered: root.refreshStatus()
-    }
-
-    // HTTP-only fallback: when the WS never connects (only HTTP enabled),
-    // drive now-playing like the old implementation.
-    Timer {
-        id: nowPlayingTimer
-        interval: 5000
-        running: !root.wsConnected
-        repeat: true
-        onTriggered: root.refreshNowPlaying()
+        onTriggered: {
+            root.refreshStatus()
+            if (!root.wsConnected)
+                root.refreshNowPlaying()
+        }
     }
 
     Component.onCompleted: {

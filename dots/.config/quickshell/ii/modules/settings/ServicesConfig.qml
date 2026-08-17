@@ -25,6 +25,23 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "play_circle"
+        title: Translation.tr("Media")
+
+        ConfigSwitch {
+            buttonIcon: "filter_alt"
+            text: Translation.tr("Filter duplicate players")
+            checked: Config.options.media.filterDuplicatePlayers
+            onCheckedChanged: {
+                Config.options.media.filterDuplicatePlayers = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Hides browser-native MPRIS buses when plasma-browser-integration is active.\nplayerctld is always ignored.")
+            }
+        }
+    }
+
+    ContentSection {
         icon: "music_cast"
         title: Translation.tr("Music Recognition")
 

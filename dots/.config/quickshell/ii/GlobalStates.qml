@@ -25,7 +25,10 @@ Singleton {
 
     Component.onCompleted: {
         // Pre-fetch holiday data so the calendar has it cached before first open
-        Holidays.fetchYear(Holidays.currentYear);
+        const year = new Date().getFullYear();
+        Holidays.fetchYear(year);
+        Holidays.fetchYear(year - 1);
+        Holidays.fetchYear(year + 1);
     }
     property bool recordRegionMic: false
     property bool regionSelectorOpen: false

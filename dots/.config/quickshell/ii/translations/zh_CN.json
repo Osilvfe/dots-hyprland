@@ -810,5 +810,18 @@
   "VPN enabled": "VPN 已开启",
   "Wi-Fi disabled": "Wi-Fi 已关闭",
   "Wi-Fi enabled": "Wi-Fi 已开启",
-  "Wireless radio is off": "无线开关已关闭"
+  "Wireless radio is off": "无线开关已关闭",
+  "Named devices": "有名称的设备",
+  "Unnamed devices": "无名称设备",
+  "Tap to connect or disconnect a device": "点击以连接或断开设备",
+  "Region": "区域",
+  "Fullscreen": "全屏",
+  "Window": "窗口",
+  "Record audio": "录音",
+  "System audio": "系统声音",
+  "Start recording": "开始录制",
+  "Hide passive tray icons": "隐藏被动托盘图标",
+  "Show item ID in tooltip": "在提示中显示项目 ID",
+  "Filter duplicate players": "过滤重复播放器",
+  "Hides browser-native MPRIS buses when plasma-browser-integration is active.\nplayerctld is always ignored.": "在 plasma-browser-integration 启用时隐藏浏览器自带的 MPRIS。\nplayerctld 始终会被忽略。"
 }

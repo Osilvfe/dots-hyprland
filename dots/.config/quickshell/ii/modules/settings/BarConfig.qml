@@ -253,6 +253,24 @@ ContentPage {
                 Config.options.tray.monochromeIcons = checked;
             }
         }
+
+        ConfigSwitch {
+            buttonIcon: "visibility_off"
+            text: Translation.tr("Hide passive tray icons")
+            checked: Config.options.tray.filterPassive
+            onCheckedChanged: {
+                Config.options.tray.filterPassive = checked;
+            }
+        }
+
+        ConfigSwitch {
+            buttonIcon: "tag"
+            text: Translation.tr("Show item ID in tooltip")
+            checked: Config.options.tray.showItemId
+            onCheckedChanged: {
+                Config.options.tray.showItemId = checked;
+            }
+        }
     }
 
     ContentSection {

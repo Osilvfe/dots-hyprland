@@ -98,9 +98,9 @@ Scope {
                         Layout.fillWidth: true
                         Layout.bottomMargin: 2
                         model: [
-                            Translation.tr("区域"),
-                            Translation.tr("全屏"),
-                            Translation.tr("窗口"),
+                            Translation.tr("Region"),
+                            Translation.tr("Fullscreen"),
+                            Translation.tr("Window"),
                         ]
                         currentIndex: root.recordArea === "region" ? 0
                             : root.recordArea === "fullscreen" ? 1 : 2
@@ -114,20 +114,20 @@ Scope {
                         Layout.leftMargin: 6
                         Layout.topMargin: 6
                         Layout.bottomMargin: 2
-                        text: Translation.tr("录音")
+                        text: Translation.tr("Record audio")
                         font.pixelSize: Appearance.font.pixelSize.small
                         color: Appearance.colors.colOnSurfaceVariant
                     }
 
                     ConfigSwitch {
                         buttonIcon: "speaker"
-                        text: Translation.tr("系统声音")
+                        text: Translation.tr("System audio")
                         checked: root.recordSystem
                         onClicked: root.recordSystem = !root.recordSystem
                     }
                     ConfigSwitch {
                         buttonIcon: "mic"
-                        text: Translation.tr("麦克风")
+                        text: Translation.tr("Microphone")
                         checked: root.recordMic
                         onClicked: root.recordMic = !root.recordMic
                     }
@@ -148,7 +148,7 @@ Scope {
                             }
 
                             StyledText {
-                                text: Translation.tr("开始录制")
+                                text: Translation.tr("Start recording")
                                 font.pixelSize: Appearance.font.pixelSize.medium
                                 color: Appearance.colors.colPrimary
                                 Layout.fillWidth: true

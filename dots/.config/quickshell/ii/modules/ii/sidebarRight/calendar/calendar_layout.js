@@ -12,9 +12,10 @@ const weekDays = [ // MONDAY IS THE FIRST DAY OF THE WEEK
 ]
 
 // Lunar calendar data 1900-2100
-// Each entry encodes one lunar year:
+// Each entry encodes one lunar year (classic lunarInfo layout):
 // Bits 0-3:    leap month (0-12, 0=no leap)
-// Bits 4-15:   month length flags (bit4=Jan, 1=30d, 0=29d)
+// Bits 4-15:   month length flags (bit15=month 1, bit4=month 12; 1=30d, 0=29d)
+// Bit 16:      leap month length (1=30d, 0=29d)
 // The Chinese New Year offset is computed iteratively from base 1900-01-31
 const lunarInfo = [
     0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
@@ -59,13 +60,13 @@ function leapMonth(y) {
 
 function leapDays(y) {
     if (leapMonth(y)) {
-        return (lunarInfo[y - 1900] & (1 << (15 - leapMonth(y)))) ? 30 : 29
+        return (lunarInfo[y - 1900] & 0x10000) ? 30 : 29
     }
     return 0
 }
 
 function monthDays(y, m) {
-    return (lunarInfo[y - 1900] & (1 << (3 + m))) ? 30 : 29
+    return (lunarInfo[y - 1900] & (0x10000 >> m)) ? 30 : 29
 }
 
 function lunarYearDays(y) {

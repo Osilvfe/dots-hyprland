@@ -15,11 +15,13 @@ Singleton {
     readonly property int activeDeviceCount: Bluetooth.defaultAdapter?.devices.values.filter(device => device.connected).length ?? 0
     readonly property bool connected: Bluetooth.devices.values.some(d => d.connected)
 
+    function isMacName(name) {
+        return /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(name ?? "");
+    }
     function sortFunction(a, b) {
         // Ones with meaningful names before MAC addresses
-        const macRegex = /^([0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}$/;
-        const aIsMac = macRegex.test(a.name);
-        const bIsMac = macRegex.test(b.name);
+        const aIsMac = root.isMacName(a.name);
+        const bIsMac = root.isMacName(b.name);
         if (aIsMac !== bIsMac)
             return aIsMac ? 1 : -1;
 
@@ -34,4 +36,6 @@ Singleton {
         ...pairedButNotConnectedDevices,
         ...unpairedDevices
     ]
+    property list<var> namedDeviceList: friendlyDeviceList.filter(d => !root.isMacName(d.name))
+    property list<var> unnamedDeviceList: friendlyDeviceList.filter(d => root.isMacName(d.name))
 }
