@@ -823,5 +823,11 @@
   "Hide passive tray icons": "隐藏被动托盘图标",
   "Show item ID in tooltip": "在提示中显示项目 ID",
   "Filter duplicate players": "过滤重复播放器",
-  "Hides browser-native MPRIS buses when plasma-browser-integration is active.\nplayerctld is always ignored.": "在 plasma-browser-integration 启用时隐藏浏览器自带的 MPRIS。\nplayerctld 始终会被忽略。"
+  "Hides browser-native MPRIS buses when plasma-browser-integration is active.\nplayerctld is always ignored.": "在 plasma-browser-integration 启用时隐藏浏览器自带的 MPRIS。\nplayerctld 始终会被忽略。",
+  "OSD / bar-scroll volume ceiling (%)": "OSD / 顶栏滚轮音量上限 (%)",
+  "Indicators": "指示器",
+  "Keep-awake icon": "勿休眠图标",
+  "Show a coffee icon on the bar while Keep awake is on": "开启勿休眠时在顶栏显示咖啡杯图标",
+  "Bluetooth battery": "蓝牙电量",
+  "Show connected device battery next to the clock group": "在时钟组旁显示已连接蓝牙设备电量"
 }

@@ -19,6 +19,36 @@ ContentPage {
             }
         }
     }
+
+    ContentSection {
+        icon: "sensors"
+        title: Translation.tr("Indicators")
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "coffee"
+                text: Translation.tr("Keep-awake icon")
+                checked: Config.options.bar.indicators.showIdleInhibitor
+                onCheckedChanged: {
+                    Config.options.bar.indicators.showIdleInhibitor = checked;
+                }
+                StyledToolTip {
+                    text: Translation.tr("Show a coffee icon on the bar while Keep awake is on")
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "bluetooth"
+                text: Translation.tr("Bluetooth battery")
+                checked: Config.options.bar.indicators.showBluetoothBattery
+                onCheckedChanged: {
+                    Config.options.bar.indicators.showBluetoothBattery = checked;
+                }
+                StyledToolTip {
+                    text: Translation.tr("Show connected device battery next to the clock group")
+                }
+            }
+        }
+    }
     
     ContentSection {
         icon: "display_settings"

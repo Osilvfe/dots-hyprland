@@ -141,6 +141,7 @@ Singleton {
 
             property JsonObject audio: JsonObject {
                 // Values in %
+                property int osdMaxPercent: 150 // Ceiling for OSD / bar-scroll volume (100–150)
                 property JsonObject protection: JsonObject {
                     // Prevent sudden bangs
                     property bool enable: false
@@ -279,6 +280,8 @@ Singleton {
                     property JsonObject notifications: JsonObject {
                         property bool showUnreadCount: false
                     }
+                    property bool showIdleInhibitor: true
+                    property bool showBluetoothBattery: true
                 }
                 property JsonObject tooltips: JsonObject {
                     property bool clickToShow: false
@@ -559,6 +562,7 @@ Singleton {
             property JsonObject sounds: JsonObject {
                 property bool battery: false
                 property bool pomodoro: false
+                property bool notifications: false
                 property string theme: "freedesktop"
             }
 

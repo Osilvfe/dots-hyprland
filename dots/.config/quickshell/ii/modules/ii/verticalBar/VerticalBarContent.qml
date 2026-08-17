@@ -272,6 +272,20 @@ Item { // Bar content region
                             id: notificationUnreadCount
                         }
                     }
+                    Revealer {
+                        vertical: true
+                        reveal: Config.options.bar.indicators.showIdleInhibitor && Idle.inhibit
+                        Layout.fillWidth: true
+                        Layout.bottomMargin: reveal ? indicatorsColumnLayout.realSpacing : 0
+                        Behavior on Layout.bottomMargin {
+                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        }
+                        MaterialSymbol {
+                            text: "coffee"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: rightSidebarButton.colText
+                        }
+                    }
                     MaterialSymbol {
                         text: Network.materialSymbol
                         iconSize: Appearance.font.pixelSize.larger

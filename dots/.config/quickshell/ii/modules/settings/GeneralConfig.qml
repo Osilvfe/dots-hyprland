@@ -56,6 +56,17 @@ ContentPage {
                 }
             }
         }
+        ConfigSpinBox {
+            icon: "volume_up"
+            text: Translation.tr("OSD / bar-scroll volume ceiling (%)")
+            value: Config.options.audio.osdMaxPercent
+            from: 100
+            to: 150
+            stepSize: 10
+            onValueChanged: {
+                Config.options.audio.osdMaxPercent = value;
+            }
+        }
     }
 
     ContentSection {
@@ -281,6 +292,14 @@ ContentPage {
                 checked: Config.options.sounds.pomodoro
                 onCheckedChanged: {
                     Config.options.sounds.pomodoro = checked;
+                }
+            }
+            ConfigSwitch {
+                buttonIcon: "notifications"
+                text: Translation.tr("Notifications")
+                checked: Config.options.sounds.notifications
+                onCheckedChanged: {
+                    Config.options.sounds.notifications = checked;
                 }
             }
         }
