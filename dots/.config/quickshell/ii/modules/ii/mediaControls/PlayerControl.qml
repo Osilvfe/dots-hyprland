@@ -15,10 +15,9 @@ import Quickshell.Services.Mpris
 Item { // Player instance
     id: root
     required property MprisPlayer player
-    property var artUrl: player?.trackArtUrl
+    property var artUrl: player?.trackArtUrl ?? ""
     property string artDownloadLocation: Directories.coverArt
-    property string artFileName: Qt.md5(artUrl)
-    property string artFilePath: `${artDownloadLocation}/${artFileName}`
+    property string stickyArtFilePath: ""
     property color artDominantColor: ColorUtils.mix((colorQuantizer?.colors[0] ?? Appearance.colors.colPrimary), Appearance.colors.colPrimaryContainer, 0.8) || Appearance.m3colors.m3secondaryContainer
     property bool downloaded: false
     property list<real> visualizerPoints: []
@@ -26,7 +25,7 @@ Item { // Player instance
     property int visualizerSmoothing: 2 // Number of points to average for smoothing
     property real radius
 
-    property string displayedArtFilePath: root.downloaded ? Qt.resolvedUrl(artFilePath) : ""
+    property string displayedArtFilePath: (root.downloaded && root.stickyArtFilePath !== "") ? Qt.resolvedUrl(root.stickyArtFilePath) : ""
 
     component TrackChangeButton: RippleButton {
         implicitWidth: 24
@@ -59,27 +58,33 @@ Item { // Player instance
         }
     }
 
-    onArtFilePathChanged: {
-        if (root.artUrl.length == 0) {
-            root.artDominantColor = Appearance.m3colors.m3secondaryContainer
+    onArtUrlChanged: {
+        const url = root.artUrl ? String(root.artUrl) : "";
+        // Firefox/YTM often clears trackArtUrl after a few seconds; keep the last good image.
+        if (url.length === 0)
+            return;
+
+        const path = `${root.artDownloadLocation}/${Qt.md5(url)}`;
+        coverArtDownloader.targetFile = url;
+        coverArtDownloader.artFilePath = path;
+        if (root.stickyArtFilePath === path) {
+            root.downloaded = true;
             return;
         }
-
-        // Binding does not work in Process
-        coverArtDownloader.targetFile = root.artUrl 
-        coverArtDownloader.artFilePath = root.artFilePath
-        // Download
-        root.downloaded = false
-        coverArtDownloader.running = true
+        root.downloaded = false;
+        coverArtDownloader.running = true;
     }
 
     Process { // Cover art downloader
         id: coverArtDownloader
-        property string targetFile: root.artUrl
-        property string artFilePath: root.artFilePath
-        command: [ "bash", "-c", `[ -f ${artFilePath} ] || curl -4 -sSL '${targetFile}' -o '${artFilePath}'` ]
+        property string targetFile: ""
+        property string artFilePath: ""
+        command: [ "bash", "-c", `[ -f '${StringUtils.shellSingleQuoteEscape(artFilePath)}' ] || curl -4 -sSL --fail '${StringUtils.shellSingleQuoteEscape(targetFile)}' -o '${StringUtils.shellSingleQuoteEscape(artFilePath)}'` ]
         onExited: (exitCode, exitStatus) => {
-            root.downloaded = true
+            if (exitCode === 0) {
+                root.stickyArtFilePath = coverArtDownloader.artFilePath;
+                root.downloaded = true;
+            }
         }
     }
 

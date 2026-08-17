@@ -1,9 +1,6 @@
-#!/bin/env bash
-
-MAIN_KB_CAPS=$(hyprctl devices | grep -B 6 "main: yes" | grep "capsLock" | head -1 | awk '{print $2}')
-
-if [ "$MAIN_KB_CAPS" = "yes" ]; then
+#!/usr/bin/env bash
+# One hyprctl JSON call instead of a 5-process text pipeline.
+MAIN_KB_CAPS=$(hyprctl devices -j | jq -r '.keyboards[] | select(.main == true) | .capsLock' | head -1)
+if [ "$MAIN_KB_CAPS" = "true" ]; then
     echo "Caps Lock active"
-else
-    echo ""
 fi

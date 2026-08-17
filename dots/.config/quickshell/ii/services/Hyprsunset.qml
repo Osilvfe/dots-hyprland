@@ -74,8 +74,13 @@ Singleton {
     onShouldBeOnChanged: ensureState()
     function ensureState() {
         // console.log("[Hyprsunset] Ensuring state:", root.shouldBeOn, "Automatic mode:", root.automatic);
-        if (!root.automatic || root.manualActive !== undefined)
+        if (root.manualActive !== undefined)
             return;
+        // Automatic off: do not keep a leftover temperature from a previous session/reload.
+        if (!root.automatic) {
+            root.disableTemperature();
+            return;
+        }
         if (root.shouldBeOn) {
             root.enableTemperature();
         } else {

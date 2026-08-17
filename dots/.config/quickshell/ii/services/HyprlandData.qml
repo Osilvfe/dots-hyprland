@@ -70,6 +70,13 @@ Singleton {
         updateWorkspaces();
     }
 
+    Timer {
+        id: updateDebounce
+        interval: 50
+        repeat: false
+        onTriggered: root.updateAll()
+    }
+
     function biggestWindowForWorkspace(workspaceId) {
         const windowsInThisWorkspace = HyprlandData.windowList.filter(w => w.workspace.id == workspaceId);
         return windowsInThisWorkspace.reduce((maxWin, win) => {
@@ -88,8 +95,15 @@ Singleton {
 
         function onRawEvent(event) {
             // console.log("Hyprland raw event:", event.name);
-            if (["openlayer", "closelayer", "screencast"].includes(event.name)) return;
-            updateAll()
+            const name = event.name;
+            if (["openlayer", "closelayer", "screencast", "activelayout", "submap"].includes(name))
+                return;
+            // Burst events during drag/resize: coalesce instead of 5 hyprctl per event.
+            if (["movewindow", "movewindowv2", "changefloatingmode"].includes(name) || name.startsWith("resize")) {
+                updateDebounce.restart();
+                return;
+            }
+            updateAll();
         }
     }
 

@@ -35,11 +35,19 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    root.keybinds = JSON.parse(text)
+                    const raw = text.trim()
+                    if (raw.length === 0)
+                        return
+                    root.keybinds = JSON.parse(raw)
                     var groups = []
                     for (var i = 0; i < root.keybinds.length; i++) {
                         var bind = root.keybinds[i].description
-                        var group = bind.substring(0, bind.indexOf(":"))
+                        if (!bind || bind.length === 0)
+                            continue
+                        var colon = bind.indexOf(":")
+                        if (colon <= 0)
+                            continue
+                        var group = bind.substring(0, colon)
                         if (!groups.includes(group) && group.length > 0) {
                             groups.push(group)
                         }

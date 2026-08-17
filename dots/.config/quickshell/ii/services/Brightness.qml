@@ -43,9 +43,9 @@ Singleton {
     function decreaseBrightness(): void {
         const focusedName = Hyprland.focusedMonitor.name;
         const monitor = monitors.find(m => focusedName === m.screen.name);
-        if (monitor && monitor.brightness > 0) 
-            monitor.setBrightness(monitor.brightness - 0.05);
-        // if brightness is 0, then decrease gamma
+        // Keep hardware backlight at >= 5%; further dimming uses gamma so the panel does not power off.
+        if (monitor && monitor.brightness > 0.05)
+            monitor.setBrightness(Math.max(0.05, monitor.brightness - 0.05));
         else {
             Hyprsunset.setGamma(Hyprsunset.gamma - 5);
         }
