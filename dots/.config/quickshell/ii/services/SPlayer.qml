@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import QtWebSockets
+import qs.modules.common.functions
 
 // SPlayer-Next external API integration
 // (https://github.com/SPlayer-Dev/SPlayer-Next, external API server)
@@ -29,8 +30,17 @@ Singleton {
     readonly property int backoffMinMs: 3000
     readonly property int backoffMaxMs: 30000
 
+    // Implements the Lyrics source contract (see services/Lyrics.qml).
+    readonly property bool ready: !apiDown
+    property bool isInterlude: false
+
     // current line text (synced), or empty when no lyrics / no player
     property string lineText: ""
+    // word-level timings for the current line (karaoke scroll in the bar)
+    property var lineWords: []
+    property int lineStartMs: 0
+    property int lineEndMs: 0
+    property int currentLineIndex: -1
     property string title: ""
     property string artist: ""
     property bool lyricAvailable: false
@@ -95,6 +105,11 @@ Singleton {
         root.lyricAvailable = false
         root.lyricLines = []
         root.lineText = ""
+        root.lineWords = []
+        root.lineStartMs = 0
+        root.lineEndMs = 0
+        root.currentLineIndex = -1
+        root.isInterlude = false
         root.loadedTrackId = ""
         root.playing = false
         root.durationMs = 0
@@ -184,25 +199,49 @@ Singleton {
         return false
     }
 
-    function updateLine() {
-        if (root.apiDown || root.lyricLines.length === 0) { root.lineText = ""; return }
-        var pos = root.positionMs
-        if (root.inInterlude(pos)) {
-            if (root.lineText !== root.interludeText) root.lineText = root.interludeText
+    function setCurrentLine(idx, text) {
+        if (idx === root.currentLineIndex && root.lineText === text)
+            return
+        root.currentLineIndex = idx
+        root.lineText = text
+        root.isInterlude = (idx === -2)
+        if (idx < 0) {
+            root.lineWords = []
+            root.lineStartMs = 0
+            root.lineEndMs = 0
             return
         }
-        var active = ""
+        var line = root.lyricLines[idx]
+        root.lineWords = line.words || []
+        root.lineStartMs = line.startTime ?? 0
+        root.lineEndMs = line.endTime ?? 0
+    }
+
+    function updateLine() {
+        if (root.apiDown || root.lyricLines.length === 0) {
+            root.setCurrentLine(-1, "")
+            return
+        }
+        var pos = root.positionMs
+        if (root.inInterlude(pos)) {
+            root.setCurrentLine(-2, root.interludeText)
+            return
+        }
+        var idx = -1
         for (var i = 0; i < root.lyricLines.length; i++) {
             var line = root.lyricLines[i]
-            if (line.isBG) continue
-            if (pos >= (line.startTime ?? 0) - 100) {
-                var words = line.words || []
-                active = words.map(w => w.word).join("")
-            } else {
+            if (line.isBG)
+                continue
+            if (pos >= (line.startTime ?? 0) - 100)
+                idx = i
+            else
                 break
-            }
         }
-        if (root.lineText !== active) root.lineText = active
+        if (idx < 0) {
+            root.setCurrentLine(-1, "")
+            return
+        }
+        root.setCurrentLine(idx, LyricSync.joinWords(root.lyricLines[idx].words || []))
     }
 
     // ---- WebSocket (primary channel) ----
@@ -259,6 +298,11 @@ Singleton {
                 root.loadedTrackId = t.id
                 root.lyricLines = []
                 root.lineText = ""
+                root.lineWords = []
+                root.lineStartMs = 0
+                root.lineEndMs = 0
+                root.currentLineIndex = -1
+                root.isInterlude = false
                 // lyric event usually follows; HTTP fetch as fallback
                 root.loadLyrics()
             }

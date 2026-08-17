@@ -7,6 +7,7 @@
 ### 工作区（Workspace）
 - **Niri 风格 per-monitor 工作区**：监视器按顺序各占 10 个编号（第一台 1–10，第二台 11–20），`SUPER+数字键` 映射到当前监视器那一组
 - 用 Hyprland `workspace_rule` 把编号绑到对应 `monitor:`，不是断连后窗口位置的持久化
+- 工作区切换：竖直滑动 + 临界阻尼弹簧（无回弹）
 
 ### 概览（Overview）
 - `SUPER+Tab` 触发 [hyprland-scroll-overview](https://github.com/yayuuu/hyprland-scroll-overview) 插件
@@ -25,10 +26,10 @@
 - 等宽字体：JetBrains Mono NF（kitty / 代码块）
 
 ### 顶栏媒体歌词（Quickshell/II 定制）
-- **实时歌词**：通过 [SPlayer-Next](https://github.com/SPlayer-Dev/SPlayer-Next) 外部 API 显示当前句歌词到顶栏（需在 SPlayer 设置开启 external API）
-- **WebSocket 事件驱动**：`track`/`lyric`/`status` 事件即时推送切歌/歌词/播放态；position 本地时钟推算 + 低频 HTTP 校准；WS 不可用时自动降级 HTTP 轮询
+- **实时歌词**：通过 [SPlayer-Next](https://github.com/SPlayer-Dev/SPlayer-Next) 外部 API 显示当前句到顶栏（需在 SPlayer 设置开启 external API）
+- **可替换数据源**：顶栏只认 `Lyrics` 门面；SPlayer 是当前后端。有逐字时间轴时超长句按当前字滚动，否则 ghost marquee
+- **WebSocket 事件驱动**：`track`/`lyric`/`status` 即时推送；position 本地时钟推算 + 低频 HTTP 校准；WS 不可用时降级 HTTP
 - **间奏识别**：行间或尾部 outro 间隙 ≥4s 显示音符指示
-- 歌词超长时 ghost 无缝 marquee 滚动，支持切歌/暂停/滚动对齐
 
 ### 截图 / 录屏 / 录音（SUPER+SHIFT+S）
 - 选区工具栏：取色器、录屏、录 GIF、录麦克风、录系统声音

@@ -23,9 +23,9 @@
 - 入口 `shell.qml`（`qs -c ii` 加载），`settings.qml`（设置应用），`welcome.qml`
 - `services/` —— Singleton 服务（`pragma Singleton`）：
   - 系统类：Audio/Brightness/Cliphist/Battery/Network/BluetoothStatus/Wallpapers/Notifications/Idle/Updates/Weather/HyprlandData/HyprlandXkb/Hyprsunset
-  - 定制类：`SPlayer.qml`（歌词）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`、`ClashVerge.qml`（Clash Verge Rev TUN/系统代理）
+  - 定制类：`Lyrics.qml`（歌词门面）、`SPlayer.qml`（SPlayer-Next 后端）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`、`ClashVerge.qml`（Clash Verge Rev TUN/系统代理）
 - `modules/`：
-  - `common/` —— 共享基础：`Config.qml`（配置定义 JsonObject）、`Directories.qml`（路径，带 file://）、`Appearance.qml`（主题/颜色/字体）、`functions/FileUtils.qml`、`widgets/`（通用组件）、`panels/`（lock 等）
+  - `common/` —— 共享基础：`Config.qml`（配置定义 JsonObject）、`Directories.qml`（路径，带 file://）、`Appearance.qml`（主题/颜色/字体）、`functions/`（FileUtils、LyricSync 等）、`widgets/`（含 `SyncedLyricText`）、`panels/`（lock 等）
   - `ii/` —— 主面板族：`bar/`（顶栏，含 Media/SysTray/Workspaces/Resources 等）、`sidebarLeft/`、`sidebarRight/`（日历/节假日）、`overview/`（搜索框+emoji）、`overlay/`（截图/录屏区域）、`recordingStatus/`、`mediaControls/`、`background/` 等
   - `settings/` —— 设置页（BarConfig/GeneralConfig/InterfaceConfig）+ `settings/system/`（Wifi/Bluetooth/Monitor/KDE）
   - `waffle/` —— 另一个面板族（可切换）
@@ -72,7 +72,7 @@
 ### 整支 merge
 - **#3484** `eea9a660` — songrec：`recognize-music.sh` `"matches": [` → `"track":`（紧凑 JSON）
 - **#3497** `af766d4d` — 设置侧栏分层（`iiPages` + Connectivity/Monitor/KDE）；`settings/system/` 有 Wifi/Bluetooth/Monitor/KDE，**未留 VpnConfig**。合并带出的 WifiDialog 孤儿 `visible` 已在 `83125c42` 修掉
-- **#3135** `c7639efb` — Android 16 快捷设置弹窗卡片化。已跟进：设备色 input=primary / audio=tertiary / 其他=secondary；蓝牙按名称/MAC 分组；提示字号 `pixelSize.small`；分区头 `Layout.leftMargin: 12`（`399352bd`）。**未做**：底部按钮 padding 收紧（`WindowDialogButtonRow` `margins:-8` + 各框 `margins:4`）
+- **#3135** `c7639efb` — Android 16 快捷设置弹窗卡片化。已跟进：设备色 input=primary / audio=tertiary / 其他=secondary；蓝牙按名称/MAC 分组；提示字号 `pixelSize.small`；分区头 `Layout.leftMargin: 12`（`399352bd`）；底部 `WindowDialogButtonRow` `margins:-8` + 各框 `Layout.margins: 4`
 
 ### 本地补丁 · bugfix（`c7c5790c`）
 - **#3517** 翻译复制按钮挂 `ButtonGroup.groupData`（不是 `actions.data`）
@@ -140,26 +140,34 @@
 
 ### II Overview / 搜索框（本项目定制）
 - **SUPER 单按**：`keybinds.lua` 里 `SUPER_L` 绑 `quickshell:searchToggle`（`release=true`）——按下松开后 toggle
-- **搜索框**：`Overview.qml` `width: Math.min(680, panelWindow.width-80)`+`topMargin: height*0.18`；`SearchBar.qml` `implicitHeight: 52`+`font.pixelSize.large`
+- **搜索框**：`Overview.qml` `width: Math.min(680, panelWindow.width-80)`，竖直位置 `y: height*0.18`；`SearchBar.qml` `implicitHeight: 52`+`font.pixelSize.large`
+- **开关动画**：compositor 对 `quickshell:overview` 仍 `no_anim`（避免叠两套）。QS 侧 `keepSearchMounted` 关后挂 ~180ms，透明度 + scale(0.94) + 轻微上浮；进 280ms `emphasizedDecel` / 出 160ms `emphasizedAccel`
 - **emoji 面板**：`SearchWidget.qml` 有 `emojiMode`（`searchingText.startsWith(prefix.emojis)`）+`emojiGrid`（GridView）；`Emojis.qml` word-based matching（空搜全返、每词须出现、slice 50）
 - **模块恢复**：从 `upstream/main` 恢复 QML 因版本不兼容不工作，用**本地历史版本**（`git show <commit^>:<path>`）；Overview 删除分两步（`4ec200e3`+`25899354`），恢复版本要匹配
 - **git revert 冲突**：保留后续功能文件（`git checkout --ours`）；revert 带出无关改动（JamesDSP、persistent_workspaces）需手动排除
 - **面板加载验证**：PanelLoader 懒加载，`qs -c ii ipc call search toggle` 后 `hyprctl layers | grep quickshell:overview`
 
+### Hyprland 动画（`hyprland/general.lua`）
+- speed 单位是 ds（1 = 100ms）。窗口 **开 350ms** `niriOpen`（带一点 overshoot）、**关 150ms** `niriClose`；图层开 250ms / 关 200ms（关不要比开慢）
+- **工作区**：`slidevert` + 真弹簧 `niriWorkspace`（mass=1, stiffness=1000, dampening=63.2，临界阻尼，约 250ms 收住）。`hl.animation({ spring = "name" })` 时 duration 由物理决定，`speed` 只是解析器占位。贝塞尔 `niriSpring`（12% 回弹）只给 `windowsMove`，全屏竖滑不要用
+- 便签本 `specialWorkspace` 同一套弹簧。OSD：`quickshell:onScreenDisplay` layer fade
+
 ### 顶栏媒体歌词（本项目定制）
-- **数据源**：SPlayer-Next external API，XMLHttpRequest 请求（参考 `services/Booru.qml`）。WS 事件驱动 + HTTP 兜底双轨：
-  - **WebSocket 主通道**（`services/wsclient.qml`，根类型 WebSocket）：服务端推 `track`/`lyric`/`status`/`ended` 事件——切歌/歌词/播放态即时更新，**不推连续 position**（`HIGH_FREQ_EVENTS` 过滤 `position`/`fftData`），`lineChange` 只在插件通道不经 WS
-  - **position 本地推算**：收到 status 事件（play/pause/seek 时带 position）`setAnchor`，播放中用 200ms Timer `anchorPos + (Date.now()-anchorAt)` 推算歌词行；WS 已连接时 **8s** HTTP `/api/status` 校准（`statusPollWhenWsMs`），不是 1s
-  - **降级 / 退避**：WS 未连上时同一 Timer 兼拉 `/api/now-playing`；API 不可达时 `failBackoffMs` 从 3s 倍增到 30s（`reconnectTimer` 用同一间隔）。HTTP 有 3s timeout
-- **`import QtWebSockets` 深坑**：WebSocket **静态声明在 Singleton 内（或作 QtObject 子对象）永远不连接**（qml_rs 下状态停在 Connecting）——必须独立组件文件 `wsclient.qml` 以 WebSocket 为**根类型**、`Qt.createComponent` + `createObject(null)` 创建、事件在组件内部 handler 转发给 `SPlayer.onWsStatus/onWsMessage`（同目录 import 可见）；**外部 `.connect()` 与自定义 property 均不可靠**（property 会导致连接失败）
-- **同步**：缓存歌词行定位当前句（跳过 isBG），输出 lineText；WS `track` 事件切歌时先清行、清 `durationMs`/`lyricAvailable`，再 `loadLyrics()` HTTP 兜底（`lyric` 事件通常随后到覆盖）。`lyricAvailable` 以 API 字段或已加载行数为准，切歌时不要无条件 `true`
-- **间奏检测**（本项目定制）：SPlayer API **无 intro/interlude 标记字段**——照抄 SPlayer 前端 `detectInterlude`（`LyricLine` 只有 startTime/endTime/words/isBG/isDuet）：position 落在某行 `endTime` 到下一行 `startTime-250ms` 之间且间隙 ≥`minInterludeGap`（默认 4000ms）即视为间奏（含首行前=前奏），`lineText` 用 `interludeText`。真实歌词里只有大器乐段才触发，2–3s 行间停顿不触发
-- **尾部 outro**：存 `durationMs`（status 事件/轮询带），最后一行 `endTime` → `durationMs` 的 gap ≥阈值也算间奏；无 duration 时不判
-- **`♪` 渲染坑**：`♪`（U+266A）在 CJK 正文 fallback 成小符号——Media.qml 用三个 `music_note` **MaterialSymbol**（`iconSize: small` 与歌词同号）并排显示间奏指示；静态书写（Repeater delegate 图标字体渲染失败）
-- **API 断开**：WS Error/Closed 或 HTTP 失败（非 200 / onerror / timeout）→ `handleApiDown` → `apiDown` + `clearAll()`，否则顶栏残留旧歌名
-- **MPRIS `xesam:asText` 不是实时歌词标准**；主流靠播放器私有 API 或本地 LRC
-- **marquee**（`Media.qml`）：lyricon 式 **ghost 无缝滚动**——主文本+ghost 副本（`ghostSpacing:48`），`scrollX` 从 0 线性滚到 `-(文本宽+间距)` 循环，副本顶替主文本视觉无缝；等速（`duration = max(800, unit*25)`）；左右 14px 渐变 fading edge。**动画目标用独立属性 `scrollX`，Text.x 绑定它**（避免循环依赖）；短文本居中不滚动
-- 调试：Media 是常驻组件，加日志**用编辑工具**，勿用 sed 多行替换（会误改文件污染部署版）
+- **分层**（顶栏不要直接绑某个播放器）：
+  - `services/Lyrics.qml` —— 门面。约定见文件头（`lineText` / `lineWords[{word,startTime,endTime}]` / 行起止 / 播放时钟 / `isInterlude`）。新源实现约定后插入 `active`（先匹配优先）
+  - `services/SPlayer.qml` —— 当前唯一后端（SPlayer-Next external API）
+  - `functions/LyricSync.qml` —— 逐字时间 → 字符/像素位置，与源无关
+  - `widgets/SyncedLyricText.qml` —— 显示：有时间轴且超长则 karaoke 滚（当前字约在视口 42%），否则 ghost marquee；短句居中。`FrameAnimation` 跟帧；字宽换行时预计算；滚动文本 `renderType: QtRendering`（Native 亚像素会闪）
+- **SPlayer 通道**：XMLHttpRequest（参考 `Booru.qml`）。WS 事件驱动 + HTTP 兜底：
+  - **WebSocket 主通道**（`services/wsclient.qml`，根类型 WebSocket）：推 `track`/`lyric`/`status`/`ended`——**不推连续 position**（`HIGH_FREQ_EVENTS` 过滤 `position`/`fftData`），`lineChange` 只在插件通道不经 WS
+  - **position 本地推算**：status 事件 `setAnchor`，播放中 200ms Timer 更新 `positionMs`（karaoke 显示用 `Date.now()-anchorAt` 外推，不跟这 200ms）；WS 已连时 **8s** HTTP `/api/status` 校准（`statusPollWhenWsMs`）
+  - **降级 / 退避**：WS 未连上时同一 Timer 兼拉 `/api/now-playing`；API 不可达时 `failBackoffMs` 3s→30s。HTTP 3s timeout
+- **`import QtWebSockets` 深坑**：WebSocket **静态声明在 Singleton 内（或作 QtObject 子对象）永远不连接**（qml_rs 下停在 Connecting）——必须 `wsclient.qml` 以 WebSocket 为**根类型**、`Qt.createComponent` + `createObject(null)`，事件在组件内转 `SPlayer.onWsStatus/onWsMessage`；**外部 `.connect()` 与自定义 property 均不可靠**
+- **同步**：跳过 isBG 选当前行，暴露 `lineText`+`lineWords`；WS `track` 切歌时清行、清 `durationMs`/`lyricAvailable`/`lineWords`，再 `loadLyrics()`。`lyricAvailable` 以 API 字段或已加载行数为准，切歌时不要无条件 `true`
+- **间奏**：SPlayer API **无 intro/interlude 字段**——照抄前端 `detectInterlude`：position 落在某行 `endTime` 到下一行 `startTime-250ms` 且间隙 ≥`minInterludeGap`（默认 4000ms）；末行到 `durationMs` 同样判 outro。`isInterlude=true` 时顶栏三个 `music_note` MaterialSymbol（`♪` 在 CJK 正文会缩成小符号；Repeater+图标字体渲染失败，须静态写）
+- **API 断开**：WS Error/Closed 或 HTTP 失败 → `handleApiDown` → `apiDown` + `clearAll()`
+- **MPRIS `xesam:asText` 不是实时歌词标准**；无 Lyrics 源时顶栏回退 MPRIS 标题
+- 调试：Media 常驻，加日志用编辑工具，勿 sed 多行替换
 
 ### MPRIS 幽灵标题（MprisController，本项目定制，深坑）
 - **症状**：播放器（SPlayer/浏览器）退出后顶栏残留旧标题
