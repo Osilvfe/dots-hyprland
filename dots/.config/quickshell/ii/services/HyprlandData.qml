@@ -77,6 +77,13 @@ Singleton {
         onTriggered: root.updateAll()
     }
 
+    Timer {
+        id: windowTitleUpdateDebounce
+        interval: 250
+        repeat: false
+        onTriggered: root.updateWindowList()
+    }
+
     function biggestWindowForWorkspace(workspaceId) {
         const windowsInThisWorkspace = HyprlandData.windowList.filter(w => w.workspace.id == workspaceId);
         return windowsInThisWorkspace.reduce((maxWin, win) => {
@@ -96,6 +103,10 @@ Singleton {
         function onRawEvent(event) {
             // console.log("Hyprland raw event:", event.name);
             const name = event.name;
+            if (["windowtitle", "windowtitlev2"].includes(name)) {
+                windowTitleUpdateDebounce.restart();
+                return;
+            }
             if (["openlayer", "closelayer", "screencast", "activelayout", "submap"].includes(name))
                 return;
             // Burst events during drag/resize: coalesce instead of 5 hyprctl per event.

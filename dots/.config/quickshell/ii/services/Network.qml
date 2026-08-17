@@ -153,11 +153,30 @@ Singleton {
     }
 
     // Status update
+    // nmcli monitor can emit several lines during wifi state changes.
+    // Restarting in-flight Processes races teardown and can crash qs.
+    property bool pendingUpdate: false
+
     function update() {
+        if (updateConnectionType.running || wifiStatusProcess.running ||
+            updateNetworkName.running || updateNetworkStrength.running) {
+            pendingUpdate = true;
+            return;
+        }
         updateConnectionType.startCheck();
-        wifiStatusProcess.running = true
+        wifiStatusProcess.running = true;
         updateNetworkName.running = true;
         updateNetworkStrength.running = true;
+    }
+
+    function maybeRunPendingUpdate() {
+        if (!pendingUpdate)
+            return;
+        if (updateConnectionType.running || wifiStatusProcess.running ||
+            updateNetworkName.running || updateNetworkStrength.running)
+            return;
+        pendingUpdate = false;
+        update();
     }
 
     Process {
@@ -185,38 +204,45 @@ Singleton {
         }
         onExited: (exitCode, exitStatus) => {
             const lines = updateConnectionType.buffer.trim().split('\n');
-            const connectivity = lines.pop() // none, limited, full
+            const connectivity = lines.pop()
             let hasEthernet = false;
             let hasWifi = false;
+            let hasVpn = false;
             let wifiStatus = "disconnected";
             lines.forEach(line => {
-                if (line.includes("ethernet") && line.includes("connected"))
+                const [type, state] = line.split(':');
+                if (!type || !state)
+                    return;
+                if (type === "ethernet" && state.startsWith("connected"))
                     hasEthernet = true;
-                else if (line.includes("wifi:")) {
-                    if (line.includes("disconnected")) {
+                else if (type === "wifi") {
+                    if (state.startsWith("disconnected")) {
                         wifiStatus = "disconnected"
                     }
-                    else if (line.includes("connected")) {
+                    else if (state.startsWith("connected")) {
                         hasWifi = true;
                         wifiStatus = "connected"
-
-                        if (connectivity === "limited") {
-                            hasWifi = false;
-                            wifiStatus = "limited"
-                        }
                     }
-                    else if (line.includes("connecting")) {
+                    else if (state.startsWith("connecting")) {
                         wifiStatus = "connecting"
                     }
-                    else if (line.includes("unavailable")) {
+                    else if (state.startsWith("unavailable")) {
                         wifiStatus = "disabled"
                     }
                 }
+                else if ((type === "tun" || type === "wireguard" || type === "vpn") && state.startsWith("connected")) {
+                    hasVpn = true;
+                }
             });
+            if (connectivity === "limited" && wifiStatus === "connected" && !hasVpn) {
+                hasWifi = false;
+                wifiStatus = "limited"
+            }
             root.wifiStatus = wifiStatus;
             root.ethernet = hasEthernet;
             root.wifi = hasWifi;
         }
+        onRunningChanged: if (!running) root.maybeRunPendingUpdate()
     }
 
     Process {
@@ -228,6 +254,7 @@ Singleton {
                 root.networkName = data;
             }
         }
+        onRunningChanged: if (!running) root.maybeRunPendingUpdate()
     }
 
     Process {
@@ -239,6 +266,7 @@ Singleton {
                 root.networkStrength = parseInt(data);
             }
         }
+        onRunningChanged: if (!running) root.maybeRunPendingUpdate()
     }
 
     Process {
@@ -254,6 +282,7 @@ Singleton {
                 root.wifiEnabled = text.trim() === "enabled";
             }
         }
+        onRunningChanged: if (!running) root.maybeRunPendingUpdate()
     }
 
     Process {

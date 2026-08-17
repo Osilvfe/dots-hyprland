@@ -20,6 +20,14 @@ Singleton {
     property var baseLayoutFilePath: "/usr/share/X11/xkb/rules/base.lst"
     property bool needsLayoutRefresh: false
 
+    // Hyprland keeps xkb group state per input device and emits one
+    // activelayout event per device. Pin tracking to a single device so a
+    // spurious event from an unrelated device (e.g. fcitx virtual keyboard)
+    // can't overwrite what this service reports.
+    property string trackedKeyboardOverride: ""
+    property string trackedKeyboard: ""
+    property bool trackedKeyboardSeen: false
+
     // Update the layout code according to the layout name (Hyprland gives the name not the code)
     onCurrentLayoutNameChanged: root.updateLayoutCode()
     function updateLayoutCode() {
@@ -82,11 +90,21 @@ Singleton {
             id: devicesCollector
             onStreamFinished: {
                 const parsedOutput = JSON.parse(devicesCollector.text);
-                const hyprlandKeyboard = parsedOutput["keyboards"].find(kb => kb.main === true);
+                const keyboards = parsedOutput["keyboards"];
+                if (!keyboards || keyboards.length === 0) return;
+
+                var hyprlandKeyboard = null;
+                if (root.trackedKeyboardOverride.length > 0)
+                    hyprlandKeyboard = keyboards.find(kb => kb.name === root.trackedKeyboardOverride);
+                if (!hyprlandKeyboard)
+                    hyprlandKeyboard = keyboards.find(kb => kb.main === true);
+                if (!hyprlandKeyboard)
+                    hyprlandKeyboard = keyboards[0];
+
+                root.trackedKeyboard = hyprlandKeyboard["name"];
+                root.trackedKeyboardSeen = false;
                 root.layoutCodes = hyprlandKeyboard["layout"].split(",");
                 root.currentLayoutName = hyprlandKeyboard["active_keymap"];
-                // console.log("[HyprlandXkb] Fetched | Layouts (multiple: " + (root.layoutCodes.length > 1) + "): "
-                //     + root.layoutCodes.join(", ") + " | Active: " + root.currentLayoutName);
             }
         }
     }
@@ -106,7 +124,18 @@ Singleton {
 
                 // Update when layout might have changed
                 const dataString = event.data;
-                root.currentLayoutName = dataString.substring(dataString.indexOf(",") + 1);
+                const prefix = root.trackedKeyboard + ",";
+                const fromTracked = root.trackedKeyboard.length > 0 && dataString.startsWith(prefix);
+
+                if (fromTracked) {
+                    root.trackedKeyboardSeen = true;
+                } else if (root.trackedKeyboardSeen) {
+                    return;
+                }
+
+                root.currentLayoutName = fromTracked
+                    ? dataString.substring(prefix.length)
+                    : dataString.substring(dataString.indexOf(",") + 1);
 
                 // Update layout for on-screen keyboard (osk)
                 Config.options.osk.layout = root.currentLayoutName.split(" (")[0];

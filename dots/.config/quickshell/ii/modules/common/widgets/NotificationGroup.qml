@@ -64,11 +64,7 @@ MouseArea { // Notification group area
             easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
         }
         onFinished: () => {
-            root.notifications.forEach((notif) => {
-                Qt.callLater(() => {
-                    Notifications.discardNotification(notif.notificationId);
-                });
-            });
+            Notifications.discardByAppName(root.notifications[0]?.appName);
         }
     }
 
@@ -228,7 +224,9 @@ MouseArea { // Notification group area
 
                 StyledListView { // Notification body (expanded)
                     id: notificationsColumn
+                    Layout.preferredHeight: contentHeight
                     implicitHeight: contentHeight
+                    reuseItems: true
                     Layout.fillWidth: true
                     spacing: expanded ? 5 : 3
                     // clip: true

@@ -20,11 +20,7 @@ MouseArea {
     implicitHeight: contentLayout.implicitHeight
 
     function dismissAll() {
-        root.notifications.forEach(notif => {
-            Qt.callLater(() => {
-                Notifications.discardNotification(notif.notificationId);
-            });
-        });
+        Notifications.discardByAppName(root.notifications[0]?.appName);
         removeAnimation.start();
     }
 
@@ -69,7 +65,9 @@ MouseArea {
             Layout.rightMargin: -Layout.leftMargin
             Layout.fillWidth: true
             implicitWidth: notifHeader.implicitWidth
+            Layout.preferredHeight: contentHeight
             implicitHeight: contentHeight
+            reuseItems: true
             interactive: false
             spacing: 4
             model: ScriptModel {
