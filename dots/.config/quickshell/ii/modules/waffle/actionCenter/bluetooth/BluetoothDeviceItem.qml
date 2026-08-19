@@ -57,9 +57,10 @@ ExpandableChoiceButton {
                     if (!root.device?.paired)
                         return Translation.tr("Not connected");
                     let statusText = root.device?.connected ? Translation.tr("Connected") : Translation.tr("Paired");
-                    if (!root.device?.batteryAvailable)
+                    const pct = BluetoothStatus.batteryFraction(root.device);
+                    if (pct < 0)
                         return statusText;
-                    statusText += ` • ${Math.round(root.device?.battery * 100)}%`;
+                    statusText += ` • ${Math.round(pct * 100)}%`;
                     return statusText;
                 }
             }

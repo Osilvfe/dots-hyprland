@@ -208,7 +208,7 @@ Item { // Bar content region
                         ClippedProgressBar {
                             id: btBattery
                             readonly property var btDevices: BluetoothStatus.connectedBatteryDevices
-                            value: btDevices.length > 0 ? btDevices[0].battery : 0
+                            value: btDevices.length > 0 ? BluetoothStatus.batteryFraction(btDevices[0]) : 0
                             highlightColor: Appearance.colors.colOnSecondaryContainer
                             valueBarWidth: 40
                             textMask: Item {
@@ -229,7 +229,7 @@ Item { // Bar content region
                                         font.weight: Font.DemiBold
                                         text: btBattery.btDevices.length > 1
                                             ? "+" + btBattery.btDevices.length
-                                            : Math.round((btBattery.btDevices[0]?.battery ?? 0) * 100)
+                                            : Math.round(Math.max(0, BluetoothStatus.batteryFraction(btBattery.btDevices[0])) * 100)
                                     }
                                 }
                             }
@@ -252,7 +252,7 @@ Item { // Bar content region
                                         required property var modelData
                                         icon: "battery_android_full"
                                         label: (modelData?.name ?? "") + ":"
-                                        value: Math.round((modelData?.battery ?? 0) * 100) + "%"
+                                        value: Math.round(Math.max(0, BluetoothStatus.batteryFraction(modelData)) * 100) + "%"
                                     }
                                 }
                             }

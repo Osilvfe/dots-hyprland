@@ -94,8 +94,9 @@ ContentPage {
                             return Translation.tr("Available to pair");
 
                         let statusText = itemRoot.device?.connected ? Translation.tr("Connected") : Translation.tr("Paired");
-                        if (itemRoot.device?.batteryAvailable)
-                            statusText += ` - ${Math.round(itemRoot.device?.battery * 100)}%`;
+                        const pct = BluetoothStatus.batteryFraction(itemRoot.device);
+                        if (pct >= 0)
+                            statusText += ` - ${Math.round(pct * 100)}%`;
                         return statusText;
                     }
                     color: Appearance.colors.colSubtext
