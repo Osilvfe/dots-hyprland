@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import qs.services
 import qs.modules.common
 import qs.modules.common.functions
 import qs.modules.common.widgets
@@ -11,6 +12,7 @@ Item {
 
     // schedule.json (kept backward compatible):
     // { semesterStart: "2026-09-07", showWeekend: true, timeHeaders: ["第1节"],
+    //   scheduleOverrides: { "2026-10-10": { weekday: 4 } },
     //   scheduleItems: [{ text, col, row, rowSpan, colorId,
     //     weeks: [1, 2], weekStart: 1, weekEnd: 16, weekType: "all|odd|even" }] }
     // `weeks` takes precedence when present. Old entries without week data are shown every week.
@@ -18,14 +20,22 @@ Item {
     property var timeHeaders: []
     property string semesterStart: ""
     property bool showWeekend: true
+    // A date override maps a make-up workday to the source weekday (0=Monday).
+    // It is only needed where the official holiday data says "班" but not which
+    // day's courses should be followed.
+    property var scheduleOverrides: ({})
     property var headers: ["一", "二", "三", "四", "五", "六", "日"]
     property bool settingsOpen: false
     property var editTimeHeaders: []
     property bool editShowWeekend: true
+    property string editScheduleOverrides: ""
     property int timeW: 40
-    property int cellW: 52
+    // Size from the Flickable viewport, not this item's implicit width.  The
+    // latter is also used by SwipeView to size the background and caused a
+    // feedback loop that could clip the Sunday column.
+    property int cellW: Math.max(32, Math.floor((flick.width - timeW - visibleDayCount * gap) / visibleDayCount))
     property int cellH: 52
-    property int headerH: 24
+    property int headerH: 38
     property int gap: 4
     readonly property int periodCount: Math.max(timeHeaders.length, 4)
     property var currentDate: new Date()
@@ -34,6 +44,10 @@ Item {
     readonly property int maxWeek: scheduleMaxWeek()
     readonly property string termState: termStatus()
     readonly property int visibleDayCount: showWeekend ? 7 : 5
+    // Keep a direct binding to the singleton data.  Calling a JS method on a
+    // singleton alone does not reliably make repeater delegates update after
+    // the holiday file/network load completes.
+    readonly property var holidayData: Holidays.data
     property string filePath: Directories.scheduleCache
 
     function dateFromIso(value) {
@@ -101,6 +115,68 @@ Item {
         return "active";
     }
 
+    function selectedDateForDay(day) {
+        var start = dateFromIso(semesterStart);
+        if (!start)
+            return null;
+        return new Date(start.getFullYear(), start.getMonth(), start.getDate() + (selectedWeek - 1) * 7 + day);
+    }
+
+    function dateKey(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    function holidayForDay(day) {
+        var date = selectedDateForDay(day);
+        if (!date)
+            return null;
+        Holidays.fetchYear(date.getFullYear());
+        return holidayData[dateKey(date)] ?? null;
+    }
+
+    function holidayIsRestDay(holiday) {
+        return holiday?.isOffDay === true;
+    }
+
+    function dayIsOff(day) {
+        return holidayIsRestDay(holidayForDay(day));
+    }
+
+    function sourceWeekdayForDay(day) {
+        var date = selectedDateForDay(day);
+        if (!date)
+            return day;
+        var override = scheduleOverrides[dateKey(date)];
+        return override?.weekday !== undefined ? Number(override.weekday) : day;
+    }
+
+    function formatScheduleOverrides() {
+        return Object.keys(scheduleOverrides).sort().map((date) => `${date}=${Number(scheduleOverrides[date].weekday) + 1}`).join("\n");
+    }
+
+    function parseScheduleOverrides(text) {
+        var overrides = {};
+        var lines = text.split("\n");
+        for (var index = 0; index < lines.length; index++) {
+            var line = lines[index].trim();
+            if (!line)
+                continue;
+            var match = /^(\d{4}-\d{2}-\d{2})\s*=\s*([1-7])$/.exec(line);
+            if (!match)
+                return null;
+            overrides[match[1]] = { "weekday": Number(match[2]) - 1 };
+        }
+        return overrides;
+    }
+
+    function dayDateText(day) {
+        var date = selectedDateForDay(day);
+        var holiday = holidayForDay(day);
+        var suffix = holidayIsRestDay(holiday) ? "休" : holiday?.isOffDay === false ? "班" : "";
+        var dateText = date ? `${date.getMonth() + 1}/${date.getDate()}` : "";
+        return `${dateText}${suffix ? " · " + suffix : ""}`;
+    }
+
     function courseLayoutKey(course) {
         return JSON.stringify({
             "text": course.text || "",
@@ -116,8 +192,8 @@ Item {
 
     // Rendering can merge a course spanning adjacent sections without changing
     // the imported source records. It keeps courses with differing weeks apart.
-    function mergedScheduleItems() {
-        var sorted = scheduleItems.slice().sort((left, right) => {
+    function mergeScheduleItems(items) {
+        var sorted = items.slice().sort((left, right) => {
             return left.col - right.col || left.row - right.row;
         });
         var merged = [];
@@ -133,6 +209,28 @@ Item {
         return merged;
     }
 
+    function mergedScheduleItems() {
+        return mergeScheduleItems(scheduleItems);
+    }
+
+    function renderedScheduleItems() {
+        var rendered = [];
+        for (var day = 0; day < visibleDayCount; day++) {
+            if (dayIsOff(day))
+                continue;
+            var sourceDay = sourceWeekdayForDay(day);
+            for (var index = 0; index < scheduleItems.length; index++) {
+                var course = scheduleItems[index];
+                if (course.col === sourceDay) {
+                    var copy = Object.assign({}, course);
+                    copy.col = day;
+                    rendered.push(copy);
+                }
+            }
+        }
+        return mergeScheduleItems(rendered);
+    }
+
     function getColor(id) {
         var colors = [Appearance.colors.colPrimaryContainer, Appearance.colors.colSecondaryContainer, Appearance.colors.colTertiaryContainer, ColorUtils.transparentize(Appearance.colors.colErrorContainer, 0.6), Appearance.colors.colLayer2Hover];
         return colors[id % colors.length];
@@ -146,6 +244,7 @@ Item {
     function openSettings() {
         editTimeHeaders = timeHeaders.length ? timeHeaders.slice() : ["第1节", "第2节", "第3节", "第4节", "第5节", "第6节", "第7节", "第8节", "第9节", "第10节"];
         editShowWeekend = showWeekend;
+        editScheduleOverrides = formatScheduleOverrides();
         settingsOpen = true;
     }
 
@@ -160,19 +259,28 @@ Item {
         }).filter((value) => {
             return value.length > 0;
         });
+        var overrides = parseScheduleOverrides(editScheduleOverrides);
+        if (overrides === null) {
+            settingsError.text = "补班格式应为 YYYY-MM-DD=周几（周一为 1）";
+            return ;
+        }
         semesterStart = start;
         timeHeaders = periods;
         showWeekend = editShowWeekend;
+        scheduleOverrides = overrides;
         scheduleFile.setText(JSON.stringify({
             "semesterStart": semesterStart,
             "showWeekend": showWeekend,
+            "scheduleOverrides": scheduleOverrides,
             "timeHeaders": timeHeaders,
             "scheduleItems": scheduleItems
         }, null, 2));
         settingsOpen = false;
     }
 
-    implicitWidth: timeW + visibleDayCount * (cellW + gap) + gap + 16
+    // Do not make the surrounding SwipeView/card grow to the grid's former
+    // fixed minimum width.  The grid itself follows the actual viewport.
+    implicitWidth: 320
     implicitHeight: 310
     Component.onCompleted: Quickshell.execDetached(["mkdir", "-p", FileUtils.parentDirectory(filePath)])
     onCurrentWeekChanged: {
@@ -203,6 +311,7 @@ Item {
                 var parsed = JSON.parse(text);
                 root.semesterStart = parsed.semesterStart || parsed.firstWeekDate || "";
                 root.showWeekend = parsed.showWeekend !== false;
+                root.scheduleOverrides = parsed.scheduleOverrides || {};
                 root.timeHeaders = parsed.timeHeaders || [];
                 root.scheduleItems = parsed.scheduleItems || [];
                 if (root.currentWeek > 0 && root.currentWeek <= root.maxWeek)
@@ -261,7 +370,7 @@ Item {
             Layout.fillHeight: true
             Layout.margins: 8
             clip: true
-            contentWidth: root.timeW + root.visibleDayCount * (root.cellW + root.gap) + root.gap
+            contentWidth: Math.max(width, root.timeW + root.visibleDayCount * (root.cellW + root.gap))
             contentHeight: root.headerH + root.periodCount * (root.cellH + root.gap) + root.gap
             boundsBehavior: Flickable.StopAtBounds
 
@@ -292,12 +401,24 @@ Item {
                             height: root.headerH
                             color: "transparent"
 
-                            StyledText {
+                            Column {
                                 anchors.centerIn: parent
-                                text: modelData
-                                font.pixelSize: 10
-                                font.weight: Font.DemiBold
-                                color: Appearance.colors.colOnSurfaceVariant
+                                spacing: 0
+
+                                StyledText {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: root.headers[index]
+                                    font.pixelSize: 10
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnSurfaceVariant
+                                }
+
+                                StyledText {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: root.dayDateText(index)
+                                    font.pixelSize: 8
+                                    color: root.holidayIsRestDay(root.holidayForDay(index)) ? Appearance.colors.colPrimary : root.holidayForDay(index)?.isOffDay === false ? Appearance.colors.colError : Appearance.colors.colOutline
+                                }
                             }
 
                         }
@@ -334,7 +455,32 @@ Item {
                 }
 
                 Repeater {
-                    model: root.mergedScheduleItems()
+                    model: root.visibleDayCount
+
+                    Rectangle {
+                        visible: root.dayIsOff(index)
+                        x: root.timeW + root.gap + index * (root.cellW + root.gap)
+                        y: root.headerH + root.gap
+                        width: root.cellW
+                        height: root.periodCount * (root.cellH + root.gap) - root.gap
+                        radius: 6
+                        color: Appearance.colors.colSurfaceContainerHigh
+
+                        StyledText {
+                            anchors.centerIn: parent
+                            width: parent.width - 6
+                            text: root.holidayForDay(index)?.name || "休息"
+                            color: Appearance.colors.colPrimary
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            font.weight: Font.DemiBold
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+
+                Repeater {
+                    model: root.renderedScheduleItems()
 
                     Rectangle {
                         visible: modelData.col < root.visibleDayCount && root.courseIsInWeek(modelData, root.selectedWeek)
@@ -439,6 +585,22 @@ Item {
                     onToggled: root.editShowWeekend = checked
                 }
 
+            }
+
+            StyledText {
+                text: "补班调课（可选）"
+                color: Appearance.colors.colOnSurfaceVariant
+                font.pixelSize: Appearance.font.pixelSize.small
+            }
+
+            MaterialTextArea {
+                id: scheduleOverridesField
+
+                Layout.fillWidth: true
+                Layout.preferredHeight: 54
+                placeholderText: "每行：2026-10-10=5（按周五课表）"
+                text: root.editScheduleOverrides
+                onTextChanged: root.editScheduleOverrides = text
             }
 
             StyledText {

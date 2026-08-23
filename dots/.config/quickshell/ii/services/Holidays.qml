@@ -105,6 +105,44 @@ Singleton {
         root.data = merged;
     }
 
+    // Keep the current academic year's government arrangement available when
+    // the remote detailed timetable cannot be reached.  This belongs here,
+    // rather than in an individual widget, so calendar and schedule always
+    // consume exactly the same `isOffDay` values.  Remote data replaces these
+    // entries as soon as it is available.
+    function bundledOffData(year) {
+        if (Number(year) !== 2026)
+            return {};
+        return {
+            "2026-09-20": { name: "", isOffDay: false },
+            "2026-09-25": { name: "中秋节", isOffDay: true },
+            "2026-09-26": { name: "", isOffDay: true },
+            "2026-09-27": { name: "", isOffDay: true },
+            "2026-10-01": { name: "国庆节", isOffDay: true },
+            "2026-10-02": { name: "", isOffDay: true },
+            "2026-10-03": { name: "", isOffDay: true },
+            "2026-10-04": { name: "", isOffDay: true },
+            "2026-10-05": { name: "", isOffDay: true },
+            "2026-10-06": { name: "", isOffDay: true },
+            "2026-10-07": { name: "", isOffDay: true },
+            "2026-10-10": { name: "", isOffDay: false }
+        };
+    }
+
+    function mergeBundledOffData(year) {
+        const fallback = root.bundledOffData(year);
+        if (Object.keys(fallback).length === 0)
+            return;
+        const merged = Object.assign({}, root.data);
+        for (const key in fallback) {
+            // Festival-only cache entries have `isOffDay: null`; they are not
+            // detailed timetable data and should be completed by the fallback.
+            if (!merged[key] || merged[key].isOffDay === null)
+                merged[key] = Object.assign({}, merged[key], fallback[key]);
+        }
+        root.data = merged;
+    }
+
     function markYearLoaded(year) {
         const loaded = Object.assign({}, root.yearsLoaded);
         loaded[year] = true;
@@ -186,6 +224,7 @@ Singleton {
         const days = root.stripMeta(parsed);
         if (Object.keys(days).length > 0)
             root.mergeIntoData(days);
+        root.mergeBundledOffData(root.pendingYear);
         return parsed;
     }
 
@@ -262,7 +301,8 @@ Singleton {
     function maybeFinishLoad() {
         if (!root.offDone || !root.festivalDone)
             return;
-        const merged = root.mergeData(root.offData, root.festivalData);
+        const remoteOffData = Object.keys(root.offData).length > 0 ? root.offData : root.bundledOffData(root.pendingYear);
+        const merged = root.mergeData(remoteOffData, root.festivalData);
         if (Object.keys(merged).length > 0) {
             root.mergeIntoData(merged);
             root.writeYearCache(root.pendingYear, merged);

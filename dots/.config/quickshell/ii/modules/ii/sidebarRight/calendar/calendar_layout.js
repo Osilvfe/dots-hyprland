@@ -251,10 +251,12 @@ function getCalendarLayout(dateObject, highlight, holidayData) {
             holiday = holidayData[hKey] || null;
         }
 
-        // Nager.Date gives the exact festival day; other off days just get a badge
+        // Festival names and government work/rest arrangements are separate:
+        // only the shared Holidays service's explicit isOffDay value controls
+        // the corner badge.  A named make-up workday must still show "班".
         var showHolidayName = holiday && holiday.name !== "";
-        var offBadge = holiday && (holiday.isOffDay || showHolidayName);
-        var workBadge = holiday && !showHolidayName && holiday.isOffDay === false;
+        var offBadge = holiday && holiday.isOffDay === true;
+        var workBadge = holiday && holiday.isOffDay === false;
 
         calendar[i][j] = {
             "day": toFill,
