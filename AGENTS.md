@@ -23,7 +23,7 @@
 - 入口 `shell.qml`（`qs -c ii` 加载），`settings.qml`（设置应用），`welcome.qml`
 - `services/` —— Singleton 服务（`pragma Singleton`）：
   - 系统类：Audio/Brightness/Cliphist/Battery/Network/BluetoothStatus/Wallpapers/Notifications/Idle/Updates/Weather/HyprlandData/HyprlandXkb/Hyprsunset
-  - 定制类：`Lyrics.qml`（歌词门面）、`SPlayer.qml`（SPlayer-Next 后端）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`、`ClashVerge.qml`（Clash Verge Rev TUN/系统代理）
+  - 定制类：`Lyrics.qml`（歌词门面）、`SPlayer.qml`（SPlayer-Next 后端）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`、`ClashVerge.qml`（Clash Verge Rev TUN/系统代理）、`OplusBuds3.qml`（OnePlus Buds 3 控制通道）
 - `modules/`：
   - `common/` —— 共享基础：`Config.qml`（配置定义 JsonObject）、`Directories.qml`（路径，带 file://）、`Appearance.qml`（主题/颜色/字体）、`functions/`（FileUtils、LyricSync 等）、`widgets/`（含 `SyncedLyricText`）、`panels/`（lock 等）
   - `ii/` —— 主面板族：`bar/`（顶栏，含 Media/SysTray/Workspaces/Resources 等）、`sidebarLeft/`、`sidebarRight/`（日历/节假日）、`overview/`（搜索框+emoji）、`overlay/`（截图/录屏区域）、`recordingStatus/`、`mediaControls/`、`background/` 等
@@ -51,6 +51,12 @@
 - **当前**：qs 自建 `org.kde.StatusNotifierWatcher`（`StatusNotifierWatcher::instance()`）；`mask_kded6.sh` 阻止 kded6 抢占
 - 验证：`busctl --user status org.kde.StatusNotifierWatcher | grep PID=` 应对上 qs；items：`busctl --user get-property org.kde.StatusNotifierWatcher /StatusNotifierWatcher org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems`
 
+### OnePlus Buds 3 设备控制（本项目定制）
+- 目前只匹配规范化名称 `OnePlus Buds 3`；入口位于蓝牙设置的对应已保存设备行，耳机未连接时入口禁用。控制 UI 在 `settings/system/OplusBuds3Config.qml`，通过 `Loader` 按需加载，不与通用蓝牙选项混排
+- `services/OplusBuds3.qml` 只在专属页面打开时启动桥接器，返回蓝牙页或离开设置页时关闭进程并释放 RFCOMM；设备地址从 Quickshell 蓝牙模型动态取得，不写入配置
+- `scripts/bluetooth/oplus-buds3-bridge.c` 使用 BlueZ RFCOMM 和耳机私有 SPP 帧，自动探测通道；启动脚本用 `cc` + `libbluetooth` 按需编译到 `~/.cache/quickshell/helpers/`（Arch 依赖 `base-devel`、`bluez-libs`）
+- 协议字段按 `Osilvfe/OppoPodsManager-linux` 的 OnePlus Buds 3（产品 ID `063C14`）实现：电量、降噪/通透、EQ、空间音频、游戏模式/音效、双设备和佩戴检测。游戏音效与空间音频、非默认 EQ 的互斥在桥接器中同步处理
+
 ### 快捷键（`keybinds.lua`）
 - `SUPER` 单按=搜索框 toggle（`SUPER_L`/`SUPER_R`，`release=true`）；`SUPER+Tab`=**scrolloverview 插件**概览（不是 qs Overview）；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件
 
@@ -58,6 +64,7 @@
 - `hyprland/scripts/mask_kded6.sh` —— 非 KDE：假 D-Bus service `Exec=/bin/false` + `systemctl --user mask plasma-kded6.service`；`XDG_CURRENT_DESKTOP=KDE` 时执行则还原。安装 `3.files-exp.sh` 会跑一次
 - `hyprland/scripts/gamepad-active.py` —— 手柄检测（hypridle 用）
 - `quickshell/ii/scripts/launch-detached-qs.sh` —— 开 settings/welcome
+- `quickshell/ii/scripts/bluetooth/oplus-buds3-bridge.sh` —— 按需编译并启动 OnePlus Buds 3 原生 RFCOMM 桥接器
 - `fuzzel-emoji.sh`、`snip_to_search.sh`、`launch_first_available.sh`、`switchfloatfocus.sh`
 
 ## 同步与发布

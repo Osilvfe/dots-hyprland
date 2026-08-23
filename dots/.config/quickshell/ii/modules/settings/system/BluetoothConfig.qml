@@ -16,6 +16,20 @@ ContentPage {
     readonly property bool bluetoothEnabled: Bluetooth.defaultAdapter?.enabled ?? false
     readonly property bool bluetoothScanning: Bluetooth.defaultAdapter?.discovering ?? false
     readonly property int savedDeviceCount: BluetoothStatus.connectedDevices.length + BluetoothStatus.pairedButNotConnectedDevices.length
+    property bool showingOplusBuds3Controls: false
+
+    function isOplusBuds3(device) {
+        const name = String(device?.name ?? device?.deviceName ?? "")
+            .toLowerCase().replace(/[^a-z0-9]/g, "");
+        return name === "oneplusbuds3";
+    }
+
+    function openOplusBuds3Controls(device) {
+        if (!root.isOplusBuds3(device) || !device?.connected)
+            return;
+        root.resetScanState();
+        root.showingOplusBuds3Controls = true;
+    }
 
     function scanDevices() {
         if (!Bluetooth.defaultAdapter)
@@ -45,14 +59,17 @@ ContentPage {
     Component.onDestruction: root.stopScanning()
 
     onVisibleChanged: {
-        if (!visible)
+        if (!visible) {
             root.stopScanning();
+            root.showingOplusBuds3Controls = false;
+        }
     }
 
     component BluetoothSettingsDeviceItem: DialogListItem {
         id: itemRoot
         required property var device
         property bool nearby: false
+        readonly property bool hasDeviceControls: !nearby && root.isOplusBuds3(device)
 
         Layout.fillWidth: true
         verticalPadding: 8
@@ -106,6 +123,13 @@ ContentPage {
             }
 
             DialogButton {
+                visible: itemRoot.hasDeviceControls
+                enabled: itemRoot.device?.connected ?? false
+                buttonText: Translation.tr("Device controls")
+                onClicked: root.openOplusBuds3Controls(itemRoot.device)
+            }
+
+            DialogButton {
                 visible: !itemRoot.nearby
                 buttonText: itemRoot.device?.connected ? Translation.tr("Disconnect") : Translation.tr("Connect")
                 onClicked: {
@@ -133,6 +157,7 @@ ContentPage {
     }
 
     ColumnLayout {
+        visible: !root.showingOplusBuds3Controls
         Layout.fillWidth: true
         spacing: 6
 
@@ -196,9 +221,26 @@ ContentPage {
         }
     }
 
+    Loader {
+        id: oplusBuds3ControlsLoader
+        visible: active
+        active: root.showingOplusBuds3Controls
+        Layout.fillWidth: true
+        source: "OplusBuds3Config.qml"
+    }
+
+    Connections {
+        target: oplusBuds3ControlsLoader.item
+        ignoreUnknownSignals: true
+
+        function onBackRequested() {
+            root.showingOplusBuds3Controls = false;
+        }
+    }
+
     ContentSection {
         id: nearbySection
-        visible: root.bluetoothEnabled && (root.scanRequested || opacity > 0)
+        visible: !root.showingOplusBuds3Controls && root.bluetoothEnabled && (root.scanRequested || opacity > 0)
         property real animatedHeight: root.bluetoothEnabled && root.scanRequested ? implicitHeight : 0
         Layout.maximumHeight: animatedHeight
         clip: true
@@ -250,7 +292,7 @@ ContentPage {
     }
 
     ContentSection {
-        visible: root.bluetoothEnabled
+        visible: !root.showingOplusBuds3Controls && root.bluetoothEnabled
         icon: "bookmark"
         title: Translation.tr("Saved devices")
 
