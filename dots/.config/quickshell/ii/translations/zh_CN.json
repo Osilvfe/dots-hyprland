@@ -830,5 +830,19 @@
   "Open app": "打开应用",
   "Open Clash Verge Rev": "打开 Clash Verge Rev",
   "For browsers and apps that honor the OS proxy": "适用于浏览器和遵循系统代理的应用",
-  "Route all traffic through a virtual NIC": "通过虚拟网卡接管全部流量"
+  "Route all traffic through a virtual NIC": "通过虚拟网卡接管全部流量",
+  "Custom color": "自定义颜色",
+  "Custom color: %1": "自定义颜色：%1",
+  "Pick a color on screen — the whole theme is generated from it instead of the wallpaper": "在屏幕上拾取颜色——将以该颜色而非壁纸生成完整主题",
+  "Back to wallpaper colors": "恢复壁纸配色",
+  "Clear the custom color and derive colors from the wallpaper again": "清除自定义颜色，重新从壁纸提取配色",
+  "Saved themes": "已保存的主题",
+  "Save current theme": "保存当前主题",
+  "Snapshots wallpaper, palette, custom color, and light/dark mode into the first free slot": "将壁纸、配色方案、自定义颜色与明暗模式保存到第一个空槽位",
+  "Filled slot: click = restore, X then click again = delete. Empty slot: click = save here.": "已保存槽位：点击恢复；点击 X 后再次点击删除。空槽位：点击保存到此处。",
+  "Clear results": "清除结果",
+  "Clipboard is empty": "剪贴板为空",
+  "Copy something to see it here": "复制内容后将在此显示",
+  "No results found": "未找到结果",
+  "Try a different search": "请尝试其他搜索词"
 }

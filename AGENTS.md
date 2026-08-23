@@ -93,6 +93,9 @@
 - **#3538** 顶栏蓝牙电量（`bar.indicators.showBluetoothBattery`，默认开）
 - **#3581** 可选通知提示音（`sounds.notifications`，默认关）
 - **#3144** Gemini `thought_signature` + 完整 `functionCall`（无设置开关）
+- **#3600** 设置页自定义主题主色（复用 `switchwall.sh --color`）
+- **#3598** 主题槽位：保存/恢复/删除壁纸、明暗模式、配色方案与自定义主色（10 个槽位）
+- **#3546** Overview 剪贴板清除全部/筛选结果按钮与空状态提示
 
 ### 本地修复（无对应 PR）
 - **`c2de877c`** 设置/欢迎走 `launch-detached-qs.sh`，避免 `__QUICKSHELL_CRASH_*` 让 `qs -p` 再开一根顶栏
