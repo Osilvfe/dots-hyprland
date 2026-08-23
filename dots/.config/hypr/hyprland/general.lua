@@ -127,6 +127,8 @@ hl.config({
     },
     scrolling = {
         column_width = 0.5,
+        -- Keep a single new column at column_width instead of expanding it to 1.0.
+        fullscreen_on_one_column = false,
         focus_fit_method = 1,
         follow_focus = true,
         follow_min_visible = 0.4,
