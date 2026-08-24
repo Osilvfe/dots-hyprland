@@ -22,7 +22,7 @@
 - `SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图/录制工具栏
 
 ### 字体
-- 默认界面字体：PingFang SC（`illogical-impulse-fonts-themes` 依赖 `fonts-apple`）
+- 默认界面字体：Google Sans Flex（安装脚本自动获取）
 - 等宽字体：JetBrains Mono NF（kitty / 代码块）
 
 ### 顶栏媒体歌词（Quickshell/II 定制）
@@ -76,4 +76,3 @@ hyprpm enable scrolloverview
 本项目基于以下开源项目与贡献，特此致谢：
 
 - **上游基础**：[end-4/dots-hyprland](https://github.com/end-4/dots-hyprland) — 本项目的一切来源于此，Quickshell/II shell 与 Hyprland 配置框架均继承自上游
-
