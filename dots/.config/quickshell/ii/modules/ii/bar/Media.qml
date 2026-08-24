@@ -93,6 +93,7 @@ Item {
             anchorAt: Lyrics.anchorAt
             positionMs: Lyrics.positionMs
             isInterlude: root.isInterlude
+            holdLine: Lyrics.holdLine
         }
 
     }

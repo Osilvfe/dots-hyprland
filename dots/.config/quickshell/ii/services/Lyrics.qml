@@ -10,6 +10,7 @@ import qs.modules.common.functions
 //   ready: bool                 // false while unreachable (optional; default true)
 //   lineText: string            // current line; empty = no synced line
 //   isInterlude: bool           // instrumental gap (bar shows notes, not text)
+//   holdLine: bool               // short gap; retain the prior line without animating it
 //   lineWords: var              // [{word, startTime, endTime}] milliseconds
 //   lineStartMs, lineEndMs: int
 //   positionMs: int
@@ -19,11 +20,13 @@ import qs.modules.common.functions
 //   title, artist: string       // optional now-playing metadata
 //
 // To add a backend: implement the contract, then insert it in `active` below
-// (first match wins).
+// (first match wins). YAQMC takes priority whenever it has a current track.
 Singleton {
     id: root
 
     readonly property var active: {
+        if (Yaqmc.ready !== false && (Yaqmc.lineText.length > 0 || Yaqmc.title.length > 0))
+            return Yaqmc;
         if (SPlayer.ready !== false && (SPlayer.lineText.length > 0 || SPlayer.title.length > 0))
             return SPlayer;
         return null;
@@ -32,6 +35,7 @@ Singleton {
     readonly property bool available: !!active
     readonly property string lineText: active?.lineText ?? ""
     readonly property bool isInterlude: !!(active?.isInterlude)
+    readonly property bool holdLine: !!(active?.holdLine)
     readonly property var lineWords: active?.lineWords ?? []
     readonly property int lineStartMs: active?.lineStartMs ?? 0
     readonly property int lineEndMs: active?.lineEndMs ?? 0

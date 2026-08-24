@@ -395,6 +395,7 @@ Singleton {
             property JsonObject media: JsonObject {
                 // Attempt to remove dupes (the aggregator playerctl one and browsers' native ones when there's plasma browser integration)
                 property bool filterDuplicatePlayers: true
+                property bool wordHighlight: true
             }
 
             property JsonObject networking: JsonObject {

@@ -68,6 +68,11 @@ Singleton {
             return 0;
         var a = startTime || 0;
         var b = endTime || 0;
+        // Providers occasionally omit spaces/punctuation from word tokens
+        // while keeping them in the line text.  The completed line must still
+        // reach the end of the rendered text instead of stopping early.
+        if (b > a && pos >= b)
+            return n;
         if (!wordTimingsDistinct(words)) {
             if (!(b > a) && words && words.length === 1) {
                 a = words[0].startTime ?? a;
@@ -97,6 +102,8 @@ Singleton {
                     wp = (pos - start) / (end - start);
                 if (wp < 0) wp = 0;
                 if (wp > 1) wp = 1;
+                if (last && wp >= 1)
+                    return n;
                 return charOffset + wp * len;
             }
             charOffset += len;

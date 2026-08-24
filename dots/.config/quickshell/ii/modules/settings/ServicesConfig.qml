@@ -39,6 +39,15 @@ ContentPage {
                 text: Translation.tr("Hides browser-native MPRIS buses when plasma-browser-integration is active.\nplayerctld is always ignored.")
             }
         }
+
+        ConfigSwitch {
+            buttonIcon: "lyrics"
+            text: Translation.tr("Word-by-word lyric highlight")
+            checked: Config.options.media.wordHighlight
+            onCheckedChanged: {
+                Config.options.media.wordHighlight = checked;
+            }
+        }
     }
 
     ContentSection {
