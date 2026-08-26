@@ -113,6 +113,11 @@ Item { // Bar content region
             colText: rightSidebarButton.colText
         }
 
+        CodexUsageIndicator {
+            visible: (Config.options.bar.indicators.showCodexUsage ?? true) && CodexUsage.hasPrimary
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
         BarGroup {
             id: leftCenterGroup
             anchors.verticalCenter: parent.verticalCenter

@@ -48,6 +48,17 @@ ContentPage {
                 }
             }
         }
+        ConfigSwitch {
+            buttonIcon: "code"
+            text: Translation.tr("Codex usage")
+            checked: Config.options.bar.indicators.showCodexUsage ?? true
+            onCheckedChanged: {
+                Config.options.bar.indicators.showCodexUsage = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Show Codex limits next to the clock group")
+            }
+        }
     }
     
     ContentSection {

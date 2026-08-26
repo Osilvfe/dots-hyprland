@@ -282,6 +282,7 @@ Singleton {
                     }
                     property bool showIdleInhibitor: true
                     property bool showBluetoothBattery: true
+                    property bool showCodexUsage: true
                 }
                 property JsonObject tooltips: JsonObject {
                     property bool clickToShow: false
