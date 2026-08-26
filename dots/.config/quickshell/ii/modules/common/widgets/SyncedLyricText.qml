@@ -12,6 +12,7 @@ Item {
     implicitHeight: marqueeText.implicitHeight
 
     property string text: ""
+    property bool animateContent: true
     property var words: []
     property int lineStartMs: 0
     property int lineEndMs: 0
@@ -30,7 +31,10 @@ Item {
     readonly property real textWidth: marqueeText.implicitWidth
     readonly property bool overflow: textWidth > width + 1
     readonly property real unit: textWidth + ghostSpacing
-    readonly property bool hasTimedLyrics: !renderedInterlude && !holdLine && LyricSync.hasTiming(words, lineStartMs, lineEndMs)
+    // Short titles and lyric lines are centered from their actual geometry,
+    // rather than depending on a previously-reset animation offset.
+    readonly property real textX: overflow ? scrollX : (width - textWidth) / 2
+    readonly property bool hasTimedLyrics: animateContent && !renderedInterlude && !holdLine && LyricSync.hasTiming(words, lineStartMs, lineEndMs)
     readonly property bool showWordHighlight: Config.options.media.wordHighlight && hasTimedLyrics
     readonly property bool canKaraoke: overflow && hasTimedLyrics
     property real scrollX: 0
@@ -151,7 +155,7 @@ Item {
         rebuildCharXs();
         karaokeTargetIndex = -2;
         lastKaraokePosition = -1;
-        if (renderedInterlude || !overflow) {
+        if (!animateContent || renderedInterlude || !overflow) {
             marqueeRunning = false;
             root.scrollX = overflow ? 0 : (width - textWidth) / 2;
             if (hasTimedLyrics)
@@ -181,6 +185,7 @@ Item {
     }
     onCanKaraokeChanged: restartScroll()
     onHasTimedLyricsChanged: restartScroll()
+    onAnimateContentChanged: restartScroll()
     onIsInterludeChanged: requestLineChange()
     onHoldLineChanged: restartScroll()
     onPlayingChanged: {
@@ -289,11 +294,11 @@ Item {
         opacity: root.showWordHighlight ? 0.5 : 1
         renderType: Text.QtRendering
         text: root.renderedInterlude ? "" : root.renderedText
-        x: root.scrollX
+        x: root.textX
     }
 
     Item {
-        x: root.scrollX
+        x: root.textX
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(root.textWidth, root.karaokeProgressX)
         height: marqueeText.implicitHeight
@@ -322,7 +327,7 @@ Item {
         renderType: Text.QtRendering
         text: root.renderedInterlude ? "" : root.renderedText
         visible: root.marqueeRunning
-        x: root.scrollX + root.unit
+        x: root.textX + root.unit
     }
 
     Row {

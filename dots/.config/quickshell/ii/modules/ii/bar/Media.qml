@@ -13,12 +13,16 @@ Item {
     property bool borderless: Config.options.bar.borderless
     readonly property MprisPlayer activePlayer: MprisController.activePlayer
     readonly property string cleanedTitle: StringUtils.cleanMusicTitle(activePlayer?.trackTitle) || Translation.tr("No media")
+    readonly property string mprisTrackLabel: activePlayer?.trackTitle
+        ? `${cleanedTitle}${activePlayer?.trackArtist ? ' • ' + activePlayer.trackArtist : ''}`
+        : ""
+    readonly property bool hasMediaContent: Lyrics.hasSyncedLine
+        || mprisTrackLabel.length > 0
+        || Lyrics.trackLabel.length > 0
 
     readonly property string displayText: Lyrics.hasSyncedLine
         ? Lyrics.lineText
-        : (Lyrics.trackLabel
-            ? Lyrics.trackLabel
-            : `${cleanedTitle}${activePlayer?.trackArtist ? ' • ' + activePlayer.trackArtist : ''}`)
+        : (mprisTrackLabel || Lyrics.trackLabel || Translation.tr("No media"))
 
     readonly property bool isInterlude: Lyrics.isInterlude
 
@@ -85,6 +89,7 @@ Item {
             Layout.alignment: Qt.AlignVCenter
             Layout.fillHeight: true
             text: root.displayText
+            animateContent: root.hasMediaContent
             words: Lyrics.hasSyncedLine ? Lyrics.lineWords : []
             lineStartMs: Lyrics.lineStartMs
             lineEndMs: Lyrics.lineEndMs
@@ -93,7 +98,10 @@ Item {
             anchorAt: Lyrics.anchorAt
             positionMs: Lyrics.positionMs
             isInterlude: root.isInterlude
-            holdLine: Lyrics.holdLine
+            // A lyric source may enter/leave a short gap while the bar is
+            // showing an MPRIS title. Do not let that unrelated state reset
+            // the title marquee back to its start on every poll.
+            holdLine: Lyrics.hasSyncedLine && Lyrics.holdLine
         }
 
     }

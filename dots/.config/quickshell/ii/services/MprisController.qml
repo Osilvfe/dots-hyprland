@@ -44,12 +44,26 @@ Singleton {
 	readonly property bool hasActivePlasmaIntegration: Mpris.players.values.some(
 		p => p.dbusName?.startsWith('org.mpris.MediaPlayer2.plasma-browser-integration')
 	)
+	function isDormantBrowserPlaceholder(player) {
+		const bus = player?.dbusName ?? "";
+		const isBrowser = bus.startsWith('org.mpris.MediaPlayer2.chromium')
+			|| bus.startsWith('org.mpris.MediaPlayer2.firefox');
+		const title = String(player?.trackTitle ?? "").trim().toLowerCase();
+		return isBrowser && !player?.isPlaying
+			&& (title.length === 0 || title === "untitled" || title === "unknown title");
+	}
 	function isRealPlayer(player) {
         // playerctld mirrors other buses and keeps a zombie title after the
         // real player exits; always drop it, even when duplicate filtering is off.
         if (player.dbusName?.startsWith('org.mpris.MediaPlayer2.playerctld')) {
             return false;
         }
+		// Chromium/Firefox retain an MPRIS bus after playback stops, often with
+		// no metadata (or the synthetic title "Untitled"). It is not a media
+		// source and must not displace a real player in the bar.
+		if (isDormantBrowserPlaceholder(player)) {
+			return false;
+		}
         if (!Config.options.media.filterDuplicatePlayers) {
             return true;
         }
@@ -108,7 +122,12 @@ Singleton {
 			}
 
 			function onPlaybackStateChanged() {
-				if (!root.isRealPlayer(modelData)) return;
+				root.playersRevision++;
+				if (!root.isRealPlayer(modelData)) {
+					if (root.trackedPlayer === modelData)
+						root.trackedPlayer = null;
+					return;
+				}
 				if (root.trackedPlayer !== modelData) root.trackedPlayer = modelData;
 			}
 		}
