@@ -216,9 +216,9 @@ Singleton {
                 property bool hideWhenFullscreen: true
                 property JsonObject parallax: JsonObject {
                     property bool vertical: false
-                    property bool autoVertical: false
-                    property bool enableWorkspace: false
-                    property real workspaceZoom: 1.07 // Relative to wallpaper size
+                    property bool followTiledColumns: true
+                    property real preferredScale: 1.1 // Relative to wallpaper size
+                    property int tiledColumnSpan: 6 // Tiled columns needed for the full horizontal travel
                     property bool enableSidebar: false
                     property real widgetsFactor: 1.2
                 }

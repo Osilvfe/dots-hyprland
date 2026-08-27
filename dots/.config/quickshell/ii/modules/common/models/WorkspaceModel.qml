@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.services
 import qs.modules.common as C
@@ -8,23 +7,30 @@ NestableObject {
     id: root
 
     required property HyprlandMonitor monitor
-    readonly property var liveMonitorData: HyprlandData.monitors.find(m => m.id === monitor.id)
-    readonly property Toplevel activeWindow: ToplevelManager.activeToplevel
+    readonly property var liveMonitorData: HyprlandData.monitors.find(m => m.id === monitor?.id)
     readonly property int activeWorkspace: monitor?.activeWorkspace?.id ?? 1
-    readonly property bool currentWorkspaceNotFake: activeWindow?.activated ?? false // Active empty workspace = fake. At least, that's how I like to call it.
+    readonly property var activeWorkspaceData: HyprlandData.workspaceById[activeWorkspace]
+    readonly property bool currentWorkspaceNotFake: (activeWorkspaceData?.windows ?? 0) > 0
     readonly property int fakeWorkspace: currentWorkspaceNotFake ? -9999 : activeWorkspace
     readonly property int shownCount: C.Config.options.bar.workspaces.shown
     readonly property int group: Math.floor((activeWorkspace - 1) / shownCount)
     readonly property var specialWorkspace: liveMonitorData?.specialWorkspace
-    readonly property string specialWorkspaceName: specialWorkspace?.name.replace("special:", "") ?? "special"
+    readonly property string specialWorkspaceName: specialWorkspace?.name?.replace("special:", "") ?? "special"
     readonly property bool specialWorkspaceActive: specialWorkspaceName !== ""
 
     property list<bool> occupied: []
-    property list<var> biggestWindow: occupied.map((_, index) => {
-        const wsId = getWorkspaceIdAt(index);
-        var biggestWindow = HyprlandData.biggestWindowForWorkspace(wsId);
-        return biggestWindow;
-    })
+    property list<var> biggestWindow: {
+        const windows = HyprlandData.windowList;
+        return occupied.map((_, index) => {
+            const wsId = getWorkspaceIdAt(index);
+            const workspaceWindows = windows.filter(window => window.workspace.id === wsId);
+            return workspaceWindows.reduce((largest, window) => {
+                const largestArea = (largest?.size?.[0] ?? 0) * (largest?.size?.[1] ?? 0);
+                const windowArea = (window?.size?.[0] ?? 0) * (window?.size?.[1] ?? 0);
+                return windowArea > largestArea ? window : largest;
+            }, null);
+        });
+    }
 
     function getWorkspaceId(group, index) {
         return group * root.shownCount + index + 1;

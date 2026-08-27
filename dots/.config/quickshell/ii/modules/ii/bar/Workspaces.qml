@@ -21,11 +21,13 @@ ButtonMouseArea {
     }
 
     readonly property int visibleCount: {
-        let max = 0;
+        let lastOccupied = -1;
         for (let i = 0; i < wsModel.shownCount; i++) {
-            if (wsModel.occupied[i]) max = i + 1;
+            if (Boolean(wsModel.occupied[i]))
+                lastOccupied = i;
         }
-        return Math.max(1, Math.min(wsModel.shownCount, max + 1));
+        const requiredCount = Math.max(lastOccupied + 2, root.workspaceIndexInGroup + 1);
+        return Math.max(1, Math.min(wsModel.shownCount, requiredCount));
     }
 
     property bool vertical: Config.options.bar.vertical
@@ -39,7 +41,11 @@ ButtonMouseArea {
     property real workspaceIconSizeShrinked: workspaceButtonWidth * 0.55
     property real workspaceIconOpacityShrinked: 1
     property real workspaceIconMarginShrinked: -4
-    property int workspaceIndexInGroup: (monitor?.activeWorkspace?.id - 1) % wsModel.shownCount
+    property int workspaceIndexInGroup: {
+        const shownCount = Math.max(1, wsModel.shownCount);
+        const activeWorkspace = monitor?.activeWorkspace?.id ?? 1;
+        return ((activeWorkspace - 1) % shownCount + shownCount) % shownCount;
+    }
     property real specialTextSize: workspaceButtonWidth * 0.5
 
     Layout.alignment: vertical ? Qt.AlignHCenter : Qt.AlignVCenter
@@ -59,7 +65,7 @@ ButtonMouseArea {
     hoverEnabled: true
     property int hoverIndex: {
         const position = root.vertical ? mouseY : mouseX;
-        return Math.floor(position / root.workspaceButtonWidth);
+        return Math.max(0, Math.min(root.visibleCount - 1, Math.floor(position / root.workspaceButtonWidth)));
     }
 
     function switchWorkspaceToHovered() {
@@ -122,9 +128,9 @@ ButtonMouseArea {
                     id: wsBg
                     required property int index
                     readonly property int wsId: wsModel.getWorkspaceIdAt(index)
-                    property bool currentOccupied: wsModel.occupied[index] && wsId != wsModel.fakeWorkspace
-                    property bool previousOccupied: index > 0 && wsModel.occupied[index - 1] && (wsId - 1) != wsModel.fakeWorkspace
-                    property bool nextOccupied: index < wsModel.shownCount - 1 && wsModel.occupied[index + 1] && (wsId + 1) != wsModel.fakeWorkspace
+                    property bool currentOccupied: Boolean(wsModel.occupied[index]) && wsId != wsModel.fakeWorkspace
+                    property bool previousOccupied: index > 0 && Boolean(wsModel.occupied[index - 1]) && (wsId - 1) != wsModel.fakeWorkspace
+                    property bool nextOccupied: index < wsModel.shownCount - 1 && Boolean(wsModel.occupied[index + 1]) && (wsId + 1) != wsModel.fakeWorkspace
                     implicitWidth: root.workspaceButtonWidth
                     implicitHeight: root.workspaceButtonWidth
 
@@ -377,7 +383,6 @@ ButtonMouseArea {
     component NumberWorkspaceItem: WorkspaceItem {
         id: wsNum
         property bool hasBiggestWindow: !!wsModel.biggestWindow[index]
-        property int wsId: wsModel.getWorkspaceIdAt(index)
         property color contentColor: (wsModel.occupied[wsNum.index] && wsId !== wsModel.fakeWorkspace) ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer1Inactive
         property bool showingNumbers: {
             if (root.superPressAndHeld)

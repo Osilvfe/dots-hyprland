@@ -88,6 +88,34 @@ ContentPage {
             ColumnLayout {
                 RippleButtonWithIcon {
                     enabled: !randomWallProc.running
+                    Layout.fillWidth: true
+                    buttonRadius: Appearance.rounding.small
+                    materialIcon: "today"
+                    mainText: randomWallProc.running ? Translation.tr("Be patient...") : Translation.tr("Daily: Bing")
+                    onClicked: {
+                        randomWallProc.scriptPath = `${Directories.scriptPath}/colors/random/random_bing_wall.sh`;
+                        randomWallProc.running = true;
+                    }
+                    StyledToolTip {
+                        text: Translation.tr("Bing daily UHD wallpaper\nImage is saved to ~/Pictures/Wallpapers")
+                    }
+                }
+                RippleButtonWithIcon {
+                    enabled: !randomWallProc.running
+                    Layout.fillWidth: true
+                    buttonRadius: Appearance.rounding.small
+                    materialIcon: "travel_explore"
+                    mainText: randomWallProc.running ? Translation.tr("Be patient...") : Translation.tr("Random: Wallhaven")
+                    onClicked: {
+                        randomWallProc.scriptPath = `${Directories.scriptPath}/colors/random/random_wallhaven_wall.sh`;
+                        randomWallProc.running = true;
+                    }
+                    StyledToolTip {
+                        text: Translation.tr("Random SFW wallpaper from Wallhaven\nImage is saved to ~/Pictures/Wallpapers")
+                    }
+                }
+                RippleButtonWithIcon {
+                    enabled: !randomWallProc.running
                     visible: Config.options.policies.weeb === 1
                     Layout.fillWidth: true
                     buttonRadius: Appearance.rounding.small

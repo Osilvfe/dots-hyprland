@@ -881,5 +881,12 @@
   "Daily": "每日",
   "Weekly": "每周",
   "Monthly": "每月",
-  "Now": "现在"
+  "Now": "现在",
+  "Follow tiled window focus": "随平铺窗口焦点移动",
+  "Horizontal travel columns": "横向行程列数",
+  "Vertical workspace parallax": "工作区垂直视差",
+  "Daily: Bing": "每日：Bing",
+  "Bing daily UHD wallpaper\nImage is saved to ~/Pictures/Wallpapers": "Bing 每日 UHD 壁纸\n图片会保存到 ~/Pictures/Wallpapers",
+  "Random: Wallhaven": "随机：Wallhaven",
+  "Random SFW wallpaper from Wallhaven\nImage is saved to ~/Pictures/Wallpapers": "随机 Wallhaven SFW 壁纸\n图片会保存到 ~/Pictures/Wallpapers"
 }

@@ -11,43 +11,54 @@ ContentPage {
         icon: "sync_alt"
         title: Translation.tr("Parallax")
 
-        ConfigSwitch {
-            buttonIcon: "unfold_more_double"
-            text: Translation.tr("Vertical")
-            checked: Config.options.background.parallax.vertical
-            onCheckedChanged: {
-                Config.options.background.parallax.vertical = checked;
-            }
-        }
-
         ConfigRow {
             uniform: true
             ConfigSwitch {
-                buttonIcon: "counter_1"
-                text: Translation.tr("Depends on workspace")
-                checked: Config.options.background.parallax.enableWorkspace
+                buttonIcon: "center_focus_weak"
+                text: Translation.tr("Follow tiled window focus")
+                checked: Config.options.background.parallax.followTiledColumns
                 onCheckedChanged: {
-                    Config.options.background.parallax.enableWorkspace = checked;
+                    Config.options.background.parallax.followTiledColumns = checked;
                 }
             }
             ConfigSwitch {
-                buttonIcon: "side_navigation"
-                text: Translation.tr("Depends on sidebars")
-                checked: Config.options.background.parallax.enableSidebar
+                buttonIcon: "swap_vert"
+                text: Translation.tr("Vertical workspace parallax")
+                checked: Config.options.background.parallax.vertical
                 onCheckedChanged: {
-                    Config.options.background.parallax.enableSidebar = checked;
+                    Config.options.background.parallax.vertical = checked;
                 }
+            }
+        }
+        ConfigSwitch {
+            buttonIcon: "side_navigation"
+            text: Translation.tr("Depends on sidebars")
+            checked: Config.options.background.parallax.enableSidebar
+            onCheckedChanged: {
+                Config.options.background.parallax.enableSidebar = checked;
             }
         }
         ConfigSpinBox {
             icon: "loupe"
             text: Translation.tr("Preferred wallpaper zoom (%)")
-            value: Config.options.background.parallax.workspaceZoom * 100
-            from: 10
-            to: 200
+            value: Config.options.background.parallax.preferredScale * 100
+            from: 100
+            to: 135
             stepSize: 1
             onValueChanged: {
-                Config.options.background.parallax.workspaceZoom = value / 100;
+                Config.options.background.parallax.preferredScale = value / 100;
+            }
+        }
+        ConfigSpinBox {
+            enabled: Config.options.background.parallax.followTiledColumns
+            icon: "view_column"
+            text: Translation.tr("Horizontal travel columns")
+            value: Config.options.background.parallax.tiledColumnSpan
+            from: 2
+            to: 12
+            stepSize: 1
+            onValueChanged: {
+                Config.options.background.parallax.tiledColumnSpan = value;
             }
         }
     }

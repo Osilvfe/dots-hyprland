@@ -34,11 +34,78 @@ Variants {
 
         // Workspaces
         property HyprlandMonitor monitor: Hyprland.monitorFor(modelData)
-        property list<var> relevantWindows: HyprlandData.windowList.filter(win => win.monitor == monitor?.id && win.workspace.id >= 0).sort((a, b) => a.workspace.id - b.workspace.id)
-        property int firstWorkspaceId: relevantWindows[0]?.workspace.id || 1
-        property int lastWorkspaceId: relevantWindows[relevantWindows.length - 1]?.workspace.id || 10
-        property int workspaceChunkSize: Config?.options.bar.workspaces.shown ?? 10
-        property int totalWorkspaces: Math.ceil(lastWorkspaceId / workspaceChunkSize) * workspaceChunkSize
+        readonly property var activeWorkspaceData: HyprlandData.workspaceById[monitor?.activeWorkspace?.id]
+        readonly property var focusedWindow: HyprlandData.windowByAddress[activeWorkspaceData?.lastwindow]
+        readonly property var activeTiledWindows: HyprlandData.windowList.filter(window =>
+            bgRoot.isTiledWindowOnActiveWorkspace(window))
+        readonly property var horizontalColumns: {
+            const seen = {};
+            const columns = [];
+            for (const window of activeTiledWindows) {
+                const column = bgRoot.windowColumn(window);
+                const key = String(column);
+                if (seen[key])
+                    continue;
+                seen[key] = true;
+                columns.push(column);
+            }
+            columns.sort((left, right) => left - right);
+            return columns;
+        }
+        property var lastFocusedTiledColumnByWorkspace: ({})
+        readonly property real focusedTiledColumnProgress: {
+            if (horizontalColumns.length === 0)
+                return 0.5;
+
+            const workspaceKey = String(monitor?.activeWorkspace?.id ?? "");
+            const focusedColumn = isTiledWindowOnActiveWorkspace(focusedWindow)
+                ? windowColumn(focusedWindow)
+                : Number(lastFocusedTiledColumnByWorkspace[workspaceKey]);
+            let columnIndex = 0;
+            if (isFinite(focusedColumn)) {
+                let nearestDistance = Math.abs(horizontalColumns[0] - focusedColumn);
+                for (let index = 1; index < horizontalColumns.length; index++) {
+                    const distance = Math.abs(horizontalColumns[index] - focusedColumn);
+                    if (distance < nearestDistance) {
+                        columnIndex = index;
+                        nearestDistance = distance;
+                    }
+                }
+            }
+
+            const span = Math.max(2, Config.options.background.parallax.tiledColumnSpan);
+            return Math.max(0, Math.min(1, columnIndex / (span - 1)));
+        }
+
+        function windowColumn(window) {
+            return Math.round(Number(window?.at?.[0] ?? 0));
+        }
+
+        function isTiledWindowOnActiveWorkspace(window) {
+            return !!window
+                && window.mapped !== false
+                && !window.floating
+                && window.monitor === monitor?.id
+                && window.workspace?.id === monitor?.activeWorkspace?.id;
+        }
+
+        function rememberFocusedTiledColumn() {
+            if (!isTiledWindowOnActiveWorkspace(focusedWindow))
+                return;
+            const workspaceKey = String(monitor?.activeWorkspace?.id ?? "");
+            if (workspaceKey === "")
+                return;
+            const column = windowColumn(focusedWindow);
+            if (Number(lastFocusedTiledColumnByWorkspace[workspaceKey]) === column)
+                return;
+            const next = Object.assign({}, lastFocusedTiledColumnByWorkspace);
+            next[workspaceKey] = column;
+            lastFocusedTiledColumnByWorkspace = next;
+        }
+
+        onFocusedWindowChanged: rememberFocusedTiledColumn()
+        Component.onCompleted: rememberFocusedTiledColumn()
+        property int workspaceChunkSize: Math.max(1, Config?.options.bar.workspaces.shown ?? 10)
         // Wallpaper
         property bool wallpaperIsVideo: Config.options.background.wallpaperPath.endsWith(".mp4") || Config.options.background.wallpaperPath.endsWith(".webm") || Config.options.background.wallpaperPath.endsWith(".mkv") || Config.options.background.wallpaperPath.endsWith(".avi") || Config.options.background.wallpaperPath.endsWith(".mov")
         property string wallpaperPath: wallpaperIsVideo ? Config.options.background.thumbnailPath : Config.options.background.wallpaperPath
@@ -48,16 +115,15 @@ Variants {
             const sensitiveNetwork = (CF.StringUtils.stringListContainsSubstring(Network.networkName.toLowerCase(), Config.options.workSafety.triggerCondition.networkNameKeywords));
             return enabled && sensitiveWallpaper && sensitiveNetwork;
         }
-        readonly property real parallaxRation: Config.options.background.parallax.workspaceZoom
+        readonly property real parallaxRatio: Config.options.background.parallax.preferredScale
         property real minSuitableScale: 1 // Some reasonable init, to be updated
-        property real effectiveWallpaperScale: minSuitableScale * parallaxRation
+        property real effectiveWallpaperScale: minSuitableScale * parallaxRatio
         property int wallpaperWidth: modelData.width // Some reasonable init value, to be updated
         property int wallpaperHeight: modelData.height // Some reasonable init value, to be updated
         property real scaledWallpaperWidth: wallpaperWidth * effectiveWallpaperScale
         property real scaledWallpaperHeight: wallpaperHeight * effectiveWallpaperScale
         property real parallaxTotalPixelsX: Math.max(0, scaledWallpaperWidth - screen.width)
         property real parallaxTotalPixelsY: Math.max(0, scaledWallpaperHeight - screen.height)
-        readonly property bool verticalParallax: (Config.options.background.parallax.autoVertical && wallpaperHeight > wallpaperWidth) || Config.options.background.parallax.vertical
         // Colors
         property bool shouldBlur: (GlobalStates.screenLocked && Config.options.lock.blur.enable)
         property color dominantColor: Appearance.colors.colPrimary // Default, to be changed
@@ -135,31 +201,34 @@ Variants {
                 cache: false
                 smooth: false
 
-                property int workspaceIndex: (bgRoot.monitor.activeWorkspace?.id ?? 1) - 1
+                property int workspaceIndex: {
+                    const workspaceId = bgRoot.monitor.activeWorkspace?.id ?? 1;
+                    return ((workspaceId - 1) % bgRoot.workspaceChunkSize + bgRoot.workspaceChunkSize) % bgRoot.workspaceChunkSize;
+                }
                 property real middleFraction: 0.5
                 property real fraction: {
                     // 0 - start of the picture
                     // 1 - end of the picture
-                    if (bgRoot.totalWorkspaces <= 1) {
+                    if (bgRoot.workspaceChunkSize <= 1) {
                         return middleFraction;
                     }
-                    return Math.max(0, Math.min(1, workspaceIndex / (bgRoot.totalWorkspaces - 1)));
+                    return Math.max(0, Math.min(1, workspaceIndex / (bgRoot.workspaceChunkSize - 1)));
                 }
 
                 property real usedFractionX: {
                     let usedFraction = middleFraction;
-                    if (Config.options.background.parallax.enableWorkspace && !bgRoot.verticalParallax) {
-                        usedFraction = fraction;
+                    if (Config.options.background.parallax.followTiledColumns) {
+                        usedFraction = bgRoot.focusedTiledColumnProgress;
                     }
                     if (Config.options.background.parallax.enableSidebar) {
-                        let sidebarFraction = bgRoot.parallaxRation / bgRoot.workspaceChunkSize / 2;
+                        let sidebarFraction = bgRoot.parallaxRatio / bgRoot.workspaceChunkSize / 2;
                         usedFraction += (sidebarFraction * GlobalStates.sidebarRightOpen - sidebarFraction * GlobalStates.sidebarLeftOpen);
                     }
                     return Math.max(0, Math.min(1, usedFraction));
                 }
                 property real usedFractionY: {
                     let usedFraction = middleFraction;
-                    if (Config.options.background.parallax.enableWorkspace && bgRoot.verticalParallax) {
+                    if (Config.options.background.parallax.vertical) {
                         usedFraction = fraction;
                     }
                     return Math.max(0, Math.min(1, usedFraction));
@@ -230,7 +299,7 @@ Variants {
                 height: parent.height
                 readonly property real parallaxFactor: {
                     var f = Config.options.background.parallax.widgetsFactor;
-                    return f / bgRoot.parallaxRation;
+                    return f / bgRoot.parallaxRatio;
                 }
                 readonly property real baseWallpaperOffsetX: (bgRoot.screen.width - wallpaper.width) / 2
                 readonly property real baseWallpaperOffsetY: (bgRoot.screen.height - wallpaper.height) / 2
