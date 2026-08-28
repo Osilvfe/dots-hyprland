@@ -149,6 +149,21 @@ ColumnLayout {
         }
 
         ConfigSwitch {
+            enabled: OplusBuds3.connected && OplusBuds3.hiRes >= 0
+            buttonIcon: "high_quality"
+            text: Translation.tr("Hi-Res audio")
+            checked: OplusBuds3.hiRes === 1
+            onCheckedChanged: {
+                if (enabled && checked !== (OplusBuds3.hiRes === 1))
+                    OplusBuds3.setHiRes(checked);
+            }
+
+            StyledToolTip {
+                text: Translation.tr("Enables the earbuds' LHDC Hi-Res mode. The actual codec, sample rate and bitrate are negotiated by the host.")
+            }
+        }
+
+        ConfigSwitch {
             enabled: OplusBuds3.connected && OplusBuds3.spatial >= 0
             buttonIcon: "spatial_audio"
             text: Translation.tr("Spatial audio")

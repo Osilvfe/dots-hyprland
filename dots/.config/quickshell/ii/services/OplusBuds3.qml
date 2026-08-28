@@ -45,6 +45,7 @@ Singleton {
     property int gameSound: -1
     property int dualDevice: -1
     property int wearDetection: -1
+    property int hiRes: -1
 
     function resetState() {
         root.connected = false;
@@ -62,6 +63,7 @@ Singleton {
         root.gameSound = -1;
         root.dualDevice = -1;
         root.wearDetection = -1;
+        root.hiRes = -1;
     }
 
     function bridgeCommand() {
@@ -138,6 +140,7 @@ Singleton {
     function setGameSound(enabled) { root.send(`game_sound ${enabled ? 1 : 0}`); }
     function setDualDevice(enabled) { root.send(`dual ${enabled ? 1 : 0}`); }
     function setWearDetection(enabled) { root.send(`wear ${enabled ? 1 : 0}`); }
+    function setHiRes(enabled) { root.send(`hires ${enabled ? 1 : 0}`); }
 
     function applyNullableInt(data, key, fallback) {
         return data[key] === null || data[key] === undefined ? fallback : Number(data[key]);
@@ -179,6 +182,7 @@ Singleton {
         root.gameSound = data.gameSound === null || data.gameSound === undefined ? -1 : (data.gameSound ? 1 : 0);
         root.dualDevice = data.dualDevice === null || data.dualDevice === undefined ? -1 : (data.dualDevice ? 1 : 0);
         root.wearDetection = data.wearDetection === null || data.wearDetection === undefined ? -1 : (data.wearDetection ? 1 : 0);
+        root.hiRes = data.hiRes === null || data.hiRes === undefined ? -1 : (data.hiRes ? 1 : 0);
         if (root.connected)
             root.lastError = "";
     }

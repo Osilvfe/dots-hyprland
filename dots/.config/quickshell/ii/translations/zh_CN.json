@@ -912,5 +912,7 @@
   "The desired EQ is enabled but is not active on the live node.": "已设为启用，但 EQ 尚未在当前设备节点上生效。",
   "EQ is bypassed on the live device node.": "当前设备节点上的 EQ 已旁路。",
   "Live A/B switching": "实时 A/B 对比",
-  "Enable and bypass update the PipeWire device node directly. Playback continues without restarting WirePlumber, and the selected state is also saved for the next device connection.": "启用和旁路会直接更新 PipeWire 设备节点；无需重启 WirePlumber，播放保持连续，同时会保存所选状态供设备下次连接使用。"
+  "Enable and bypass update the PipeWire device node directly. Playback continues without restarting WirePlumber, and the selected state is also saved for the next device connection.": "启用和旁路会直接更新 PipeWire 设备节点；无需重启 WirePlumber，播放保持连续，同时会保存所选状态供设备下次连接使用。",
+  "Hi-Res audio": "Hi-Res 音频",
+  "Enables the earbuds' LHDC Hi-Res mode. The actual codec, sample rate and bitrate are negotiated by the host.": "启用耳机端的 LHDC Hi-Res 模式；实际编解码器、采样率与码率仍由主机协商。"
 }

@@ -52,6 +52,7 @@
 
 #define FEATURE_WEAR_DETECTION 0x04
 #define FEATURE_DUAL_DEVICE 0x11
+#define FEATURE_HI_RES 0x18
 #define FEATURE_SPATIAL 0x1b
 #define FEATURE_GAME_SOUND 0x27
 #define FEATURE_GAME_MAIN 0x28
@@ -71,6 +72,7 @@ struct buds_state {
     int game_sound;
     int dual_device;
     int wear_detection;
+    int hi_res;
 };
 
 static volatile sig_atomic_t keep_running = 1;
@@ -119,6 +121,7 @@ static void reset_state(void)
     state.game_sound = -1;
     state.dual_device = -1;
     state.wear_detection = -1;
+    state.hi_res = -1;
 }
 
 static void print_nullable_int(int value)
@@ -165,6 +168,8 @@ static void emit_state(bool connected)
     print_nullable_bool(state.dual_device);
     fputs(",\"wearDetection\":", stdout);
     print_nullable_bool(state.wear_detection);
+    fputs(",\"hiRes\":", stdout);
+    print_nullable_bool(state.hi_res);
     fputs("}\n", stdout);
     fflush(stdout);
 }
@@ -453,6 +458,8 @@ static void parse_batch(const uint8_t *payload, size_t length)
             state.spatial = enabled;
         else if (feature == FEATURE_WEAR_DETECTION)
             state.wear_detection = enabled;
+        else if (feature == FEATURE_HI_RES)
+            state.hi_res = enabled;
     }
 }
 
@@ -587,7 +594,7 @@ static void send_fast_queries(void)
 static void send_slow_queries(void)
 {
     static const uint8_t batch[] = {
-        0x07, 0x04, 0x05, 0x11, 0x06, 0x1b, 0x27, 0x28
+        0x08, 0x04, 0x05, 0x11, 0x18, 0x06, 0x1b, 0x27, 0x28
     };
     static const uint8_t notify[] = { 0x01, 0x01, 0x02, 0x02 };
     static const uint8_t notify_wear[] = { 0x02, 0x02 };
@@ -733,6 +740,14 @@ static void handle_command(char *line)
         bool enabled = strcmp(line + 5, "1") == 0;
         send_feature(FEATURE_WEAR_DETECTION, enabled);
         state.wear_detection = enabled;
+        emit_state(true);
+        return;
+    }
+
+    if (strncmp(line, "hires ", 6) == 0) {
+        bool enabled = strcmp(line + 6, "1") == 0;
+        send_feature(FEATURE_HI_RES, enabled);
+        state.hi_res = enabled;
         emit_state(true);
         return;
     }
