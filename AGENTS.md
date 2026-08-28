@@ -144,6 +144,16 @@
 - **蓝牙**：HFP（8kHz）导致无声/静音，wireplumber 配置 `bluez5.headset-roles = [ ]` 禁用；重连需手动
 - **UI 组件**：`StyledComboBox`/`ConfigSwitch`/`IconToolbarButton`/`IconAndTextToolbarButton`/`Toolbar`
 
+### PipeWire 分设备 EQ（本项目定制）
+- `services/PipewireEq.qml` + `modules/settings/system/PipewireEqConfig.qml` 提供分设备 EQ 管理；后端为 `scripts/audio/pipewire-eq.py`
+- 使用 PipeWire 节点的内部 `audioconvert.filter-graph.N` 将滤镜直接附加到物理 `Audio/Sink`，按稳定的 `node.name` 精确匹配，不创建新的虚拟默认 sink
+- 配置、运行时节点序列号与生成的 profile 位于 `~/.config/illogical-impulse/pipewire-eq/`；不生成 WirePlumber 片段，避免重连时持久规则与 Quickshell reconcile 重复挂载 graph
+- 支持标准 AutoEQ `ParametricEQ.txt`（PipeWire `param_eq`，保留 Preamp）和无表头频率/增益二列曲线（转最小相位 FIR，PipeWire `convolver`）
+- FIR 同时生成 44.1/48/96/192 kHz，convolver 按 graph rate 选择最近文件；正增益曲线自动整体下移并留 0.2 dB 余量
+- 导入默认不启用；启停通过设备节点 `Props` 的 `audioconvert.filter-graph.7` 热加载/卸载，可连续播放做 A/B，不重启 WirePlumber；`GlobalStates` 常驻预加载服务，设备重连后按持久状态自动 reconcile
+- PipeWire 1.6 的 `audioconvert.filter-graph.N` 是只写运行时命令，不会由 `enum-params Props` 回显；管理器以 `object.serial` + graph 哈希记录本次节点是否成功下发，序列号变化时重新挂载
+- JamesDSP 支持已移除；PipeWire 分设备 EQ 是仓库内唯一的 EQ 集成
+
 ### Hypridle
 - 关屏后挂起死锁——已改**不黑屏直接挂起**（无 DPMS off listener）；唤醒 `after_sleep_cmd`+`on-resume` 里 `hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'`
 - 手柄检测 `gamepad-active.py`（EVIOCGBIT 并行 select，避免 pgrep 自匹配/窗口耗尽）
@@ -154,7 +164,7 @@
 - **开关动画**：compositor 对 `quickshell:overview` 仍 `no_anim`（避免叠两套）。QS 侧 `keepSearchMounted` 关后挂 ~180ms，透明度 + scale(0.94) + 轻微上浮；进 280ms `emphasizedDecel` / 出 160ms `emphasizedAccel`
 - **emoji 面板**：`SearchWidget.qml` 有 `emojiMode`（`searchingText.startsWith(prefix.emojis)`）+`emojiGrid`（GridView）；`Emojis.qml` word-based matching（空搜全返、每词须出现、slice 50）
 - **模块恢复**：从 `upstream/main` 恢复 QML 因版本不兼容不工作，用**本地历史版本**（`git show <commit^>:<path>`）；Overview 删除分两步（`4ec200e3`+`25899354`），恢复版本要匹配
-- **git revert 冲突**：保留后续功能文件（`git checkout --ours`）；revert 带出无关改动（JamesDSP、persistent_workspaces）需手动排除
+- **git revert 冲突**：保留后续功能文件（`git checkout --ours`）；revert 带出无关改动（如 persistent_workspaces）需手动排除
 - **面板加载验证**：PanelLoader 懒加载，`qs -c ii ipc call search toggle` 后 `hyprctl layers | grep quickshell:overview`
 
 ### Hyprland 动画（`hyprland/general.lua`）

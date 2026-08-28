@@ -369,7 +369,6 @@
   "Get the next page of results": "קבל את עמוד התוצאות הבא",
   "Invalid arguments. Must provide `command`.": "ארגומנטים לא חוקיים. חובה לספק `פקודה`.",
   "Please charge!\nAutomatic suspend triggers at %1": "נא להטעין!\nהשהיה אוטומטית תופעל ב-%1",
-  "EasyEffects | Right-click to configure": "EasyEffects | קליק ימני להגדרות",
   "🔴 Focus: %1 minutes": "🔴 פוקוס: %1 דקות",
   "Set API key": "הגדר מפתח API",
   "Load chat from %1": "טען שיחה מ-%1",

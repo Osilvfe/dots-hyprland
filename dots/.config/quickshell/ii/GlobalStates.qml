@@ -29,6 +29,8 @@ Singleton {
         Holidays.fetchYear(year);
         Holidays.fetchYear(year - 1);
         Holidays.fetchYear(year + 1);
+        // Re-attach desired per-device EQ graphs after device reconnects.
+        PipewireEq.reconcile();
     }
     property bool recordRegionMic: false
     property bool regionSelectorOpen: false

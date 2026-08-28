@@ -33,7 +33,6 @@ AbstractQuickPanel {
         NightLight {}
         GameMode {}
         IdleInhibitor {}
-        EasyEffectsToggle {}
         ClashVerge {
             altAction: () => {
                 root.openClashVergeDialog();

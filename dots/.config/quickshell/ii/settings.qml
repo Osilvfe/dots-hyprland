@@ -97,6 +97,11 @@ ApplicationWindow {
             component: "modules/settings/system/MonitorConfig.qml"
         },
         {
+            name: Translation.tr("Audio"),
+            icon: "graphic_eq",
+            component: "modules/settings/system/PipewireEqConfig.qml"
+        },
+        {
             name: "KDE",
             icon: "palette",
             command: "systemsettings"

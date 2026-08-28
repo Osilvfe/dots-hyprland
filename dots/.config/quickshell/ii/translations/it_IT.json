@@ -217,7 +217,6 @@
   "Online models disallowed\n\nControlled by `policies.ai` config option": "Modelli online disattivati\n\nDisattiva l'opzione \"Solo locale\"",
   "Set the current API provider": "Imposta il provider API",
   "Total token count\nInput: %1\nOutput: %2": "Numero token totali\nInput: %1\nOutput: %2",
-  "EasyEffects | Right-click to configure": "EasyEffects",
   "Random SFW Anime wallpaper from Konachan\nImage is saved to ~/Pictures/Wallpapers": "Sfondo anime SFW casuale da Konachan\nL'immagine verrà salvata in ~/Immagini/Wallpapers",
   "Hover to reveal": "Mostra col passaggio del mouse",
   "Arrow keys to navigate, Enter to select\nEsc or click anywhere to cancel": "Usa i tasti freccia per navigare, Invio per selezionare\nEsc o clicca qualsiasi punto per uscire",

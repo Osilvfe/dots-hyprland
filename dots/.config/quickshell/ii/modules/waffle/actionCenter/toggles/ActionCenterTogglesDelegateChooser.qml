@@ -77,13 +77,6 @@ DelegateChooser {
         }
     }
     DelegateChoice {
-        roleValue: "easyEffects"
-        ActionCenterToggleButton {
-            toggleModel: EasyEffectsToggle {}
-            icon: "device-eq"
-        }
-    }
-    DelegateChoice {
         roleValue: "gameMode"
         ActionCenterToggleButton {
             toggleModel: GameModeToggle {}

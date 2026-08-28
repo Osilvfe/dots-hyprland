@@ -12,9 +12,6 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("dbus-update-activation-environment --all")
     hl.exec_cmd("sleep 1 && dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP") -- Some fix idk
 
-    -- Audio
-    hl.exec_cmd("jamesdsp -t")
-
     -- Connectivity
     hl.exec_cmd("kdeconnect-indicator")
 

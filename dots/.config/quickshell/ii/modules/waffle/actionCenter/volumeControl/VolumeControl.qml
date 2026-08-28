@@ -104,39 +104,12 @@ Item {
         }
 
         WPanelSeparator {
-            visible: EasyEffects.available && root.output
             color: Looks.colors.bg2Hover
         }
 
         ////////////////////////////////////////////////////////////
 
         SectionText {
-            visible: EasyEffects.available && root.output
-            text: Translation.tr("Sound effects")
-        }
-
-        WChoiceButton {
-            visible: EasyEffects.available && root.output
-            text: Translation.tr("Off")
-            checked: !EasyEffects.active
-            onClicked: EasyEffects.disable()
-        }
-
-        WChoiceButton {
-            visible: EasyEffects.available && root.output
-            text: Translation.tr("JamesDSP")
-            checked: EasyEffects.active
-            onClicked: EasyEffects.enable()
-        }
-
-        WPanelSeparator {
-            color: Looks.colors.bg2Hover
-        }
-
-        ////////////////////////////////////////////////////////////
-
-        SectionText {
-            visible: EasyEffects.available
             text: Translation.tr("Volume mixer")
         }
 
