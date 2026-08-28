@@ -97,7 +97,7 @@ Tips:
   - Not explicitly used, but it may help as fallback for displaying emoji characters.
 
 ## illogical-impulse-hyprland
-- `hyprland-hidpi-xprop-git`
+- `hyprland-hidpi-xprop-moetayuko`
   - Surely needed.
 - `hyprsunset`
   - Used in Quickshell config.

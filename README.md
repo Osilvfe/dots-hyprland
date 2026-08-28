@@ -1,6 +1,6 @@
 # dots-hyprland (Scrolling Tiling Edition)
 
-基于 [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland) 的个人分支，针对 **Hyprland 0.56+ 滚动平铺布局**深度改造。
+基于 [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland) 的个人分支，针对滚动平铺布局深度改造。
 
 ## 主要变更
 
