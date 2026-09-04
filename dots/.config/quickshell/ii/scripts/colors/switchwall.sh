@@ -337,9 +337,21 @@ main() {
 
     detect_scheme_type_from_image() {
         local img="$1"
-        source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
-        "$SCRIPT_DIR"/scheme_for_image.py "$img" 2>/dev/null | tr -d '\n'
-        deactivate
+        if command -v magick >/dev/null 2>&1; then
+            local sat
+            sat=$(magick "$img" -resize 32x32 -colorspace HSL -channel G -separate -format "%[fx:mean*100]" info: 2>/dev/null || echo "")
+            if [[ -n "$sat" ]]; then
+                local is_low
+                is_low=$(awk -v s="$sat" 'BEGIN { print (s < 15) ? 1 : 0 }' 2>/dev/null || echo "0")
+                if [[ "$is_low" -eq 1 ]]; then
+                    echo "scheme-neutral"
+                    return
+                fi
+                echo "scheme-tonal-spot"
+                return
+            fi
+        fi
+        echo "scheme-tonal-spot"
     }
 
     while [[ $# -gt 0 ]]; do

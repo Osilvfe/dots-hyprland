@@ -25,6 +25,12 @@ Singleton {
         rescaleSize: 10
     }
     property real wallpaperVibrancy: (wallColorQuant.colors[0]?.hslSaturation + wallColorQuant.colors[0]?.hslLightness) / 2
+    readonly property string autoSchemeType: {
+        const sat = (wallColorQuant.colors[0] && wallColorQuant.colors[0].hslSaturation !== undefined)
+            ? wallColorQuant.colors[0].hslSaturation
+            : 0.5;
+        return (sat < 0.15) ? "scheme-neutral" : "scheme-tonal-spot";
+    }
     property real autoBackgroundTransparency: { // y = 0.5768x^2 - 0.759x + 0.2896
         let x = wallpaperVibrancy
         let y = 0.5768 * (x * x) - 0.759 * (x) + 0.2896
