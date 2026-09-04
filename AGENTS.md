@@ -153,6 +153,7 @@
 - 导入默认不启用；启停通过设备节点 `Props` 的 `audioconvert.filter-graph.7` 热加载/卸载，可连续播放做 A/B，不重启 WirePlumber；`GlobalStates` 常驻预加载服务，设备重连后按持久状态自动 reconcile
 - PipeWire 1.6 的 `audioconvert.filter-graph.N` 是只写运行时命令，不会由 `enum-params Props` 回显；管理器以 `object.serial` + graph 哈希记录本次节点是否成功下发，序列号变化时重新挂载
 - JamesDSP 支持已移除；PipeWire 分设备 EQ 是仓库内唯一的 EQ 集成
+- 曲线界面：`modules/settings/system/EqCurveView.qml` 提供 20 Hz – 20 kHz 对数频响曲线展示与自适应 dB 刻度；后端 `pipewire-eq.py` 计算并缓存 200 点对数采样（FIR 对数插值/WAV 重构；参数 EQ 闭式双线性解析响应，数值稳定无抵消）；支持动态鼠标探针、0 dB 基准线、各段滤镜节点与参数芯片列表，随设备启用/旁路状态同步呈现主色与半透明填充渐变
 
 ### Hypridle
 - 关屏后挂起死锁——已改**不黑屏直接挂起**（无 DPMS off listener）；唤醒 `after_sleep_cmd`+`on-resume` 里 `hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'`

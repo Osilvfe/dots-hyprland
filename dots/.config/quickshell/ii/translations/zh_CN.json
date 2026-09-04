@@ -914,5 +914,18 @@
   "Live A/B switching": "实时 A/B 对比",
   "Enable and bypass update the PipeWire device node directly. Playback continues without restarting WirePlumber, and the selected state is also saved for the next device connection.": "启用和旁路会直接更新 PipeWire 设备节点；无需重启 WirePlumber，播放保持连续，同时会保存所选状态供设备下次连接使用。",
   "Hi-Res audio": "Hi-Res 音频",
-  "Enables the earbuds' LHDC Hi-Res mode. The actual codec, sample rate and bitrate are negotiated by the host.": "启用耳机端的 LHDC Hi-Res 模式；实际编解码器、采样率与码率仍由主机协商。"
+  "Enables the earbuds' LHDC Hi-Res mode. The actual codec, sample rate and bitrate are negotiated by the host.": "启用耳机端的 LHDC Hi-Res 模式；实际编解码器、采样率与码率仍由主机协商。",
+  "Frequency response curve": "频率响应曲线",
+  "No EQ profile imported": "未导入 EQ 配置",
+  "Import an AutoEQ file to visualize the response curve.": "导入 AutoEQ 文件后可在此查看频率响应曲线。",
+  "Active": "生效中",
+  "Bypassed": "已旁路",
+  "Enabled (Inactive)": "已启用 (未激活)",
+  "Preamp": "前级",
+  "Range: %1 ~ %2 dB": "范围：%1 ~ %2 dB",
+  "Filter #%1 (%2): %3 · %4 dB · Q %5": "滤镜 #%1 (%2)：%3 · %4 dB · Q %5",
+  "Minimum-phase FIR · %1 points": "最小相位 FIR · %1 点",
+  "Parametric EQ · %1 bands": "参数均衡器 · %1 段",
+  "Headroom: %1 dB": "削波保护：%1 dB"
 }
+

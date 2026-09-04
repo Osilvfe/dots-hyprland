@@ -204,6 +204,23 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "show_chart"
+        title: Translation.tr("Frequency response curve")
+
+        Loader {
+            id: curveLoader
+            Layout.fillWidth: true
+            source: "EqCurveView.qml"
+
+            Binding {
+                target: curveLoader.item
+                property: "profile"
+                value: root.selectedProfile
+            }
+        }
+    }
+
+    ContentSection {
         icon: "compare_arrows"
         title: Translation.tr("Live A/B switching")
 

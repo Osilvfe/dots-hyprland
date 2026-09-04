@@ -126,7 +126,94 @@ def parse_curve(text: str) -> list[tuple[float, float]]:
     return points
 
 
-def parse_parametric(text: str) -> tuple[str, dict[str, Any]]:
+def generate_log_frequencies(
+    count: int = 200, f_min: float = 20.0, f_max: float = 20000.0
+) -> list[float]:
+    log_min = math.log10(f_min)
+    log_max = math.log10(f_max)
+    step = (log_max - log_min) / (count - 1)
+    return [10.0 ** (log_min + i * step) for i in range(count)]
+
+
+def filter_response(
+    kind: str, f0: float, gain_db: float, q: float, f: float, fs: float = 48000.0
+) -> float:
+    kind = kind.upper()
+    q = max(q, 0.001)
+    w = math.tan(math.pi * f / fs) / max(math.tan(math.pi * f0 / fs), 1e-9)
+    s = 1j * w
+    A = 10.0 ** (gain_db / 40.0)
+
+    if kind == "PK":
+        num = s**2 + s * (A / q) + 1.0
+        den = s**2 + s / (A * q) + 1.0
+    elif kind == "LSC":
+        num = A * (s**2 + (math.sqrt(A) / q) * s + A)
+        den = A * s**2 + (math.sqrt(A) / q) * s + 1.0
+    elif kind == "HSC":
+        num = A * (A * s**2 + (math.sqrt(A) / q) * s + 1.0)
+        den = s**2 + (math.sqrt(A) / q) * s + A
+    else:
+        return 0.0
+
+    ratio = num / den
+    return 20.0 * math.log10(max(abs(ratio), 1e-12))
+
+
+def compute_parametric_curve(
+    preamp: float,
+    filters: list[tuple[int, str, float, float, float]],
+    fs: float = 48000.0,
+    count: int = 200,
+) -> tuple[list[dict[str, float]], list[dict[str, Any]]]:
+    filter_list = []
+    for index, kind, frequency, gain, quality in filters:
+        filter_list.append({
+            "id": index,
+            "kind": kind,
+            "frequency": frequency,
+            "gain": gain,
+            "q": quality,
+        })
+    freqs = generate_log_frequencies(count, 20.0, 20000.0)
+    curve = []
+    for f in freqs:
+        total_gain = preamp
+        for _, kind, frequency, gain, quality in filters:
+            total_gain += filter_response(kind, frequency, gain, quality, f, fs)
+        curve.append({"f": round(f, 1), "gain": round(total_gain, 2)})
+    return curve, filter_list
+
+
+def compute_fir_curve(
+    points: list[tuple[float, float]],
+    count: int = 200,
+) -> list[dict[str, float]]:
+    freqs = generate_log_frequencies(count, 20.0, 20000.0)
+    curve = []
+    for f in freqs:
+        gain = interpolate_curve(points, f)
+        curve.append({"f": round(f, 1), "gain": round(gain, 2)})
+    return curve
+
+
+def compute_wav_curve(wav_path: Path, count: int = 200) -> list[dict[str, float]]:
+    data = wav_path.read_bytes()
+    header_offset = data.find(b"data") + 8
+    raw_samples = data[header_offset:]
+    samples = struct.unpack(f"<{len(raw_samples)//4}f", raw_samples)
+    L = min(len(samples), 4096)
+    freqs = generate_log_frequencies(count, 20.0, 20000.0)
+    fs = 44100.0
+    curve = []
+    for f in freqs:
+        h_resp = sum(samples[n] * cmath.exp(-2j * math.pi * f * n / fs) for n in range(L))
+        gain = 20.0 * math.log10(max(abs(h_resp), 1e-12))
+        curve.append({"f": round(f, 1), "gain": round(gain, 2)})
+    return curve
+
+
+def parse_parametric(text: str) -> tuple[str, list[tuple[int, str, float, float, float]], dict[str, Any]]:
     preamp: float | None = None
     filters: list[tuple[int, str, float, float, float]] = []
     for raw_line in text.splitlines():
@@ -169,11 +256,12 @@ def parse_parametric(text: str) -> tuple[str, dict[str, Any]]:
             f"Filter {index}: ON {kind} Fc {frequency:g} Hz "
             f"Gain {gain:g} dB Q {quality:g}"
         )
-    return "\n".join(lines) + "\n", {
+    metadata = {
         "kind": "parametric",
         "filters": len(filters),
         "preamp": preamp,
     }
+    return "\n".join(lines) + "\n", filters, metadata
 
 
 def inspect_profile(path: Path) -> tuple[str, Any, dict[str, Any]]:
@@ -185,7 +273,12 @@ def inspect_profile(path: Path) -> tuple[str, Any, dict[str, Any]]:
         raise EqError(f"无法读取导入文件：{error}") from error
 
     if PREAMP_RE.search(text) or re.search(r"^Filter\s+\d+\s*:", text, re.MULTILINE):
-        normalized, metadata = parse_parametric(text)
+        normalized, raw_filters, metadata = parse_parametric(text)
+        curve, filter_list = compute_parametric_curve(metadata["preamp"], raw_filters)
+        metadata["curve"] = curve
+        metadata["filterList"] = filter_list
+        metadata["minGain"] = min(p["gain"] for p in curve)
+        metadata["maxGain"] = max(p["gain"] for p in curve)
         return "parametric", normalized, metadata
 
     points = parse_curve(text)
@@ -193,6 +286,7 @@ def inspect_profile(path: Path) -> tuple[str, Any, dict[str, Any]]:
     headroom = max(0.0, source_max_gain + 0.2)
     if headroom > 0.0:
         points = [(frequency, gain - headroom) for frequency, gain in points]
+    curve = compute_fir_curve(points)
     metadata = {
         "kind": "fir",
         "points": len(points),
@@ -202,6 +296,9 @@ def inspect_profile(path: Path) -> tuple[str, Any, dict[str, Any]]:
         "headroomAdjustment": -headroom,
         "maxGain": max(gain for _, gain in points),
         "sampleRates": list(FIR_RATES),
+        "curve": curve,
+        "minGain": min(p["gain"] for p in curve),
+        "maxGain": max(p["gain"] for p in curve),
     }
     return "fir", points, metadata
 
@@ -520,6 +617,54 @@ def set_entry_runtime(
     return "enabled"
 
 
+def ensure_device_curve(entry: dict[str, Any]) -> bool:
+    if entry.get("curve") and len(entry["curve"]) > 0:
+        return False
+    kind = entry.get("kind")
+    if kind == "fir":
+        points = None
+        source_path = Path(entry.get("sourcePath", "")) if entry.get("sourcePath") else None
+        if source_path and source_path.is_file():
+            try:
+                points = parse_curve(source_path.read_text(encoding="utf-8-sig"))
+                headroom = entry.get("headroomAdjustment", 0.0)
+                if headroom != 0.0:
+                    points = [(f, g + headroom) for f, g in points]
+            except Exception:
+                points = None
+        if points:
+            curve = compute_fir_curve(points)
+        else:
+            profile_wav = Path(entry.get("profile", "")) if entry.get("profile") else None
+            if profile_wav and profile_wav.is_file():
+                try:
+                    curve = compute_wav_curve(profile_wav)
+                except Exception:
+                    return False
+            else:
+                return False
+        entry["curve"] = curve
+        entry["minGain"] = min(p["gain"] for p in curve)
+        entry["maxGain"] = max(p["gain"] for p in curve)
+        return True
+    elif kind == "parametric":
+        profile_path = Path(entry.get("profile", "")) if entry.get("profile") else None
+        if not profile_path or not profile_path.is_file():
+            return False
+        try:
+            text = profile_path.read_text(encoding="utf-8-sig")
+            _, parsed_filters, p_metadata = parse_parametric(text)
+            curve, filter_list = compute_parametric_curve(p_metadata["preamp"], parsed_filters)
+            entry["curve"] = curve
+            entry["filterList"] = filter_list
+            entry["minGain"] = min(p["gain"] for p in curve)
+            entry["maxGain"] = max(p["gain"] for p in curve)
+            return True
+        except Exception:
+            return False
+    return False
+
+
 def status_payload(state: dict[str, Any]) -> dict[str, Any]:
     try:
         nodes = live_sink_nodes()
@@ -528,13 +673,18 @@ def status_payload(state: dict[str, Any]) -> dict[str, Any]:
         nodes = {}
         runtime_error = str(error)
     devices = []
+    state_dirty = False
     for device, entry in sorted(state["devices"].items()):
+        if ensure_device_curve(entry):
+            state_dirty = True
         item = dict(entry)
         item["device"] = device
         item.update(runtime_status(device, entry, nodes))
         if runtime_error:
             item["runtimeError"] = runtime_error
         devices.append(item)
+    if state_dirty:
+        save_state(state)
     return {
         "ok": True,
         "available": all(
