@@ -98,8 +98,19 @@ ApplicationWindow {
         },
         {
             name: Translation.tr("Audio"),
-            icon: "graphic_eq",
-            component: "modules/settings/system/PipewireEqConfig.qml"
+            icon: "volume_up",
+            pages: [
+                {
+                    name: Translation.tr("Sound"),
+                    icon: "volume_up",
+                    component: "modules/settings/system/SoundConfig.qml"
+                },
+                {
+                    name: Translation.tr("Equalizer"),
+                    icon: "graphic_eq",
+                    component: "modules/settings/system/PipewireEqConfig.qml"
+                }
+            ]
         },
         {
             name: "KDE",
@@ -140,6 +151,55 @@ ApplicationWindow {
         currentPage = index;
     }
 
+    function applyInitialTarget() {
+        const target = (Quickshell.env("QS_SETTINGS_TARGET") || "").toLowerCase().trim();
+        const categoryTarget = (Quickshell.env("QS_SETTINGS_CATEGORY") || "").toLowerCase().trim();
+        const pageTarget = (Quickshell.env("QS_SETTINGS_PAGE") || "").toLowerCase().trim();
+
+        const effectiveTarget = target || pageTarget || categoryTarget;
+        if (!effectiveTarget)
+            return;
+
+        if (effectiveTarget === "wifi" || effectiveTarget === "wi-fi" || effectiveTarget === "wireless" || effectiveTarget === "network") {
+            root.openCategory(1);
+            root.openPage(0);
+            return;
+        }
+        if (effectiveTarget === "bluetooth" || effectiveTarget === "bt") {
+            root.openCategory(1);
+            root.openPage(1);
+            return;
+        }
+        if (effectiveTarget === "connectivity") {
+            root.openCategory(1);
+            root.openPage(0);
+            return;
+        }
+        if (effectiveTarget === "monitor" || effectiveTarget === "display" || effectiveTarget === "screen") {
+            root.openCategory(2);
+            return;
+        }
+        if (effectiveTarget === "sound" || effectiveTarget === "audio" || effectiveTarget === "volume") {
+            root.openCategory(3);
+            root.openPage(0);
+            return;
+        }
+        if (effectiveTarget === "equalizer" || effectiveTarget === "eq" || effectiveTarget === "pipewire-eq") {
+            root.openCategory(3);
+            root.openPage(1);
+            return;
+        }
+
+        const catIdx = parseInt(categoryTarget);
+        if (!isNaN(catIdx) && catIdx >= 0 && catIdx < root.categories.length) {
+            root.openCategory(catIdx);
+            const pIdx = parseInt(pageTarget);
+            if (!isNaN(pIdx) && root.currentCategoryHasPages && pIdx >= 0 && pIdx < root.categories[catIdx].pages.length) {
+                root.openPage(pIdx);
+            }
+        }
+    }
+
     visible: true
     onClosing: Qt.quit()
     title: "illogical-impulse Settings"
@@ -148,6 +208,7 @@ ApplicationWindow {
         MaterialThemeLoader.reapplyTheme()
         Config.readWriteDelay = 0 // Settings app always only sets one var at a time so delay isn't needed
         settingsReady = true
+        root.applyInitialTarget()
         enableInnerRailAnimationTimer.restart();
     }
 
@@ -407,6 +468,14 @@ ApplicationWindow {
                         function onCurrentComponentChanged() {
                             switchAnim.complete();
                             switchAnim.start();
+                        }
+                    }
+
+                    Connections {
+                        target: pageLoader.item
+                        ignoreUnknownSignals: true
+                        function onOpenPageRequested(pageIndex) {
+                            root.openPage(pageIndex);
                         }
                     }
 

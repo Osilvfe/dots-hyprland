@@ -27,7 +27,7 @@
 - `modules/`：
   - `common/` —— 共享基础：`Config.qml`（配置定义 JsonObject）、`Directories.qml`（路径，带 file://）、`Appearance.qml`（主题/颜色/字体）、`functions/`（FileUtils、LyricSync 等）、`widgets/`（含 `SyncedLyricText`）、`panels/`（lock 等）
   - `ii/` —— 主面板族：`bar/`（顶栏，含 Media/SysTray/Workspaces/Resources 等）、`sidebarLeft/`、`sidebarRight/`（日历/节假日）、`overview/`（搜索框+emoji）、`overlay/`（截图/录屏区域）、`recordingStatus/`、`mediaControls/`、`background/` 等
-  - `settings/` —— 设置页（BarConfig/GeneralConfig/InterfaceConfig）+ `settings/system/`（Wifi/Bluetooth/Monitor/KDE）
+  - `settings/` —— 设置页（BarConfig/GeneralConfig/InterfaceConfig）+ `settings/system/`（Wifi/Bluetooth/Monitor/KDE/PipewireEq/Sound）
   - `waffle/` —— 另一个面板族（可切换）
 - `translations/zh_CN.json` —— 中文翻译（新 key 追加到文件末尾，勿 `sorted()` 重排）
 - `assets/`、`defaults/`、`scripts/`（含 `launch-detached-qs.sh`：清 qs crash 环境变量后再 `qs -p` 开设置/欢迎页）
@@ -154,6 +154,7 @@
 - PipeWire 1.6 的 `audioconvert.filter-graph.N` 是只写运行时命令，不会由 `enum-params Props` 回显；管理器以 `object.serial` + graph 哈希记录本次节点是否成功下发，序列号变化时重新挂载
 - JamesDSP 支持已移除；PipeWire 分设备 EQ 是仓库内唯一的 EQ 集成
 - 曲线界面：`modules/settings/system/EqCurveView.qml` 提供 20 Hz – 20 kHz 对数频响曲线展示与自适应 dB 刻度；后端 `pipewire-eq.py` 计算并缓存 200 点对数采样（FIR 对数插值/WAV 重构；参数 EQ 闭式双线性解析响应，数值稳定无抵消）；支持动态鼠标探针、0 dB 基准线、各段滤镜节点与参数芯片列表，随设备启用/旁路状态同步呈现主色与半透明填充渐变
+- 声音设置面板：`modules/settings/system/SoundConfig.qml` 提供系统级声音管理（物理输入/输出设备选择、主音量与麦克风增益、声道与提示音测试、应用音量混音器、系统提示音开关与主题选择、防爆音与音量保护）；与 `PipewireEqConfig.qml` 作为二级页面挂载在设置应用的 `Audio` 分类下
 
 ### Hypridle
 - 关屏后挂起死锁——已改**不黑屏直接挂起**（无 DPMS off listener）；唤醒 `after_sleep_cmd`+`on-resume` 里 `hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'`
