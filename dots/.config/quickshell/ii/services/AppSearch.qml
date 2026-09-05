@@ -3,6 +3,7 @@ pragma Singleton
 import qs.modules.common
 import qs.modules.common.functions
 import Quickshell
+import QtQuick
 
 /**
  * - Eases fuzzy searching for applications by name
@@ -40,20 +41,33 @@ Singleton {
         }
     ]
 
-    // Deduped list to fix double icons
-    readonly property list<DesktopEntry> list: {
-        const apps = Array.from(DesktopEntries.applications.values);
-        const seen = {};
-        const out = [];
-        for (let i = 0; i < apps.length; i++) {
-            const id = apps[i].id;
-            if (seen[id])
-                continue;
-            seen[id] = true;
-            out.push(apps[i]);
+    // Deduped list to fix double icons.
+    // NOT a live binding on DesktopEntries.applications.values: a desktop-entry rescan
+    // (any change in an applications/ dir — Steam, wine, flatpak, PWA installs...) emits
+    // one valuesChanged per entry (~hundreds), and a binding would rebuild this list —
+    // and everything derived from it (preppedNames/preppedIcons/every guessIcon() caller)
+    // — once per signal, freezing the shell for seconds. Coalesce into a single rebuild.
+    property list<DesktopEntry> list: []
+    function rebuildList() {
+        const seen = new Set();
+        const result = [];
+        for (const app of DesktopEntries.applications.values) {
+            if (seen.has(app.id)) continue;
+            seen.add(app.id);
+            result.push(app);
         }
-        return out;
+        root.list = result;
     }
+    Timer {
+        id: rebuildListTimer
+        interval: 150
+        onTriggered: root.rebuildList()
+    }
+    Connections {
+        target: DesktopEntries.applications
+        function onValuesChanged() { rebuildListTimer.restart(); }
+    }
+    Component.onCompleted: root.rebuildList()
     
     readonly property var preppedNames: list.map(a => ({
         name: Fuzzy.prepare(`${a.name} `),
