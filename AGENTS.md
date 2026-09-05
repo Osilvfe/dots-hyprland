@@ -93,6 +93,14 @@
 - **#3451** 启动器 `Terminal=true` 按参数转义，不 `join(' ')` 整串给 `-e`
 - **#3560** `windowtitle` 只刷新 client 列表
 - **#3526** 通知堆积时整组关闭不再打满 CPU
+- **#3612** Overview 剪贴板读取 `Cliphist.currentEntryText` 避免 Wayland 10-15s 同步读超时；`AppSearch` 150ms 聚合防抖
+- **#3634** 蓝牙设备 1000ms 排序节流 + `areDeviceListsEqual` 浅比对防 CPU 100%；`expandedAddress` 维持展开状态；移除夜间模式误触发扫描
+- **#3622** `applycolor.sh` 仅对真实控制终端 pty 发送 OSC 转义序列
+- **#3627** `applycolor.sh` / `switchwall.sh` 临时文件原子替换避免损坏终端配置与 scss；`pgrep -x kitty` 精准匹配
+- **#3614** 背景天气组件温度字段 `typeof string` 守卫，避免未拉取时 TypeError
+- **#3616** `KeyringStorage` 异步初次加载前的写入队列保护，防止覆盖抹除已有密钥
+- **#3617** `SqueezedAnnotationStyledText` 翻译自适应尺寸增加宽度溢出检测、尺寸为 0 守卫与 resize 重新计算
+- **#3599** `random_osu_wall.sh` 遭遇 Cloudflare 人机拦截时优雅降级并弹窗提示
 
 ### 本地补丁 · 功能
 - **#3533** OSD/顶栏滚轮音量上限（`audio.osdMaxPercent`，默认 150；不影响键盘 `wpctl -l 1.5`）
