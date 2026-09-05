@@ -957,6 +957,9 @@
   "Speaker test": "扬声器测试",
   "Left channel": "左声道",
   "Right channel": "右声道",
-  "Chime": "提示音"
+  "Chime": "提示音",
+  "Type or click here to search…": "输入或点击此处搜索…",
+  "No matching keybinds": "未找到匹配的快捷键"
 }
+
 
