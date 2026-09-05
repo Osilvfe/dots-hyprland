@@ -118,6 +118,7 @@
 - **#3621** 设置应用界面页支持调节活动窗口边框粗细（`general:border_size`）并修复 SpinBox 绑定自循环
 
 ### 本地修复（无对应 PR）
+- **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示
 - **`c2de877c`** 设置/欢迎走 `launch-detached-qs.sh`，避免 `__QUICKSHELL_CRASH_*` 让 `qs -p` 再开一根顶栏
 - **`ac34923b`** `notifications.forceMonitor`（上游 #3593）；SearchItem `entry?.`；关夜间模式停 hyprsunset；HyprlandData debounce layout；`XDG_DATA_DIRS` 去重；锁屏 Caps Lock；亮度保底 5%；封面 URL 清空时保留上一张
 - **`399352bd`** 农历位运算、SPlayer 空闲退避、playerctld 始终过滤、蓝牙分组
