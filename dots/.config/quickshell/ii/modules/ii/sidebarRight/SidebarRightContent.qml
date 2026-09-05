@@ -290,13 +290,7 @@ Item {
             QuickToggleButton {
                 toggled: false
                 buttonIcon: "settings"
-                onClicked: {
-                    GlobalStates.sidebarRightOpen = false;
-                    Quickshell.execDetached([
-                        FileUtils.trimFileProtocol(`${Directories.scriptPath}/launch-detached-qs.sh`),
-                        root.settingsQmlPath
-                    ]);
-                }
+                onClicked: GlobalStates.openSettings()
                 StyledToolTip {
                     text: Translation.tr("Settings")
                 }

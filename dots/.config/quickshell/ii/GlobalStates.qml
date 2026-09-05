@@ -1,4 +1,5 @@
 import qs.modules.common
+import qs.modules.common.functions
 import qs.services
 import QtQuick
 import Quickshell
@@ -9,6 +10,14 @@ pragma ComponentBehavior: Bound
 
 Singleton {
     id: root
+
+    function openSettings(targetCategoryOrPage) {
+        root.sidebarRightOpen = false;
+        const script = FileUtils.trimFileProtocol(`${Directories.scriptPath}/launch-detached-qs.sh`);
+        const qmlPath = FileUtils.trimFileProtocol(Quickshell.shellPath("settings.qml"));
+        const target = targetCategoryOrPage || "";
+        Quickshell.execDetached([script, qmlPath, target]);
+    }
     property bool barOpen: true
     property bool crosshairOpen: false
     property bool sidebarLeftOpen: false

@@ -48,8 +48,8 @@ WindowDialog {
         DialogButton {
             buttonText: Translation.tr("Details")
             onClicked: {
-                Quickshell.execDetached(["bash", "-c", `${Network.ethernet ? Config.options.apps.networkEthernet : Config.options.apps.network}`]);
-                GlobalStates.sidebarRightOpen = false;
+                root.dismiss();
+                GlobalStates.openSettings("wifi");
             }
         }
 

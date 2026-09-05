@@ -111,8 +111,8 @@ WindowDialog {
         DialogButton {
             buttonText: Translation.tr("Details")
             onClicked: {
-                Quickshell.execDetached(["bash", "-c", `${Config.options.apps.bluetooth}`]);
-                GlobalStates.sidebarRightOpen = false;
+                root.dismiss();
+                GlobalStates.openSettings("bluetooth");
             }
         }
 

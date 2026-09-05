@@ -8,10 +8,13 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-    echo "usage: $0 <qml-file>" >&2
+    echo "usage: $0 <qml-file> [target]" >&2
     exit 1
 fi
 
 unset __QUICKSHELL_CRASH_INFO_FD __QUICKSHELL_CRASH_DUMP_PID __QUICKSHELL_CRASH_SIGNAL
 export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP_OVERRIDE:-gnome}"
+if [[ $# -ge 2 && -n "$2" ]]; then
+    export QS_SETTINGS_TARGET="$2"
+fi
 exec qs -p "$1"
