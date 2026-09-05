@@ -959,7 +959,10 @@
   "Right channel": "右声道",
   "Chime": "提示音",
   "Type or click here to search…": "输入或点击此处搜索…",
-  "No matching keybinds": "未找到匹配的快捷键"
+  "No matching keybinds": "未找到匹配的快捷键",
+  "Active border thickness": "活动窗口边框粗细",
+  "How thick the border around the focused window is. 0 hides it.": "聚焦窗口周围边框的粗细程度，设为 0 则隐藏。"
 }
+
 
 
