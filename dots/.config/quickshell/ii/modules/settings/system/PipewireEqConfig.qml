@@ -12,14 +12,20 @@ ContentPage {
     forceWidth: true
 
     property string selectedDeviceName: ""
+    property bool userManuallySelected: false
     readonly property var physicalDevices: Audio.outputDevices.filter(node => {
         const name = root.deviceName(node);
         return name.startsWith("alsa_output.") || name.startsWith("bluez_output.");
     })
-    readonly property var deviceChoices: physicalDevices.map(node => ({
-        displayName: Audio.friendlyDeviceName(node),
-        value: root.deviceName(node),
-    }))
+    readonly property var deviceChoices: physicalDevices.map(node => {
+        const isCurrent = (node.id === Audio.sink?.id) || (root.deviceName(node) === root.deviceName(Audio.sink));
+        const baseName = Audio.friendlyDeviceName(node);
+        return {
+            displayName: isCurrent ? `${baseName} (${Translation.tr("In use")})` : baseName,
+            value: root.deviceName(node),
+            isCurrent: isCurrent
+        };
+    })
     readonly property var selectedDevice: physicalDevices.find(node => root.deviceName(node) === selectedDeviceName) ?? null
     readonly property var selectedProfile: PipewireEq.profileFor(selectedDeviceName)
 
@@ -32,13 +38,31 @@ ContentPage {
         return Number.isInteger(value) && value >= 1 && value <= 8 ? value : 2;
     }
 
-    function ensureSelection() {
+    function currentDefaultDeviceName() {
+        const defaultNode = Audio.sink;
+        if (!defaultNode)
+            return "";
+        const name = root.deviceName(defaultNode);
+        return root.physicalDevices.some(node => root.deviceName(node) === name) ? name : "";
+    }
+
+    function ensureSelection(forceDefault = false) {
         if (root.physicalDevices.length === 0) {
             root.selectedDeviceName = "";
+            root.userManuallySelected = false;
             return;
         }
-        if (!root.physicalDevices.some(node => root.deviceName(node) === root.selectedDeviceName))
-            root.selectedDeviceName = root.deviceName(root.physicalDevices[0]);
+
+        const defName = root.currentDefaultDeviceName();
+
+        if (forceDefault || !root.userManuallySelected || root.selectedDeviceName === "" || !root.physicalDevices.some(node => root.deviceName(node) === root.selectedDeviceName)) {
+            if (defName !== "") {
+                root.selectedDeviceName = defName;
+            } else if (!root.physicalDevices.some(node => root.deviceName(node) === root.selectedDeviceName)) {
+                root.selectedDeviceName = root.deviceName(root.physicalDevices[0]);
+                root.userManuallySelected = false;
+            }
+        }
     }
 
     function profileSummary(profile) {
@@ -50,7 +74,7 @@ ContentPage {
     }
 
     Component.onCompleted: {
-        root.ensureSelection();
+        root.ensureSelection(true);
         PipewireEq.refresh();
     }
 
@@ -58,6 +82,11 @@ ContentPage {
         target: Audio
         function onOutputDevicesChanged() {
             root.ensureSelection();
+        }
+        function onSinkChanged() {
+            if (!root.userManuallySelected) {
+                root.ensureSelection(true);
+            }
         }
     }
 
@@ -104,7 +133,20 @@ ContentPage {
                 textRole: "displayName"
                 model: root.deviceChoices
                 currentIndex: Math.max(0, root.deviceChoices.findIndex(choice => choice.value === root.selectedDeviceName))
-                onActivated: index => root.selectedDeviceName = model[index]?.value ?? ""
+                onActivated: index => {
+                    const chosen = root.deviceChoices[index]?.value ?? "";
+                    root.userManuallySelected = (chosen !== root.currentDefaultDeviceName());
+                    root.selectedDeviceName = chosen;
+                }
+            }
+
+            DialogButton {
+                visible: root.selectedDeviceName !== root.currentDefaultDeviceName() && root.currentDefaultDeviceName() !== ""
+                buttonText: Translation.tr("Active device")
+                onClicked: {
+                    root.userManuallySelected = false;
+                    root.ensureSelection(true);
+                }
             }
 
             DialogButton {
