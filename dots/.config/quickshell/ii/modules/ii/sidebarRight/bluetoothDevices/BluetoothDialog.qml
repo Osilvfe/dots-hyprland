@@ -74,9 +74,7 @@ WindowDialog {
                 visible: namedRepeater.count > 0
                 Repeater {
                     id: namedRepeater
-                    model: ScriptModel {
-                        values: BluetoothStatus.namedDeviceList
-                    }
+                    model: BluetoothStatus.namedDeviceList
                     BluetoothDeviceItem {
                         required property BluetoothDevice modelData
                         device: modelData
@@ -93,9 +91,7 @@ WindowDialog {
                 visible: unnamedRepeater.count > 0
                 Repeater {
                     id: unnamedRepeater
-                    model: ScriptModel {
-                        values: BluetoothStatus.unnamedDeviceList
-                    }
+                    model: BluetoothStatus.unnamedDeviceList
                     BluetoothDeviceItem {
                         required property BluetoothDevice modelData
                         device: modelData
