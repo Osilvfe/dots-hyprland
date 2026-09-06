@@ -52,7 +52,7 @@ ContentPage {
             uniform: true
             visible: Config.options.bar.indicators.showBluetoothBattery
             ConfigSwitch {
-                buttonIcon: "earbuds"
+                buttonIcon: "earbuds_2"
                 text: Translation.tr("Lowest earbud battery")
                 checked: Config.options.bar.indicators.bluetoothBatteryLowestEarbud ?? true
                 onCheckedChanged: {

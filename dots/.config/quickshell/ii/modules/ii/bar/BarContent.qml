@@ -226,7 +226,7 @@ Item { // Bar content region
                                         Layout.alignment: Qt.AlignVCenter
                                         fill: 1
                                         text: (btBattery.btDevices.length === 1 && BluetoothStatus.earbudBatteryInfo(btBattery.btDevices[0]) !== null)
-                                            ? "earbuds"
+                                            ? "earbuds_2"
                                             : "bluetooth"
                                         iconSize: 13
                                     }
@@ -263,7 +263,7 @@ Item { // Bar content region
                                         readonly property var earbudInfo: BluetoothStatus.earbudBatteryInfo(devEntry.modelData)
 
                                         StyledPopupValueRow {
-                                            icon: devEntry.earbudInfo ? "earbuds" : "battery_android_full"
+                                            icon: devEntry.earbudInfo ? "earbuds_2" : "battery_android_full"
                                             label: (devEntry.modelData?.name ?? "") + ":"
                                             value: Math.round(Math.max(0, BluetoothStatus.batteryFraction(devEntry.modelData)) * 100) + "%"
                                         }
@@ -271,27 +271,57 @@ Item { // Bar content region
                                         RowLayout {
                                             visible: devEntry.earbudInfo !== null && (devEntry.earbudInfo.left >= 0 || devEntry.earbudInfo.right >= 0)
                                             Layout.leftMargin: 22
-                                            spacing: 6
+                                            spacing: 8
 
-                                            StyledText {
+                                            RowLayout {
                                                 visible: devEntry.earbudInfo?.left >= 0
-                                                font.pixelSize: Appearance.font.pixelSize.smallest
-                                                color: Appearance.colors.colSubtext
-                                                text: (devEntry.earbudInfo?.chargingLeft ? "⚡" : "") + Translation.tr("L: %1%").arg(devEntry.earbudInfo?.left ?? 0)
+                                                spacing: 3
+                                                MaterialSymbol {
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    iconSize: Appearance.font.pixelSize.smaller
+                                                    text: "earbud_left"
+                                                    color: Appearance.colors.colSubtext
+                                                }
+                                                StyledText {
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                                    color: Appearance.colors.colSubtext
+                                                    text: (devEntry.earbudInfo?.chargingLeft ? "⚡" : "") + (devEntry.earbudInfo?.left ?? 0) + "%"
+                                                }
                                             }
 
-                                            StyledText {
+                                            RowLayout {
                                                 visible: devEntry.earbudInfo?.right >= 0
-                                                font.pixelSize: Appearance.font.pixelSize.smallest
-                                                color: Appearance.colors.colSubtext
-                                                text: (devEntry.earbudInfo?.chargingRight ? "⚡" : "") + Translation.tr("R: %1%").arg(devEntry.earbudInfo?.right ?? 0)
+                                                spacing: 3
+                                                MaterialSymbol {
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    iconSize: Appearance.font.pixelSize.smaller
+                                                    text: "earbud_right"
+                                                    color: Appearance.colors.colSubtext
+                                                }
+                                                StyledText {
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                                    color: Appearance.colors.colSubtext
+                                                    text: (devEntry.earbudInfo?.chargingRight ? "⚡" : "") + (devEntry.earbudInfo?.right ?? 0) + "%"
+                                                }
                                             }
 
-                                            StyledText {
+                                            RowLayout {
                                                 visible: devEntry.earbudInfo?.case >= 0
-                                                font.pixelSize: Appearance.font.pixelSize.smallest
-                                                color: Appearance.colors.colSubtext
-                                                text: (devEntry.earbudInfo?.chargingCase ? "⚡" : "") + Translation.tr("Case: %1%").arg(devEntry.earbudInfo?.case ?? 0)
+                                                spacing: 3
+                                                MaterialSymbol {
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    iconSize: Appearance.font.pixelSize.smaller
+                                                    text: "earbud_case"
+                                                    color: Appearance.colors.colSubtext
+                                                }
+                                                StyledText {
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                                    color: Appearance.colors.colSubtext
+                                                    text: (devEntry.earbudInfo?.chargingCase ? "⚡" : "") + (devEntry.earbudInfo?.case ?? 0) + "%"
+                                                }
                                             }
                                         }
                                     }
