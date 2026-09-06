@@ -978,7 +978,12 @@
   "Hardware MAC": "硬件 MAC 地址",
   "Network interface": "网络接口",
   "Copy to clipboard": "复制到剪贴板",
-  "Copied": "已复制"
+  "Copied": "已复制",
+  "Lowest earbud battery": "耳机优先显示最低电量",
+  "For dual earbuds, display the one with lower battery on the status bar": "当连接双耳蓝牙耳机时，状态栏默认显示电量较低的一只耳机的电量",
+  "L: %1%": "左: %1%",
+  "R: %1%": "右: %1%",
+  "Case: %1%": "盒: %1%"
 }
 
 

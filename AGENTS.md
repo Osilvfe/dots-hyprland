@@ -53,7 +53,7 @@
 
 ### OnePlus Buds 3 设备控制（本项目定制）
 - 目前只匹配规范化名称 `OnePlus Buds 3`；入口位于蓝牙设置的对应已保存设备行，耳机未连接时入口禁用。控制 UI 在 `settings/system/OplusBuds3Config.qml`，通过 `Loader` 按需加载，不与通用蓝牙选项混排
-- `services/OplusBuds3.qml` 只在专属页面打开时启动桥接器，返回蓝牙页或离开设置页时关闭进程并释放 RFCOMM；设备地址从 Quickshell 蓝牙模型动态取得，不写入配置
+- `services/OplusBuds3.qml` 在开启顶栏蓝牙电量或专属页面打开时在后台与设备通信维护电量与控制通道，退出或关闭时自动释放连接与 RFCOMM 通道；设备地址从 Quickshell 蓝牙模型动态取得，不写入配置
 - `scripts/bluetooth/oplus-buds3-bridge.c` 使用 BlueZ RFCOMM 和耳机私有 SPP 帧，自动探测通道；启动脚本用 `cc` + `libbluetooth` 按需编译到 `~/.cache/quickshell/helpers/`（Arch 依赖 `base-devel`、`bluez-libs`）
 - 协议字段按 `Osilvfe/OppoPodsManager-linux` 的 OnePlus Buds 3（产品 ID `063C14`）实现：电量、降噪/通透、EQ、空间音频、游戏模式/音效、双设备和佩戴检测。游戏音效与空间音频、非默认 EQ 的互斥在桥接器中同步处理
 
@@ -117,6 +117,7 @@
 - **#3449** 快捷键速查表（Cheatsheet）支持按键与描述即时搜索，元素周期表高亮，优化弹窗打开延迟
 - **#3621** 设置应用界面页支持调节活动窗口边框粗细（`general:border_size`）并修复 SpinBox 绑定自循环
 - **以太网（RJ45）设置支持**：网络设置页面（`WifiConfig.qml`）整合以太网配置与状态展示卡片（`EthernetSection.qml`），通过 `scripts/network/ethernet-info.py` 动态探测有线网卡硬件信息、网线插入/载波状态、协商速率、MAC/IP/网关/DNS，支持快速一键复制、自动连接开关与手动连接/断开，设置应用侧边栏统一升级为“网络”（Network）并支持 `QS_SETTINGS_TARGET=ethernet` 自动跳转
+- **顶栏耳机双耳电量支持**：在顶栏蓝牙电量指示器中，针对 TWS 蓝牙耳机（如 OnePlus Buds 3）获取并显示左右耳与充电盒独立电量；支持配置默认显示双耳中电量较低的一只耳（`bar.indicators.bluetoothBatteryLowestEarbud`，默认开启），图标自动切换为专属 `earbuds` 符号；鼠标悬停提示弹窗展示各单耳及耳机盒精确电量与充电状态
 
 ### 本地修复（无对应 PR）
 - **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示

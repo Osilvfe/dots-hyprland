@@ -27,6 +27,20 @@ Singleton {
     readonly property string address: root.device?.address ?? ""
     readonly property bool connecting: root.available && bridgeProcess.running && !root.connected
 
+    readonly property bool shouldBeActive: root.available && root.address.length > 0 && (root.controlsActive || (Config.options?.bar?.indicators?.showBluetoothBattery ?? true))
+
+    readonly property int lowestBattery: {
+        var _ = root.bluetoothRevision;
+        if (!root.connected) return -1;
+        const l = root.batteryLeft;
+        const r = root.batteryRight;
+        if (l >= 0 && r >= 0) return Math.min(l, r);
+        if (l >= 0) return l;
+        if (r >= 0) return r;
+        return -1;
+    }
+    readonly property bool hasEarbudBattery: lowestBattery >= 0
+
     property bool controlsActive: false
     property bool connected: false
     property string activeAddress: ""
@@ -71,7 +85,7 @@ Singleton {
     }
 
     function syncBridge() {
-        if (!root.controlsActive || !root.available || root.address.length === 0) {
+        if (!root.shouldBeActive || root.address.length === 0) {
             retryTimer.stop();
             if (bridgeProcess.running)
                 bridgeProcess.running = false;
@@ -105,13 +119,7 @@ Singleton {
         if (!root.controlsActive)
             return;
         root.controlsActive = false;
-        restartTimer.stop();
-        retryTimer.stop();
-        if (bridgeProcess.running)
-            bridgeProcess.running = false;
-        root.activeAddress = "";
-        root.lastError = "";
-        root.resetState();
+        root.syncBridge();
     }
 
     function restart() {
@@ -187,8 +195,17 @@ Singleton {
             root.lastError = "";
     }
 
+    onShouldBeActiveChanged: {
+        Qt.callLater(root.syncBridge);
+    }
+
     onBluetoothRevisionChanged: {
-        if (root.controlsActive)
+        if (root.shouldBeActive)
+            Qt.callLater(root.syncBridge);
+    }
+
+    Component.onCompleted: {
+        if (root.shouldBeActive)
             Qt.callLater(root.syncBridge);
     }
 
@@ -227,7 +244,7 @@ Singleton {
         onStarted: root.lastError = ""
         onExited: (exitCode, exitStatus) => {
             root.connected = false;
-            if (root.available && root.activeAddress === root.address)
+            if (root.shouldBeActive && root.activeAddress === root.address)
                 retryTimer.restart();
         }
     }

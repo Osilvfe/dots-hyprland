@@ -48,6 +48,22 @@ ContentPage {
                 }
             }
         }
+        ConfigRow {
+            uniform: true
+            visible: Config.options.bar.indicators.showBluetoothBattery
+            ConfigSwitch {
+                buttonIcon: "earbuds"
+                text: Translation.tr("Lowest earbud battery")
+                checked: Config.options.bar.indicators.bluetoothBatteryLowestEarbud ?? true
+                onCheckedChanged: {
+                    Config.options.bar.indicators.bluetoothBatteryLowestEarbud = checked;
+                }
+                StyledToolTip {
+                    text: Translation.tr("For dual earbuds, display the one with lower battery on the status bar")
+                }
+            }
+            Item { Layout.fillWidth: true }
+        }
         ConfigSwitch {
             buttonIcon: "code"
             text: Translation.tr("Codex usage")

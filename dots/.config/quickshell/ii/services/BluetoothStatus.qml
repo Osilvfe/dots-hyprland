@@ -6,6 +6,8 @@ import Quickshell.Bluetooth
 import Quickshell.Services.UPower
 import QtQuick
 import QtQml.Models
+import qs.modules.common
+import qs.services
 
 Singleton {
     id: root
@@ -161,15 +163,68 @@ Singleton {
         return null;
     }
 
-    // 0–1 from BlueZ Battery1, else UPower HID; -1 if neither reports.
+    function earbudBatteryInfo(device) {
+        var _ = root.deviceRevision;
+        if (!device)
+            return null;
+
+        const devAddr = (device.address ?? "").toUpperCase();
+
+        // 1. OnePlus Buds 3 provider
+        if (OplusBuds3.available && OplusBuds3.connected) {
+            const oplusAddr = (OplusBuds3.address ?? "").toUpperCase();
+            if (devAddr.length > 0 && devAddr === oplusAddr) {
+                const l = OplusBuds3.batteryLeft;
+                const r = OplusBuds3.batteryRight;
+                const c = OplusBuds3.batteryCase;
+                const validLevels = [];
+                if (l >= 0) validLevels.push(l);
+                if (r >= 0) validLevels.push(r);
+                const lowest = validLevels.length > 0 ? Math.min(...validLevels) : -1;
+                return {
+                    isEarbuds: true,
+                    left: l,
+                    right: r,
+                    case: c,
+                    lowest: lowest,
+                    lowestFraction: lowest >= 0 ? (lowest / 100.0) : -1,
+                    chargingLeft: OplusBuds3.chargingLeft,
+                    chargingRight: OplusBuds3.chargingRight,
+                    chargingCase: OplusBuds3.chargingCase
+                };
+            }
+        }
+
+        return null;
+    }
+
+    // 0–1 from Earbuds (lowest), BlueZ Battery1, else UPower HID; -1 if neither reports.
     function batteryFraction(device) {
         var _ = root.deviceRevision;
         if (!device)
             return -1;
+
+        const preferLowest = Config.options?.bar?.indicators?.bluetoothBatteryLowestEarbud ?? true;
+        const earbudInfo = root.earbudBatteryInfo(device);
+        if (earbudInfo && earbudInfo.lowest >= 0 && preferLowest) {
+            return earbudInfo.lowestFraction;
+        }
+
         if (device.batteryAvailable)
             return device.battery;
         const u = root.uPowerBatteryFor(device);
         return u ? u.percentage : -1;
+    }
+
+    Connections {
+        target: OplusBuds3
+        function onBatteryLeftChanged() { root.refresh(); }
+        function onBatteryRightChanged() { root.refresh(); }
+        function onBatteryCaseChanged() { root.refresh(); }
+        function onChargingLeftChanged() { root.refresh(); }
+        function onChargingRightChanged() { root.refresh(); }
+        function onChargingCaseChanged() { root.refresh(); }
+        function onConnectedChanged() { root.refresh(); }
     }
 
     Instantiator {

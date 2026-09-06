@@ -225,7 +225,9 @@ Item { // Bar content region
                                     MaterialSymbol {
                                         Layout.alignment: Qt.AlignVCenter
                                         fill: 1
-                                        text: "bluetooth"
+                                        text: (btBattery.btDevices.length === 1 && BluetoothStatus.earbudBatteryInfo(btBattery.btDevices[0]) !== null)
+                                            ? "earbuds"
+                                            : "bluetooth"
                                         iconSize: 13
                                     }
                                     StyledText {
@@ -253,11 +255,45 @@ Item { // Bar content region
                                 }
                                 Repeater {
                                     model: BluetoothStatus.connectedBatteryDevices
-                                    StyledPopupValueRow {
+                                    delegate: ColumnLayout {
+                                        id: devEntry
                                         required property var modelData
-                                        icon: "battery_android_full"
-                                        label: (modelData?.name ?? "") + ":"
-                                        value: Math.round(Math.max(0, BluetoothStatus.batteryFraction(modelData)) * 100) + "%"
+                                        spacing: 2
+
+                                        readonly property var earbudInfo: BluetoothStatus.earbudBatteryInfo(devEntry.modelData)
+
+                                        StyledPopupValueRow {
+                                            icon: devEntry.earbudInfo ? "earbuds" : "battery_android_full"
+                                            label: (devEntry.modelData?.name ?? "") + ":"
+                                            value: Math.round(Math.max(0, BluetoothStatus.batteryFraction(devEntry.modelData)) * 100) + "%"
+                                        }
+
+                                        RowLayout {
+                                            visible: devEntry.earbudInfo !== null && (devEntry.earbudInfo.left >= 0 || devEntry.earbudInfo.right >= 0)
+                                            Layout.leftMargin: 22
+                                            spacing: 6
+
+                                            StyledText {
+                                                visible: devEntry.earbudInfo?.left >= 0
+                                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                                color: Appearance.colors.colSubtext
+                                                text: (devEntry.earbudInfo?.chargingLeft ? "⚡" : "") + Translation.tr("L: %1%").arg(devEntry.earbudInfo?.left ?? 0)
+                                            }
+
+                                            StyledText {
+                                                visible: devEntry.earbudInfo?.right >= 0
+                                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                                color: Appearance.colors.colSubtext
+                                                text: (devEntry.earbudInfo?.chargingRight ? "⚡" : "") + Translation.tr("R: %1%").arg(devEntry.earbudInfo?.right ?? 0)
+                                            }
+
+                                            StyledText {
+                                                visible: devEntry.earbudInfo?.case >= 0
+                                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                                color: Appearance.colors.colSubtext
+                                                text: (devEntry.earbudInfo?.chargingCase ? "⚡" : "") + Translation.tr("Case: %1%").arg(devEntry.earbudInfo?.case ?? 0)
+                                            }
+                                        }
                                     }
                                 }
                             }

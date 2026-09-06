@@ -40,6 +40,8 @@ Singleton {
         Holidays.fetchYear(year + 1);
         // Re-attach desired per-device EQ graphs after device reconnects.
         PipewireEq.reconcile();
+        // Initialize earbud bridge if headphones are already connected
+        OplusBuds3.syncBridge();
     }
     property bool recordRegionMic: false
     property bool regionSelectorOpen: false
