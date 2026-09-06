@@ -80,8 +80,8 @@ ApplicationWindow {
             icon: "settings_input_antenna",
             pages: [
                 {
-                    name: Translation.tr("Wi-Fi"),
-                    icon: "wifi",
+                    name: Translation.tr("Network"),
+                    icon: "lan",
                     component: "modules/settings/system/WifiConfig.qml"
                 },
                 {
@@ -160,7 +160,7 @@ ApplicationWindow {
         if (!effectiveTarget)
             return;
 
-        if (effectiveTarget === "wifi" || effectiveTarget === "wi-fi" || effectiveTarget === "wireless" || effectiveTarget === "network") {
+        if (effectiveTarget === "wifi" || effectiveTarget === "wi-fi" || effectiveTarget === "wireless" || effectiveTarget === "network" || effectiveTarget === "ethernet") {
             root.openCategory(1);
             root.openPage(0);
             return;

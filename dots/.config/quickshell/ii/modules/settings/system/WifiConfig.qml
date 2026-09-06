@@ -375,6 +375,30 @@ ContentPage {
             }
         }
 
+        Loader {
+            Layout.fillWidth: true
+            source: "EthernetSection.qml"
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 10
+            spacing: 6
+
+            OptionalMaterialSymbol {
+                icon: "wifi"
+                iconSize: Appearance.font.pixelSize.hugeass
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                text: Translation.tr("Wi-Fi")
+                font.pixelSize: Appearance.font.pixelSize.larger
+                font.weight: Font.Medium
+                color: Appearance.colors.colOnSecondaryContainer
+            }
+        }
+
         ConfigSwitch {
             buttonIcon: Network.wifiEnabled ? "wifi" : "signal_wifi_off"
             text: Network.wifiEnabled ? Translation.tr("Wi-Fi enabled") : Translation.tr("Wi-Fi disabled")

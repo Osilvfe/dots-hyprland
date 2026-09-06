@@ -961,7 +961,24 @@
   "Type or click here to search…": "输入或点击此处搜索…",
   "No matching keybinds": "未找到匹配的快捷键",
   "Active border thickness": "活动窗口边框粗细",
-  "How thick the border around the focused window is. 0 hides it.": "聚焦窗口周围边框的粗细程度，设为 0 则隐藏。"
+  "How thick the border around the focused window is. 0 hides it.": "聚焦窗口周围边框的粗细程度，设为 0 则隐藏。",
+  "Ethernet (RJ45)": "以太网 (RJ45)",
+  "Refreshing…": "正在刷新…",
+  "No Ethernet hardware interfaces detected.": "未检测到以太网硬件接口。",
+  "Connecting…": "正在连接…",
+  "Cable connected (inactive)": "网线已连接 (未激活)",
+  "Cable unplugged": "网线已拔出",
+  "Cable plugged in": "网线已插入",
+  "Carrier status": "网线连接状态",
+  "Link speed": "协商速率",
+  "IPv4 address": "IPv4 地址",
+  "IPv4 gateway": "IPv4 网关",
+  "DNS servers": "DNS 服务器",
+  "IPv6 address": "IPv6 地址",
+  "Hardware MAC": "硬件 MAC 地址",
+  "Network interface": "网络接口",
+  "Copy to clipboard": "复制到剪贴板",
+  "Copied": "已复制"
 }
 
 
