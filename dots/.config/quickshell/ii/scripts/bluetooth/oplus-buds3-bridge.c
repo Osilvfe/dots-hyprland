@@ -2,6 +2,7 @@
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/rfcomm.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -12,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -124,67 +126,99 @@ static void reset_state(void)
     state.hi_res = -1;
 }
 
-static void print_nullable_int(int value)
+#define MAX_CLIENTS 8
+
+struct client_slot {
+    int fd;
+    char rx_buf[512];
+    size_t rx_len;
+};
+
+static char socket_path[108] = "";
+static struct client_slot clients[MAX_CLIENTS];
+static size_t num_clients = 0;
+static bool stdin_active = true;
+
+static void send_to_fd(int fd, const char *data, size_t len)
 {
-    if (value < 0)
-        fputs("null", stdout);
-    else
-        printf("%d", value);
+    if (fd < 0 || len == 0)
+        return;
+    send(fd, data, len, MSG_NOSIGNAL);
 }
 
-static void print_nullable_bool(int value)
+static size_t format_state_json(char *buf, size_t capacity, bool connected)
 {
-    if (value < 0)
-        fputs("null", stdout);
-    else
-        fputs(value ? "true" : "false", stdout);
+    char left_str[16], right_str[16], case_str[16];
+    char ch_left[16], ch_right[16], ch_case[16];
+    char eq_str[16], sp_str[16], gm_str[16], gs_str[16], dd_str[16], wd_str[16], hr_str[16];
+
+    if (state.battery_left < 0) strcpy(left_str, "null"); else snprintf(left_str, sizeof(left_str), "%d", state.battery_left);
+    if (state.battery_right < 0) strcpy(right_str, "null"); else snprintf(right_str, sizeof(right_str), "%d", state.battery_right);
+    if (state.battery_case < 0) strcpy(case_str, "null"); else snprintf(case_str, sizeof(case_str), "%d", state.battery_case);
+
+    if (state.charging_left < 0) strcpy(ch_left, "null"); else strcpy(ch_left, state.charging_left ? "true" : "false");
+    if (state.charging_right < 0) strcpy(ch_right, "null"); else strcpy(ch_right, state.charging_right ? "true" : "false");
+    if (state.charging_case < 0) strcpy(ch_case, "null"); else strcpy(ch_case, state.charging_case ? "true" : "false");
+
+    if (state.eq < 0) strcpy(eq_str, "null"); else snprintf(eq_str, sizeof(eq_str), "%d", state.eq);
+    if (state.spatial < 0) strcpy(sp_str, "null"); else strcpy(sp_str, state.spatial ? "true" : "false");
+    if (state.game_mode < 0) strcpy(gm_str, "null"); else strcpy(gm_str, state.game_mode ? "true" : "false");
+    if (state.game_sound < 0) strcpy(gs_str, "null"); else strcpy(gs_str, state.game_sound ? "true" : "false");
+    if (state.dual_device < 0) strcpy(dd_str, "null"); else strcpy(dd_str, state.dual_device ? "true" : "false");
+    if (state.wear_detection < 0) strcpy(wd_str, "null"); else strcpy(wd_str, state.wear_detection ? "true" : "false");
+    if (state.hi_res < 0) strcpy(hr_str, "null"); else strcpy(hr_str, state.hi_res ? "true" : "false");
+
+    int n = snprintf(buf, capacity,
+        "{\"type\":\"state\",\"connected\":%s,\"address\":\"%s\",\"channel\":%d,"
+        "\"batteryLeft\":%s,\"batteryRight\":%s,\"batteryCase\":%s,"
+        "\"chargingLeft\":%s,\"chargingRight\":%s,\"chargingCase\":%s,"
+        "\"anc\":\"%s\",\"eq\":%s,\"spatial\":%s,\"gameMode\":%s,"
+        "\"gameSound\":%s,\"dualDevice\":%s,\"wearDetection\":%s,\"hiRes\":%s}\n",
+        connected ? "true" : "false", device_address, rfcomm_channel,
+        left_str, right_str, case_str,
+        ch_left, ch_right, ch_case,
+        state.anc, eq_str, sp_str, gm_str,
+        gs_str, dd_str, wd_str, hr_str);
+
+    if (n < 0 || (size_t)n >= capacity)
+        return 0;
+    return (size_t)n;
 }
 
 static void emit_state(bool connected)
 {
-    printf("{\"type\":\"state\",\"connected\":%s,\"address\":\"%s\",\"channel\":%d,",
-           connected ? "true" : "false", device_address, rfcomm_channel);
-    fputs("\"batteryLeft\":", stdout);
-    print_nullable_int(state.battery_left);
-    fputs(",\"batteryRight\":", stdout);
-    print_nullable_int(state.battery_right);
-    fputs(",\"batteryCase\":", stdout);
-    print_nullable_int(state.battery_case);
-    fputs(",\"chargingLeft\":", stdout);
-    print_nullable_bool(state.charging_left);
-    fputs(",\"chargingRight\":", stdout);
-    print_nullable_bool(state.charging_right);
-    fputs(",\"chargingCase\":", stdout);
-    print_nullable_bool(state.charging_case);
-    printf(",\"anc\":\"%s\",\"eq\":", state.anc);
-    print_nullable_int(state.eq);
-    fputs(",\"spatial\":", stdout);
-    print_nullable_bool(state.spatial);
-    fputs(",\"gameMode\":", stdout);
-    print_nullable_bool(state.game_mode);
-    fputs(",\"gameSound\":", stdout);
-    print_nullable_bool(state.game_sound);
-    fputs(",\"dualDevice\":", stdout);
-    print_nullable_bool(state.dual_device);
-    fputs(",\"wearDetection\":", stdout);
-    print_nullable_bool(state.wear_detection);
-    fputs(",\"hiRes\":", stdout);
-    print_nullable_bool(state.hi_res);
-    fputs("}\n", stdout);
-    fflush(stdout);
+    char buf[1024];
+    size_t len = format_state_json(buf, sizeof(buf), connected);
+    if (len == 0)
+        return;
+
+    if (stdin_active) {
+        fwrite(buf, 1, len, stdout);
+        fflush(stdout);
+    }
+
+    for (size_t i = 0; i < num_clients; ++i) {
+        if (clients[i].fd >= 0)
+            send_to_fd(clients[i].fd, buf, len);
+    }
 }
 
 static void emit_error(const char *message)
 {
-    fputs("{\"type\":\"error\",\"message\":\"", stdout);
-    for (const unsigned char *p = (const unsigned char *)message; *p; ++p) {
-        if (*p == '\\' || *p == '"')
-            fputc('\\', stdout);
-        if (*p >= 0x20)
-            fputc(*p, stdout);
+    char buf[512];
+    int n = snprintf(buf, sizeof(buf), "{\"type\":\"error\",\"message\":\"%s\"}\n", message);
+    if (n <= 0)
+        return;
+
+    if (stdin_active) {
+        fwrite(buf, 1, (size_t)n, stdout);
+        fflush(stdout);
     }
-    fputs("\"}\n", stdout);
-    fflush(stdout);
+
+    for (size_t i = 0; i < num_clients; ++i) {
+        if (clients[i].fd >= 0)
+            send_to_fd(clients[i].fd, buf, (size_t)n);
+    }
 }
 
 static size_t build_frame(uint16_t command, const uint8_t *payload,
@@ -756,6 +790,138 @@ static void handle_command(char *line)
         emit_error("Unknown command");
 }
 
+static void init_socket_path(const char *address)
+{
+    const char *runtime_dir = getenv("XDG_RUNTIME_DIR");
+    if (!runtime_dir || runtime_dir[0] == '\0')
+        runtime_dir = "/tmp";
+
+    char clean_addr[32];
+    size_t j = 0;
+    for (size_t i = 0; address[i] && j < sizeof(clean_addr) - 1; ++i) {
+        if (address[i] == ':')
+            clean_addr[j++] = '-';
+        else
+            clean_addr[j++] = (char)tolower((unsigned char)address[i]);
+    }
+    clean_addr[j] = '\0';
+
+    snprintf(socket_path, sizeof(socket_path), "%s/oplus-buds3-%s.sock",
+             runtime_dir, clean_addr);
+}
+
+static int try_connect_client(void)
+{
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0)
+        return -1;
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", socket_path);
+
+    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+        DEBUG_LOG("Connected to running bridge daemon at %s", socket_path);
+        return fd;
+    }
+
+    int err = errno;
+    close(fd);
+
+    if (err == ECONNREFUSED || err == ENOENT) {
+        unlink(socket_path);
+    }
+    return -1;
+}
+
+static int run_client(int sock_fd)
+{
+    int flags = fcntl(sock_fd, F_GETFL, 0);
+    if (flags >= 0)
+        fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
+
+    char sock_buf[2048];
+    char stdin_buf[512];
+
+    while (keep_running) {
+        struct pollfd items[2] = {
+            { .fd = sock_fd, .events = POLLIN | POLLHUP | POLLERR },
+            { .fd = STDIN_FILENO, .events = POLLIN | POLLHUP }
+        };
+
+        int ret = poll(items, 2, 500);
+        if (ret < 0 && errno != EINTR)
+            break;
+
+        if (items[0].revents & POLLIN) {
+            ssize_t n = read(sock_fd, sock_buf, sizeof(sock_buf));
+            if (n <= 0) {
+                DEBUG_LOG("Daemon connection closed");
+                break;
+            }
+            fwrite(sock_buf, 1, (size_t)n, stdout);
+            fflush(stdout);
+        }
+        if (items[0].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+            DEBUG_LOG("Daemon socket error/hup");
+            break;
+        }
+
+        if (items[1].revents & POLLIN) {
+            ssize_t n = read(STDIN_FILENO, stdin_buf, sizeof(stdin_buf));
+            if (n <= 0) {
+                DEBUG_LOG("Client stdin closed");
+                break;
+            }
+            send_to_fd(sock_fd, stdin_buf, (size_t)n);
+        }
+        if (items[1].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+            DEBUG_LOG("Client stdin hup");
+            break;
+        }
+    }
+
+    close(sock_fd);
+    return 0;
+}
+
+static int create_server_socket(void)
+{
+    unlink(socket_path);
+
+    int listen_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (listen_fd < 0) {
+        DEBUG_LOG("socket(AF_UNIX) failed: %s", strerror(errno));
+        return -1;
+    }
+
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", socket_path);
+
+    if (bind(listen_fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+        DEBUG_LOG("bind(AF_UNIX) failed: %s", strerror(errno));
+        close(listen_fd);
+        return -1;
+    }
+
+    if (listen(listen_fd, 8) != 0) {
+        DEBUG_LOG("listen(AF_UNIX) failed: %s", strerror(errno));
+        close(listen_fd);
+        unlink(socket_path);
+        return -1;
+    }
+
+    int flags = fcntl(listen_fd, F_GETFL, 0);
+    if (flags >= 0)
+        fcntl(listen_fd, F_SETFL, flags | O_NONBLOCK);
+
+    DEBUG_LOG("Server listening on %s", socket_path);
+    return listen_fd;
+}
+
 static bool valid_address(const char *address)
 {
     if (strlen(address) != 17)
@@ -787,9 +953,30 @@ int main(int argc, char **argv)
     signal(SIGTERM, on_signal);
     signal(SIGPIPE, SIG_IGN);
 
+    init_socket_path(device_address);
+
+    // 1. Try to connect to an existing running bridge daemon
+    int client_sock = try_connect_client();
+    if (client_sock >= 0) {
+        return run_client(client_sock);
+    }
+
+    // 2. We are the master / server instance
+    int listen_fd = create_server_socket();
+    if (listen_fd < 0) {
+        short_pause();
+        client_sock = try_connect_client();
+        if (client_sock >= 0)
+            return run_client(client_sock);
+    }
+
     socket_fd = connect_buds(device_address);
     if (socket_fd < 0) {
         emit_error("Unable to open the OnePlus Buds 3 control channel");
+        if (listen_fd >= 0) {
+            close(listen_fd);
+            unlink(socket_path);
+        }
         return 3;
     }
 
@@ -802,6 +989,11 @@ int main(int argc, char **argv)
     char input[256];
 
     while (keep_running) {
+        if (!stdin_active && num_clients == 0) {
+            DEBUG_LOG("No active stdin and no connected clients, exiting server");
+            break;
+        }
+
         int64_t now = monotonic_ms();
         int timeout = 500;
         int64_t next_query = next_fast_query < next_slow_query
@@ -811,24 +1003,126 @@ int main(int argc, char **argv)
         if (next_query <= now)
             timeout = 0;
 
-        struct pollfd items[2] = {
-            { .fd = socket_fd, .events = POLLIN | POLLHUP | POLLERR },
-            { .fd = STDIN_FILENO, .events = POLLIN | POLLHUP }
-        };
-        int ready = poll(items, 2, timeout);
+        struct pollfd pfds[2 + 1 + MAX_CLIENTS];
+        int pfd_count = 0;
+
+        int rfcomm_idx = pfd_count++;
+        pfds[rfcomm_idx].fd = socket_fd;
+        pfds[rfcomm_idx].events = POLLIN | POLLHUP | POLLERR;
+
+        int stdin_idx = -1;
+        if (stdin_active) {
+            stdin_idx = pfd_count++;
+            pfds[stdin_idx].fd = STDIN_FILENO;
+            pfds[stdin_idx].events = POLLIN | POLLHUP;
+        }
+
+        int listen_idx = -1;
+        if (listen_fd >= 0) {
+            listen_idx = pfd_count++;
+            pfds[listen_idx].fd = listen_fd;
+            pfds[listen_idx].events = POLLIN;
+        }
+
+        int client_map[MAX_CLIENTS];
+        for (size_t i = 0; i < num_clients; ++i) {
+            client_map[i] = pfd_count++;
+            pfds[client_map[i]].fd = clients[i].fd;
+            pfds[client_map[i]].events = POLLIN | POLLHUP | POLLERR;
+        }
+
+        int ready = poll(pfds, pfd_count, timeout);
         if (ready < 0 && errno != EINTR)
             break;
+
         if (ready > 0) {
-            if (items[0].revents & (POLLHUP | POLLERR | POLLNVAL))
+            if (pfds[rfcomm_idx].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+                DEBUG_LOG("RFCOMM disconnected (hup/err)");
                 break;
-            if ((items[0].revents & POLLIN) && !receive_socket_data())
+            }
+            if ((pfds[rfcomm_idx].revents & POLLIN) && !receive_socket_data()) {
+                DEBUG_LOG("RFCOMM receive error");
                 break;
-            if (items[1].revents & POLLIN) {
-                if (fgets(input, sizeof(input), stdin) == NULL)
-                    break;
-                handle_command(input);
-            } else if (items[1].revents & POLLHUP) {
-                break;
+            }
+
+            if (stdin_idx >= 0) {
+                if (pfds[stdin_idx].revents & POLLIN) {
+                    if (fgets(input, sizeof(input), stdin) == NULL) {
+                        DEBUG_LOG("Server stdin reached EOF");
+                        stdin_active = false;
+                    } else {
+                        handle_command(input);
+                    }
+                } else if (pfds[stdin_idx].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+                    DEBUG_LOG("Server stdin HUP");
+                    stdin_active = false;
+                }
+            }
+
+            if (listen_idx >= 0 && (pfds[listen_idx].revents & POLLIN)) {
+                int new_fd = accept(listen_fd, NULL, NULL);
+                if (new_fd >= 0) {
+                    if (num_clients < MAX_CLIENTS) {
+                        int flags = fcntl(new_fd, F_GETFL, 0);
+                        if (flags >= 0)
+                            fcntl(new_fd, F_SETFL, flags | O_NONBLOCK);
+                        clients[num_clients].fd = new_fd;
+                        clients[num_clients].rx_len = 0;
+                        num_clients++;
+                        DEBUG_LOG("Accepted client %d (total %zu)", new_fd, num_clients);
+
+                        char json[1024];
+                        size_t len = format_state_json(json, sizeof(json), true);
+                        if (len > 0)
+                            send_to_fd(new_fd, json, len);
+
+                        send_fast_queries();
+                        send_slow_queries();
+                    } else {
+                        DEBUG_LOG("Max clients reached, rejecting %d", new_fd);
+                        close(new_fd);
+                    }
+                }
+            }
+
+            for (size_t i = 0; i < num_clients; ) {
+                int p_idx = client_map[i];
+                bool drop = false;
+
+                if (pfds[p_idx].revents & POLLIN) {
+                    ssize_t n = read(clients[i].fd,
+                                     clients[i].rx_buf + clients[i].rx_len,
+                                     sizeof(clients[i].rx_buf) - 1 - clients[i].rx_len);
+                    if (n <= 0) {
+                        drop = true;
+                    } else {
+                        clients[i].rx_len += (size_t)n;
+                        clients[i].rx_buf[clients[i].rx_len] = '\0';
+
+                        char *nl;
+                        while ((nl = memchr(clients[i].rx_buf, '\n', clients[i].rx_len)) != NULL) {
+                            *nl = '\0';
+                            handle_command(clients[i].rx_buf);
+                            size_t line_len = (size_t)(nl - clients[i].rx_buf) + 1;
+                            memmove(clients[i].rx_buf, nl + 1, clients[i].rx_len - line_len);
+                            clients[i].rx_len -= line_len;
+                            clients[i].rx_buf[clients[i].rx_len] = '\0';
+                        }
+                    }
+                }
+                if (pfds[p_idx].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+                    drop = true;
+                }
+
+                if (drop) {
+                    DEBUG_LOG("Closing client %d", clients[i].fd);
+                    close(clients[i].fd);
+                    for (size_t j = i; j + 1 < num_clients; ++j)
+                        clients[j] = clients[j + 1];
+                    num_clients--;
+                } else {
+                    ++i;
+                }
             }
         }
 
@@ -842,6 +1136,16 @@ int main(int argc, char **argv)
             next_slow_query = now + 15000;
         }
     }
+
+    if (listen_fd >= 0) {
+        close(listen_fd);
+        unlink(socket_path);
+    }
+    for (size_t i = 0; i < num_clients; ++i) {
+        if (clients[i].fd >= 0)
+            close(clients[i].fd);
+    }
+    num_clients = 0;
 
     if (socket_fd >= 0)
         close(socket_fd);

@@ -54,7 +54,7 @@
 ### OnePlus Buds 3 设备控制（本项目定制）
 - 目前只匹配规范化名称 `OnePlus Buds 3`；入口位于蓝牙设置的对应已保存设备行，耳机未连接时入口禁用。控制 UI 在 `settings/system/OplusBuds3Config.qml`，通过 `Loader` 按需加载，不与通用蓝牙选项混排
 - `services/OplusBuds3.qml` 在开启顶栏蓝牙电量或专属页面打开时在后台与设备通信维护电量与控制通道，退出或关闭时自动释放连接与 RFCOMM 通道；设备地址从 Quickshell 蓝牙模型动态取得，不写入配置
-- `scripts/bluetooth/oplus-buds3-bridge.c` 使用 BlueZ RFCOMM 和耳机私有 SPP 帧，自动探测通道；启动脚本用 `cc` + `libbluetooth` 按需编译到 `~/.cache/quickshell/helpers/`（Arch 依赖 `base-devel`、`bluez-libs`）
+- `scripts/bluetooth/oplus-buds3-bridge.c` 使用 BlueZ RFCOMM 和耳机私有 SPP 帧，自动探测通道，并内置 UNIX domain socket 客户端/服务端多路复用（`$XDG_RUNTIME_DIR/oplus-buds3-<MAC>.sock`）；首个实例持有底层 RFCOMM 独占连接，顶栏轮询与独立设置应用窗口自动作为客户端复用同一连接，支持多进程状态实时广播与指令互通；启动脚本用 `cc` + `libbluetooth` 按需编译到 `~/.cache/quickshell/helpers/`（Arch 依赖 `base-devel`、`bluez-libs`）
 - 协议字段按 `Osilvfe/OppoPodsManager-linux` 的 OnePlus Buds 3（产品 ID `063C14`）实现：电量、降噪/通透、EQ、空间音频、游戏模式/音效、双设备和佩戴检测。游戏音效与空间音频、非默认 EQ 的互斥在桥接器中同步处理
 
 ### 快捷键（`keybinds.lua`）
