@@ -14,7 +14,7 @@
 - `hyprland.lua` —— 入口，逐段 require 下面各 lua
 - `hyprland/` 下的 lua 模块：
   - `variables.lua` / `env.lua`（环境变量：XCURSOR_SIZE、OZONE、`XDG_DATA_DIRS` 去重等）/ `colors.lua`（色板）/ `general.lua`（通用+动画+插件守卫）/ `rules.lua`（窗口规则+XWayland no_blur+per-monitor 工作区）/ `keybinds.lua`（快捷键）/ `execs.lua`（hyprland.start 启动项）/ `services/`（hypridle 等）/ `shellOverrides/main.lua`
-  - `scripts/` —— `mask_kded6.sh`、`gamepad-active.py`、`snip_to_search.sh`、`launch_first_available.sh`、`switchfloatfocus.sh`、`fuzzel-emoji.sh` 等
+  - `scripts/` —— `mask_kded6.sh`、`gamepad-active.sh`（`gamepad-active.rs`）、`snip_to_search.sh`、`launch_first_available.sh`、`switchfloatfocus.sh`、`fuzzel-emoji.sh` 等
   - `custom/` —— 自维护补充（不会被更新覆盖）
 - `hypridle.conf` / `hyprlock.conf` —— 仍用 conf；**没有** `hyprland.conf`（入口是 lua）
 - `dots/.config/kded5rc` → `~/.config/kded5rc`：禁 kded6 `devicenotifications`（kded6 读这个文件名，不是 `kded6rc`）
@@ -62,9 +62,10 @@
 
 ### 常用脚本
 - `hyprland/scripts/mask_kded6.sh` —— 非 KDE：假 D-Bus service `Exec=/bin/false` + `systemctl --user mask plasma-kded6.service`；`XDG_CURRENT_DESKTOP=KDE` 时执行则还原。安装 `3.files-exp.sh` 会跑一次
-- `hyprland/scripts/gamepad-active.py` —— 手柄检测（hypridle 用）
+- `hyprland/scripts/gamepad-active.sh` —— 手柄检测（hypridle 用，Rust `gamepad-active.rs` 原生 evdev 探测，保留 `.py` 兼容包装）
 - `quickshell/ii/scripts/launch-detached-qs.sh` —— 开 settings/welcome
 - `quickshell/ii/scripts/bluetooth/oplus-buds3-bridge.sh` —— 按需编译并启动 OnePlus Buds 3 原生 RFCOMM 桥接器
+- `quickshell/ii/scripts/network/ethernet-info.sh` —— 按需编译并执行有线以太网硬件/链路信息探测 Rust 模块（`ethernet-info.rs`）
 - `fuzzel-emoji.sh`、`snip_to_search.sh`、`launch_first_available.sh`、`switchfloatfocus.sh`
 
 ## 同步与发布
@@ -116,7 +117,7 @@
 - **#3462** 锁屏界面增加媒体控制器卡片（带封面、切歌、音量与 Cava 律动频谱动效）
 - **#3449** 快捷键速查表（Cheatsheet）支持按键与描述即时搜索，元素周期表高亮，优化弹窗打开延迟
 - **#3621** 设置应用界面页支持调节活动窗口边框粗细（`general:border_size`）并修复 SpinBox 绑定自循环
-- **以太网（RJ45）设置支持**：网络设置页面（`WifiConfig.qml`）整合以太网配置与状态展示卡片（`EthernetSection.qml`），通过 `scripts/network/ethernet-info.py` 动态探测有线网卡硬件信息、网线插入/载波状态、协商速率、MAC/IP/网关/DNS，支持快速一键复制、自动连接开关与手动连接/断开，设置应用侧边栏统一升级为“网络”（Network）并支持 `QS_SETTINGS_TARGET=ethernet` 自动跳转
+- **以太网（RJ45）设置支持**：网络设置页面（`WifiConfig.qml`）整合以太网配置与状态展示卡片（`EthernetSection.qml`），通过 Rust 原生模块 `scripts/network/ethernet-info.sh`（`ethernet-info.rs`）动态探测有线网卡硬件信息、网线插入/载波状态、协商速率、MAC/IP/网关/DNS，支持快速一键复制、自动连接开关与手动连接/断开，设置应用侧边栏统一升级为“网络”（Network）并支持 `QS_SETTINGS_TARGET=ethernet` 自动跳转
 - **顶栏耳机双耳电量支持**：在顶栏蓝牙电量指示器中，针对 TWS 蓝牙耳机（如 OnePlus Buds 3）获取并显示左右耳与充电盒独立电量；支持配置默认显示双耳中电量较低的一只耳（`bar.indicators.bluetoothBatteryLowestEarbud`，默认开启），图标自动切换为专属 `earbuds_2`（真无线双耳）符号；鼠标悬停提示弹窗展示各单耳及耳机盒精确电量与充电状态（配备 `earbud_left`、`earbud_right` 与 `earbud_case` 专属图标）
 
 ### 本地修复（无对应 PR）
@@ -174,7 +175,7 @@
 
 ### Hypridle
 - 关屏后挂起死锁——已改**不黑屏直接挂起**（无 DPMS off listener）；唤醒 `after_sleep_cmd`+`on-resume` 里 `hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'`
-- 手柄检测 `gamepad-active.py`（EVIOCGBIT 并行 select，避免 pgrep 自匹配/窗口耗尽）
+- 手柄检测 `gamepad-active.sh`（`gamepad-active.rs`：原生 Linux `EVIOCGBIT` + `poll` 系统调用，零依赖并由 `rustc -O` 缓存至 `~/.cache/hypr/helpers/`，完全消除 Python 启动耗时与解释器开销，避免 pgrep 自匹配/窗口耗尽；提供同名 `.py` 兼容转发）
 
 ### II Overview / 搜索框（本项目定制）
 - **SUPER 单按**：`keybinds.lua` 里 `SUPER_L` 绑 `quickshell:searchToggle`（`release=true`）——按下松开后 toggle

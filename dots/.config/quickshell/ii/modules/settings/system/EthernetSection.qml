@@ -141,7 +141,7 @@ ColumnLayout {
 
     Process {
         id: ethernetProc
-        command: ["python3", FileUtils.trimFileProtocol(`${Directories.scriptPath}/network/ethernet-info.py`)]
+        command: [FileUtils.trimFileProtocol(`${Directories.scriptPath}/network/ethernet-info.sh`)]
         environment: ({
             LANG: "C",
             LC_ALL: "C"
