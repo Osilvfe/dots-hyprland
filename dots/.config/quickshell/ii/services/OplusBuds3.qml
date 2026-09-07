@@ -2,19 +2,22 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Io
 import qs.modules.common
 import qs.modules.common.functions
+import qs.services
 
 Singleton {
     id: root
 
+    property bool isServer: (Quickshell.env("QS_CLIENT") ?? "") !== "1"
     readonly property string modelName: "OnePlus Buds 3"
-    readonly property int bluetoothRevision: BluetoothStatus.deviceRevision
+    readonly property string stateFilePath: FileUtils.trimFileProtocol(`${StandardPaths.standardLocations(StandardPaths.RuntimeLocation)[0]}/quickshell-oplus-buds3.json`)
+
     readonly property var device: {
-        const revision = root.bluetoothRevision;
         return Bluetooth.devices.values.find(candidate => {
             if (!candidate?.connected)
                 return false;
@@ -25,12 +28,11 @@ Singleton {
     }
     readonly property bool available: root.device !== null
     readonly property string address: root.device?.address ?? ""
-    readonly property bool connecting: root.available && bridgeProcess.running && !root.connected
+    readonly property bool connecting: root.isServer ? (root.available && bridgeProcess.running && !root.connected) : (root.available && !root.connected)
 
-    readonly property bool shouldBeActive: root.available && root.address.length > 0 && (root.controlsActive || (Config.options?.bar?.indicators?.showBluetoothBattery ?? true))
+    readonly property bool shouldBeActive: root.isServer && root.available && root.address.length > 0 && (root.controlsActive || (Config.options?.bar?.indicators?.showBluetoothBattery ?? true))
 
     readonly property int lowestBattery: {
-        var _ = root.bluetoothRevision;
         if (!root.connected) return -1;
         const l = root.batteryLeft;
         const r = root.batteryRight;
@@ -78,13 +80,45 @@ Singleton {
         root.dualDevice = -1;
         root.wearDetection = -1;
         root.hiRes = -1;
+        if (root.isServer)
+            root.saveStateToFile();
     }
 
     function bridgeCommand() {
         return FileUtils.trimFileProtocol(`${Directories.scriptPath}/bluetooth/oplus-buds3-bridge.sh`);
     }
 
+    function saveStateToFile() {
+        if (!root.isServer)
+            return;
+        const obj = {
+            type: "state",
+            connected: root.connected,
+            address: root.activeAddress || root.address,
+            channel: root.channel,
+            batteryLeft: root.batteryLeft,
+            batteryRight: root.batteryRight,
+            batteryCase: root.batteryCase,
+            chargingLeft: root.chargingLeft,
+            chargingRight: root.chargingRight,
+            chargingCase: root.chargingCase,
+            anc: root.ancMode,
+            eq: root.eqPreset,
+            spatial: root.spatial,
+            gameMode: root.gameMode,
+            gameSound: root.gameSound,
+            dualDevice: root.dualDevice,
+            wearDetection: root.wearDetection,
+            hiRes: root.hiRes,
+            lastError: root.lastError
+        };
+        stateFileView.setText(JSON.stringify(obj) + "\n");
+    }
+
     function syncBridge() {
+        if (!root.isServer)
+            return;
+
         if (!root.shouldBeActive || root.address.length === 0) {
             retryTimer.stop();
             if (bridgeProcess.running)
@@ -108,21 +142,39 @@ Singleton {
         bridgeProcess.running = true;
     }
 
+    function callServer(method, arg = "") {
+        const cmd = ["qs", "-c", "ii", "ipc", "call", "oplusBuds3", method];
+        if (arg !== "" && arg !== undefined && arg !== null)
+            cmd.push(String(arg));
+        Quickshell.execDetached(cmd);
+    }
+
     function activate() {
         if (root.controlsActive)
             return;
         root.controlsActive = true;
-        root.syncBridge();
+        if (!root.isServer) {
+            stateFileView.reload();
+            root.refresh();
+        } else {
+            root.syncBridge();
+        }
     }
 
     function deactivate() {
         if (!root.controlsActive)
             return;
         root.controlsActive = false;
-        root.syncBridge();
+        if (root.isServer) {
+            root.syncBridge();
+        }
     }
 
     function restart() {
+        if (!root.isServer) {
+            root.callServer("restart");
+            return;
+        }
         retryTimer.stop();
         root.lastError = "";
         root.resetState();
@@ -135,20 +187,53 @@ Singleton {
     }
 
     function send(command) {
-        if (!bridgeProcess.running || !root.connected)
+        if (!root.isServer || !bridgeProcess.running || !root.connected)
             return;
         bridgeProcess.write(command + "\n");
     }
 
-    function refresh() { root.send("query"); }
-    function setAnc(mode) { root.send(`anc ${mode}`); }
-    function setEq(preset) { root.send(`eq ${preset}`); }
-    function setSpatial(enabled) { root.send(`spatial ${enabled ? 1 : 0}`); }
-    function setGameMode(enabled) { root.send(`game ${enabled ? 1 : 0}`); }
-    function setGameSound(enabled) { root.send(`game_sound ${enabled ? 1 : 0}`); }
-    function setDualDevice(enabled) { root.send(`dual ${enabled ? 1 : 0}`); }
-    function setWearDetection(enabled) { root.send(`wear ${enabled ? 1 : 0}`); }
-    function setHiRes(enabled) { root.send(`hires ${enabled ? 1 : 0}`); }
+    function refresh() {
+        if (root.isServer) root.send("query");
+        else root.callServer("refresh");
+    }
+    function setAnc(mode) {
+        if (root.isServer) root.send(`anc ${mode}`);
+        else root.callServer("setAnc", mode);
+    }
+    function setEq(preset) {
+        if (root.isServer) root.send(`eq ${preset}`);
+        else root.callServer("setEq", preset);
+    }
+    function setSpatial(enabled) {
+        const val = enabled ? 1 : 0;
+        if (root.isServer) root.send(`spatial ${val}`);
+        else root.callServer("setSpatial", val);
+    }
+    function setGameMode(enabled) {
+        const val = enabled ? 1 : 0;
+        if (root.isServer) root.send(`game ${val}`);
+        else root.callServer("setGameMode", val);
+    }
+    function setGameSound(enabled) {
+        const val = enabled ? 1 : 0;
+        if (root.isServer) root.send(`game_sound ${val}`);
+        else root.callServer("setGameSound", val);
+    }
+    function setDualDevice(enabled) {
+        const val = enabled ? 1 : 0;
+        if (root.isServer) root.send(`dual ${val}`);
+        else root.callServer("setDualDevice", val);
+    }
+    function setWearDetection(enabled) {
+        const val = enabled ? 1 : 0;
+        if (root.isServer) root.send(`wear ${val}`);
+        else root.callServer("setWearDetection", val);
+    }
+    function setHiRes(enabled) {
+        const val = enabled ? 1 : 0;
+        if (root.isServer) root.send(`hires ${val}`);
+        else root.callServer("setHiRes", val);
+    }
 
     function applyNullableInt(data, key, fallback) {
         return data[key] === null || data[key] === undefined ? fallback : Number(data[key]);
@@ -170,6 +255,8 @@ Singleton {
         if (data.type === "error") {
             root.lastError = String(data.message ?? "Unknown error");
             root.connected = false;
+            if (root.isServer)
+                root.saveStateToFile();
             return;
         }
         if (data.type !== "state")
@@ -193,20 +280,64 @@ Singleton {
         root.hiRes = data.hiRes === null || data.hiRes === undefined ? -1 : (data.hiRes ? 1 : 0);
         if (root.connected)
             root.lastError = "";
+
+        if (root.isServer)
+            root.saveStateToFile();
     }
 
     onShouldBeActiveChanged: {
-        Qt.callLater(root.syncBridge);
+        if (root.isServer)
+            Qt.callLater(root.syncBridge);
     }
 
-    onBluetoothRevisionChanged: {
-        if (root.shouldBeActive)
-            Qt.callLater(root.syncBridge);
+    Connections {
+        target: Bluetooth.devices
+        function onValuesChanged() {
+            if (root.isServer)
+                Qt.callLater(root.syncBridge);
+        }
     }
 
     Component.onCompleted: {
-        if (root.shouldBeActive)
-            Qt.callLater(root.syncBridge);
+        if (root.isServer) {
+            root.saveStateToFile();
+            if (root.shouldBeActive)
+                Qt.callLater(root.syncBridge);
+        } else {
+            stateFileView.reload();
+        }
+    }
+
+    FileView {
+        id: stateFileView
+        path: Qt.resolvedUrl(root.stateFilePath)
+        onLoaded: {
+            if (!root.isServer) {
+                const content = stateFileView.text();
+                if (content && content.length > 0)
+                    root.handleLine(content);
+            }
+        }
+        onLoadFailed: error => {
+            if (error === FileViewError.FileNotFound && root.isServer) {
+                root.saveStateToFile();
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "oplusBuds3"
+
+        function setAnc(mode: string): void { root.setAnc(mode); }
+        function setEq(preset: string): void { root.setEq(Number(preset)); }
+        function setSpatial(enabled: string): void { root.setSpatial(enabled === "1" || enabled === "true"); }
+        function setGameMode(enabled: string): void { root.setGameMode(enabled === "1" || enabled === "true"); }
+        function setGameSound(enabled: string): void { root.setGameSound(enabled === "1" || enabled === "true"); }
+        function setDualDevice(enabled: string): void { root.setDualDevice(enabled === "1" || enabled === "true"); }
+        function setWearDetection(enabled: string): void { root.setWearDetection(enabled === "1" || enabled === "true"); }
+        function setHiRes(enabled: string): void { root.setHiRes(enabled === "1" || enabled === "true"); }
+        function refresh(): void { root.refresh(); }
+        function restart(): void { root.restart(); }
     }
 
     Timer {
@@ -221,6 +352,14 @@ Singleton {
         interval: 3000
         repeat: false
         onTriggered: root.syncBridge()
+    }
+
+    Timer {
+        id: clientPollTimer
+        interval: 1500
+        repeat: true
+        running: !root.isServer && root.controlsActive
+        onTriggered: stateFileView.reload()
     }
 
     Process {
@@ -244,8 +383,11 @@ Singleton {
         onStarted: root.lastError = ""
         onExited: (exitCode, exitStatus) => {
             root.connected = false;
-            if (root.shouldBeActive && root.activeAddress === root.address)
+            if (root.isServer)
+                root.saveStateToFile();
+            if (root.isServer && root.shouldBeActive && root.activeAddress === root.address)
                 retryTimer.restart();
         }
     }
 }
+

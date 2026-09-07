@@ -206,6 +206,7 @@ ApplicationWindow {
 
     Component.onCompleted: {
         MaterialThemeLoader.reapplyTheme()
+        OplusBuds3.isServer = false
         Config.readWriteDelay = 0 // Settings app always only sets one var at a time so delay isn't needed
         settingsReady = true
         root.applyInitialTarget()
