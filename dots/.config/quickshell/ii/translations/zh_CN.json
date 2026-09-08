@@ -983,7 +983,28 @@
   "For dual earbuds, display the one with lower battery on the status bar": "当连接双耳蓝牙耳机时，状态栏默认显示电量较低的一只耳机的电量",
   "L: %1%": "左: %1%",
   "R: %1%": "右: %1%",
-  "Case: %1%": "盒: %1%"
+  "Case: %1%": "盒: %1%",
+  "Color": "颜色",
+  "Copy RGB": "复制 RGB",
+  "Copy HSL": "复制 HSL",
+  "Copy HEX": "复制 HEX",
+  "Copy result": "复制计算结果",
+  "Copy date": "复制日期",
+  "Copy ISO 8601": "复制 ISO 8601",
+  "Open in browser": "在浏览器中打开",
+  "Open file": "打开文件",
+  "Open directory": "打开文件夹",
+  "Copy formatted JSON": "复制格式化 JSON",
+  "Copy minified JSON": "复制单行压缩 JSON",
+  "Copy decoded text": "复制解码文本",
+  "Link": "网页链接",
+  "File path": "文件路径",
+  "ago": "前",
+  "from now": "后",
+  "just now": "刚刚",
+  "min": "分钟",
+  "hr": "小时",
+  "day": "天"
 }
 
 

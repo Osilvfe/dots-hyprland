@@ -148,6 +148,167 @@ Singleton {
         return StringUtils.stringListContainsSubstring(entry.toLowerCase(), unsafeKeywords);
     }
 
+    function buildClipboardActions(entry, cleanText, info) {
+        const actions = [];
+
+        if (info) {
+            if (info.type === "color") {
+                if (info.originalFormat === "hex") {
+                    actions.push(resultComp.createObject(null, {
+                        name: `${Translation.tr("Copy RGB")}: ${info.rgb}`,
+                        iconName: "colorize",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.clipboardText = info.rgb;
+                        }
+                    }));
+                    actions.push(resultComp.createObject(null, {
+                        name: `${Translation.tr("Copy HSL")}: ${info.hsl}`,
+                        iconName: "palette",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.clipboardText = info.hsl;
+                        }
+                    }));
+                } else if (info.originalFormat === "rgb") {
+                    actions.push(resultComp.createObject(null, {
+                        name: `${Translation.tr("Copy HEX")}: ${info.hex}`,
+                        iconName: "palette",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.clipboardText = info.hex;
+                        }
+                    }));
+                    actions.push(resultComp.createObject(null, {
+                        name: `${Translation.tr("Copy HSL")}: ${info.hsl}`,
+                        iconName: "colorize",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.clipboardText = info.hsl;
+                        }
+                    }));
+                } else if (info.originalFormat === "hsl") {
+                    actions.push(resultComp.createObject(null, {
+                        name: `${Translation.tr("Copy HEX")}: ${info.hex}`,
+                        iconName: "palette",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.clipboardText = info.hex;
+                        }
+                    }));
+                    actions.push(resultComp.createObject(null, {
+                        name: `${Translation.tr("Copy RGB")}: ${info.rgb}`,
+                        iconName: "colorize",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.clipboardText = info.rgb;
+                        }
+                    }));
+                }
+            } else if (info.type === "math") {
+                actions.push(resultComp.createObject(null, {
+                    name: `${Translation.tr("Copy result")}: ${info.result}`,
+                    iconName: "calculate",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.clipboardText = info.result;
+                    }
+                }));
+            } else if (info.type === "timestamp") {
+                actions.push(resultComp.createObject(null, {
+                    name: `${Translation.tr("Copy date")}: ${info.formatted}`,
+                    iconName: "schedule",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.clipboardText = info.formatted;
+                    }
+                }));
+                actions.push(resultComp.createObject(null, {
+                    name: Translation.tr("Copy ISO 8601"),
+                    iconName: "calendar_month",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.clipboardText = info.iso;
+                    }
+                }));
+            } else if (info.type === "url") {
+                actions.push(resultComp.createObject(null, {
+                    name: Translation.tr("Open in browser"),
+                    iconName: "open_in_browser",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.execDetached(["xdg-open", cleanText]);
+                    }
+                }));
+            } else if (info.type === "path") {
+                actions.push(resultComp.createObject(null, {
+                    name: Translation.tr("Open file"),
+                    iconName: "open_in_new",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.execDetached(["xdg-open", info.expanded]);
+                    }
+                }));
+                if (info.directory) {
+                    actions.push(resultComp.createObject(null, {
+                        name: Translation.tr("Open directory"),
+                        iconName: "folder_open",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.execDetached(["xdg-open", info.directory]);
+                        }
+                    }));
+                }
+            } else if (info.type === "json") {
+                actions.push(resultComp.createObject(null, {
+                    name: Translation.tr("Copy formatted JSON"),
+                    iconName: "data_object",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.clipboardText = info.pretty;
+                    }
+                }));
+                actions.push(resultComp.createObject(null, {
+                    name: Translation.tr("Copy minified JSON"),
+                    iconName: "compress",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.clipboardText = info.minified;
+                    }
+                }));
+            } else if (info.type === "base64") {
+                actions.push(resultComp.createObject(null, {
+                    name: Translation.tr("Copy decoded text"),
+                    iconName: "lock_open",
+                    iconType: LauncherSearchResult.IconType.Material,
+                    execute: () => {
+                        Quickshell.clipboardText = info.decoded;
+                    }
+                }));
+            }
+        }
+
+        // Standard actions: Copy & Delete
+        actions.push(resultComp.createObject(null, {
+            name: Translation.tr("Copy"),
+            iconName: "content_copy",
+            iconType: LauncherSearchResult.IconType.Material,
+            execute: () => {
+                Cliphist.copy(entry);
+            }
+        }));
+        actions.push(resultComp.createObject(null, {
+            name: Translation.tr("Delete"),
+            iconName: "delete",
+            iconType: LauncherSearchResult.IconType.Material,
+            execute: () => {
+                Cliphist.deleteEntry(entry);
+            }
+        }));
+
+        return actions;
+    }
+
     Timer {
         id: nonAppResultsTimer
         interval: Config.options.search.nonAppResultDelay
@@ -191,30 +352,36 @@ Singleton {
                 if (mightBlurImage) {
                     shouldBlurImage = shouldBlurImage && (root.containsUnsafeLink(array[index - 1]) || root.containsUnsafeLink(array[index + 1]));
                 }
-                const type = `#${entry.match(/^\s*(\S+)/)?.[1] || ""}`;
+                const cleanText = StringUtils.cleanCliphistEntry(entry);
+                const info = ClipboardInspector.inspect(cleanText);
+                const idNum = entry.match(/^\s*(\S+)/)?.[1] || "";
+                let type = `#${idNum}`;
+                if (info) {
+                    if (info.type === "color") {
+                        type = `#${idNum} · ${Translation.tr("Color")}: ${info.hex}`;
+                    } else if (info.type === "math") {
+                        type = `#${idNum} · = ${info.result}`;
+                    } else if (info.type === "timestamp") {
+                        type = `#${idNum} · ${info.formatted} (${info.relative})`;
+                    } else if (info.type === "url") {
+                        type = `#${idNum} · ${Translation.tr("Link")}`;
+                    } else if (info.type === "path") {
+                        type = `#${idNum} · ${Translation.tr("File path")}`;
+                    } else if (info.type === "json") {
+                        type = `#${idNum} · JSON`;
+                    } else if (info.type === "base64") {
+                        type = `#${idNum} · Base64`;
+                    }
+                }
                 return resultComp.createObject(null, {
                     rawValue: entry,
-                    name: StringUtils.cleanCliphistEntry(entry),
+                    name: cleanText,
                     verb: "",
                     type: type,
                     execute: () => {
                         Cliphist.copy(entry);
                     },
-                    actions: [resultComp.createObject(null, {
-                            name: Translation.tr("Copy"),
-                            iconName: "content_copy",
-                            iconType: LauncherSearchResult.IconType.Material,
-                            execute: () => {
-                                Cliphist.copy(entry);
-                            }
-                        }), resultComp.createObject(null, {
-                            name: Translation.tr("Delete"),
-                            iconName: "delete",
-                            iconType: LauncherSearchResult.IconType.Material,
-                            execute: () => {
-                                Cliphist.deleteEntry(entry);
-                            }
-                        })],
+                    actions: root.buildClipboardActions(entry, cleanText, info),
                     blurImage: shouldBlurImage
                 });
             }).filter(Boolean);

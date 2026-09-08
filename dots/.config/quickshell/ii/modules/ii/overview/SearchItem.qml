@@ -34,6 +34,7 @@ RippleButton {
     property string materialSymbol: entry?.iconType === LauncherSearchResult.IconType.Material ? entry?.iconName ?? "" : ""
     property string cliphistRawString: entry?.rawValue ?? ""
     property bool blurImage: entry?.blurImage ?? false
+    readonly property var clipboardInspection: (root.cliphistRawString && root.itemType && root.itemType.startsWith("#")) ? ClipboardInspector.inspect(root.itemName) : null
     
     visible: root.entryShown
     property int horizontalMargin: 10
@@ -218,6 +219,45 @@ RippleButton {
                         url: modelData
                     }
                 }
+                Rectangle { // Color preview swatch
+                    visible: root.clipboardInspection && root.clipboardInspection.type === "color"
+                    implicitWidth: 16
+                    implicitHeight: 16
+                    radius: Appearance.rounding.full
+                    color: (root.clipboardInspection && root.clipboardInspection.type === "color") ? root.clipboardInspection.qmlColor : "transparent"
+                    border.width: 1.5
+                    border.color: Appearance.colors.colOutlineVariant
+                }
+                Rectangle { // Math result chip
+                    visible: root.clipboardInspection && root.clipboardInspection.type === "math"
+                    implicitWidth: mathResultText.implicitWidth + 8
+                    implicitHeight: mathResultText.implicitHeight + 2
+                    radius: Appearance.rounding.small
+                    color: Appearance.colors.colPrimaryContainer
+                    StyledText {
+                        id: mathResultText
+                        anchors.centerIn: parent
+                        text: (root.clipboardInspection && root.clipboardInspection.type === "math") ? `= ${root.clipboardInspection.result}` : ""
+                        font.pixelSize: Appearance.font.pixelSize.smallest
+                        font.weight: Font.DemiBold
+                        color: Appearance.colors.colOnPrimaryContainer
+                    }
+                }
+                Rectangle { // Timestamp chip
+                    visible: root.clipboardInspection && root.clipboardInspection.type === "timestamp"
+                    implicitWidth: timestampResultText.implicitWidth + 8
+                    implicitHeight: timestampResultText.implicitHeight + 2
+                    radius: Appearance.rounding.small
+                    color: Appearance.colors.colSecondaryContainer
+                    StyledText {
+                        id: timestampResultText
+                        anchors.centerIn: parent
+                        text: (root.clipboardInspection && root.clipboardInspection.type === "timestamp") ? root.clipboardInspection.formatted : ""
+                        font.pixelSize: Appearance.font.pixelSize.smallest
+                        font.weight: Font.Medium
+                        color: Appearance.colors.colOnSecondaryContainer
+                    }
+                }
                 StyledText { // Item name/content
                     Layout.fillWidth: true
                     id: nameText
@@ -259,7 +299,7 @@ RippleButton {
             Layout.bottomMargin: -root.buttonVerticalPadding // Why is this necessary? Good question.
             spacing: 4
             Repeater {
-                model: (root.entry?.actions ?? []).slice(0, 4)
+                model: (root.entry?.actions ?? []).slice(0, 5)
                 delegate: RippleButton {
                     id: actionButton
                     required property var modelData

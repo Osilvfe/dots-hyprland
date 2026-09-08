@@ -119,6 +119,7 @@
 - **#3621** 设置应用界面页支持调节活动窗口边框粗细（`general:border_size`）并修复 SpinBox 绑定自循环
 - **以太网（RJ45）设置支持**：网络设置页面（`WifiConfig.qml`）整合以太网配置与状态展示卡片（`EthernetSection.qml`），通过 Rust 原生模块 `scripts/network/ethernet-info.sh`（`ethernet-info.rs`）动态探测有线网卡硬件信息、网线插入/载波状态、协商速率、MAC/IP/网关/DNS，支持快速一键复制、自动连接开关与手动连接/断开，设置应用侧边栏统一升级为“网络”（Network）并支持 `QS_SETTINGS_TARGET=ethernet` 自动跳转
 - **顶栏耳机双耳电量支持**：在顶栏蓝牙电量指示器中，针对 TWS 蓝牙耳机（如 OnePlus Buds 3）获取并显示左右耳与充电盒独立电量；支持配置默认显示双耳中电量较低的一只耳（`bar.indicators.bluetoothBatteryLowestEarbud`，默认开启），图标自动切换为专属 `earbuds_2`（真无线双耳）符号；鼠标悬停提示弹窗展示各单耳及耳机盒精确电量与充电状态（配备 `earbud_left`、`earbud_right` 与 `earbud_case` 专属图标）
+- **剪贴板智能语义识别与本地快捷动作**：在 Overview 剪贴板历史（`SUPER+V` / `:clip`）中引入纯本地语义分析单例服务 `ClipboardInspector.qml`，零网络请求、零外部依赖。自动识别颜色代码（HEX/RGB/HSL，条目直观渲染动态色块，支持格式一键互转）、纯算术算式（安全数学求值与 `= 结果` 胶囊徽章）、Unix 时间戳（本地时区日期换算与相对时间）、URL 链接（默认浏览器打开）、本地文件路径（打开文件/定位目录）、JSON（格式化/单行压缩）及 Base64（本地解码），并在条目右侧动态注入最多 5 个专属动作快捷按钮。
 
 ### 本地修复（无对应 PR）
 - **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示
