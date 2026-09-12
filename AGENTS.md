@@ -127,6 +127,7 @@
 - **`c2de877c`** 设置/欢迎走 `launch-detached-qs.sh`，避免 `__QUICKSHELL_CRASH_*` 让 `qs -p` 再开一根顶栏
 - **`ac34923b`** `notifications.forceMonitor`（上游 #3593）；SearchItem `entry?.`；关夜间模式停 hyprsunset；HyprlandData debounce layout；`XDG_DATA_DIRS` 去重；锁屏 Caps Lock；亮度保底 5%；封面 URL 清空时保留上一张
 - **`399352bd`** 农历位运算、SPlayer 空闲退避、playerctld 始终过滤、蓝牙分组
+- **截图与选区冻结帧防崩溃**：NVIDIA 新版驱动配合 10-bit 色深（`XBGR2101010`）时，`ScreencopyView` 在 `dmabuf.cpp` 中将 dmabuf 导入为 EGL 图像失败报 `EGL_BAD_MATCH` 触发 `qFatal` 导致 Quickshell 瞬间硬崩（`SIGABRT`）。在 `RegionSelection.qml` 与 `ScreenTranslatorPanel.qml` 中，将原 `ScreencopyView` 替换为 Qt 原生 `Image` 渲染已由 `grim` 提前写入的 8-bit PNG 缓存文件，规避 EGL dmabuf 缺陷；并在 `RegionSelector.qml` 与 `ScreenTranslator.qml` 中补齐 IPC `dismiss()` 方法支持。
 
 ## 踩坑记录
 

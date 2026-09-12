@@ -43,6 +43,9 @@ Scope {
     IpcHandler {
         target: "screenTranslator"
 
+        function dismiss() {
+            root.dismiss()
+        }
         function translate() {
             root.translate()
         }
