@@ -6,6 +6,8 @@ import qs.modules.common.functions
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 
 Item {
@@ -25,6 +27,38 @@ Item {
         : (mprisTrackLabel || Lyrics.trackLabel || Translation.tr("No media"))
 
     readonly property bool isInterlude: Lyrics.isInterlude
+
+    function updateLyricPosition() {
+        const item = (lyricText && lyricText.width > 0) ? lyricText : root;
+        try {
+            let pos = null;
+            const targetCenterX = item.width > 0 ? (item.width / 2) : 0;
+            if (root.QsWindow && typeof root.QsWindow.mapFromItem === "function") {
+                pos = root.QsWindow.mapFromItem(item, targetCenterX, 0);
+            } else if (typeof item.mapToItem === "function") {
+                pos = item.mapToItem(null, targetCenterX, 0);
+            }
+            if (pos && typeof pos.x === "number" && !isNaN(pos.x)) {
+                GlobalStates.mediaCenterX = pos.x;
+                GlobalStates.mediaButtonScreen = root.QsWindow?.window?.screen ?? null;
+            }
+        } catch (e) {
+            console.warn("Error updating media lyric position:", e);
+        }
+    }
+
+    Connections {
+        target: GlobalStates
+        function onMediaControlsOpenChanged() {
+            if (GlobalStates.mediaControlsOpen && !GlobalStates.mediaButtonScreen) {
+                const myScreen = root.QsWindow?.window?.screen;
+                const focusedScreen = Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name);
+                if (myScreen && focusedScreen && myScreen.name === focusedScreen.name) {
+                    root.updateLyricPosition();
+                }
+            }
+        }
+    }
 
     Layout.fillHeight: true
     implicitWidth: rowLayout.implicitWidth + rowLayout.spacing * 2
@@ -48,7 +82,8 @@ Item {
             } else if (event.button === Qt.ForwardButton || event.button === Qt.RightButton) {
                 activePlayer?.next();
             } else if (event.button === Qt.LeftButton) {
-                GlobalStates.mediaControlsOpen = !GlobalStates.mediaControlsOpen
+                root.updateLyricPosition();
+                GlobalStates.mediaControlsOpen = !GlobalStates.mediaControlsOpen;
             }
         }
     }
@@ -84,6 +119,7 @@ Item {
         }
 
         SyncedLyricText {
+            id: lyricText
             Layout.fillWidth: true
             Layout.rightMargin: rowLayout.spacing
             Layout.alignment: Qt.AlignVCenter

@@ -83,6 +83,7 @@ Scope {
         sourceComponent: PanelWindow {
             id: panelWindow
             visible: true
+            screen: GlobalStates.mediaButtonScreen ?? Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
 
             exclusionMode: ExclusionMode.Ignore
             exclusiveZone: 0
@@ -100,7 +101,19 @@ Scope {
             margins {
                 top: Config.options.bar.vertical ? ((panelWindow.screen.height / 2) - widgetHeight * 1.5) : Appearance.sizes.barHeight
                 bottom: Appearance.sizes.barHeight
-                left: Config.options.bar.vertical ? Appearance.sizes.barHeight : ((panelWindow.screen.width / 2) - (osdWidth / 2) - widgetWidth)
+                left: {
+                    if (Config.options.bar.vertical) {
+                        return Appearance.sizes.barHeight;
+                    }
+                    const isCurrentScreen = !GlobalStates.mediaButtonScreen || GlobalStates.mediaButtonScreen === panelWindow.screen;
+                    if (isCurrentScreen && GlobalStates.mediaCenterX > 0) {
+                        const minLeft = Appearance.sizes.hyprlandGapsOut;
+                        const maxLeft = Math.max(minLeft, (panelWindow.screen?.width ?? 1920) - root.widgetWidth - Appearance.sizes.hyprlandGapsOut);
+                        const targetLeft = GlobalStates.mediaCenterX - (root.widgetWidth / 2);
+                        return Math.max(minLeft, Math.min(maxLeft, targetLeft));
+                    }
+                    return ((panelWindow.screen.width / 2) - (osdWidth / 2) - widgetWidth);
+                }
                 right: Appearance.sizes.barHeight
             }
 
@@ -192,17 +205,17 @@ Scope {
         target: "mediaControls"
 
         function toggle(): void {
-            mediaControlsLoader.active = !mediaControlsLoader.active;
-            if (mediaControlsLoader.active)
+            GlobalStates.mediaControlsOpen = !GlobalStates.mediaControlsOpen;
+            if (GlobalStates.mediaControlsOpen)
                 Notifications.timeoutAll();
         }
 
         function close(): void {
-            mediaControlsLoader.active = false;
+            GlobalStates.mediaControlsOpen = false;
         }
 
         function open(): void {
-            mediaControlsLoader.active = true;
+            GlobalStates.mediaControlsOpen = true;
             Notifications.timeoutAll();
         }
     }

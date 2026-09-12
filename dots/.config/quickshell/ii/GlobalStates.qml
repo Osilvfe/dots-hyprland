@@ -23,6 +23,8 @@ Singleton {
     property bool sidebarLeftOpen: false
     property bool sidebarRightOpen: false
     property bool mediaControlsOpen: false
+    property real mediaCenterX: 0
+    property var mediaButtonScreen: null
     property bool osdBrightnessOpen: false
     property bool osdVolumeOpen: false
     property bool oskOpen: false
@@ -62,6 +64,12 @@ Singleton {
         if (GlobalStates.sidebarRightOpen) {
             Notifications.timeoutAll();
             Notifications.markAllRead();
+        }
+    }
+
+    onMediaControlsOpenChanged: {
+        if (!root.mediaControlsOpen) {
+            root.mediaButtonScreen = null;
         }
     }
 
