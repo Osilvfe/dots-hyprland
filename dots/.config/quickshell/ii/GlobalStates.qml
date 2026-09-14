@@ -44,6 +44,8 @@ Singleton {
         PipewireEq.reconcile();
         // Initialize earbud bridge if headphones are already connected
         OplusBuds3.syncBridge();
+        // Ensure Polkit authentication agent is initialized immediately
+        PolkitService.init();
     }
     property bool recordRegionMic: false
     property bool regionSelectorOpen: false

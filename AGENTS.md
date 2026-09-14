@@ -128,6 +128,7 @@
 - **`ac34923b`** `notifications.forceMonitor`（上游 #3593）；SearchItem `entry?.`；关夜间模式停 hyprsunset；HyprlandData debounce layout；`XDG_DATA_DIRS` 去重；锁屏 Caps Lock；亮度保底 5%；封面 URL 清空时保留上一张
 - **`399352bd`** 农历位运算、SPlayer 空闲退避、playerctld 始终过滤、蓝牙分组
 - **截图与选区冻结帧防崩溃**：NVIDIA 新版驱动配合 10-bit 色深（`XBGR2101010`）时，`ScreencopyView` 在 `dmabuf.cpp` 中将 dmabuf 导入为 EGL 图像失败报 `EGL_BAD_MATCH` 触发 `qFatal` 导致 Quickshell 瞬间硬崩（`SIGABRT`）。在 `RegionSelection.qml` 与 `ScreenTranslatorPanel.qml` 中，将原 `ScreencopyView` 替换为 Qt 原生 `Image` 渲染已由 `grim` 提前写入的 8-bit PNG 缓存文件，规避 EGL dmabuf 缺陷；并在 `RegionSelector.qml` 与 `ScreenTranslator.qml` 中补齐 IPC `dismiss()` 方法支持。
+- **Polkit 权限认证代理注册防丢与动态重试**：Quickshell 内置 `PolkitAgent` 向 PolicyKit 注册时，若遇到旧进程尚未解绑或重启竞态（`An authentication agent already exists for the given subject`），C++ 层默认直接报错且不再重试，导致整个桌面环境失去 GUI 提权代理（表现为 `systemctl` 回退 TTY 认证、Code OSS 等无控制台应用直接报错找不到认证服务）。在 `PolkitService.qml` 中将 `PolkitAgent` 封装为 `Loader` 动态重试机制，未就绪时自动退避重试直至注册成功；在 `GlobalStates.qml` 常驻启动项显式调用 `PolkitService.init()` 避免懒加载滞后；并在 `keybinds.lua` 中将重载快捷键改为 `killall -w -q` 确保旧进程彻底退出后再启动新实例。
 
 ## 踩坑记录
 
