@@ -75,6 +75,17 @@ ContentPage {
                 text: Translation.tr("Show Codex limits next to the clock group")
             }
         }
+        ConfigSwitch {
+            buttonIcon: "favorite"
+            text: Translation.tr("Heart rate monitor")
+            checked: Config.options.bar.indicators.showHeartRate ?? true
+            onCheckedChanged: {
+                Config.options.bar.indicators.showHeartRate = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Show real-time heart rate broadcast and pulse on the bar")
+            }
+        }
     }
     
     ContentSection {

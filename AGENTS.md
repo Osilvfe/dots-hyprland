@@ -23,7 +23,7 @@
 - 入口 `shell.qml`（`qs -c ii` 加载），`settings.qml`（设置应用），`welcome.qml`
 - `services/` —— Singleton 服务（`pragma Singleton`）：
   - 系统类：Audio/Brightness/Cliphist/Battery/Network/BluetoothStatus/Wallpapers/Notifications/Idle/Updates/Weather/HyprlandData/HyprlandXkb/Hyprsunset
-  - 定制类：`Lyrics.qml`（歌词门面）、`SPlayer.qml`（SPlayer-Next 后端）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`、`ClashVerge.qml`（Clash Verge Rev TUN/系统代理）、`OplusBuds3.qml`（OnePlus Buds 3 控制通道）
+  - 定制类：`Lyrics.qml`（歌词门面）、`SPlayer.qml`（SPlayer-Next 后端）、`Holidays.qml`（节假日）、`TrayService.qml`（托盘 pin 逻辑）、`MprisController.qml`、`ResourceUsage.qml`、`ClashVerge.qml`（Clash Verge Rev TUN/系统代理）、`OplusBuds3.qml`（OnePlus Buds 3 控制通道）、`HeartRate.qml`（BLE/UDP 心率广播接收）
 - `modules/`：
   - `common/` —— 共享基础：`Config.qml`（配置定义 JsonObject）、`Directories.qml`（路径，带 file://）、`Appearance.qml`（主题/颜色/字体）、`functions/`（FileUtils、LyricSync 等）、`widgets/`（含 `SyncedLyricText`）、`panels/`（lock 等）
   - `ii/` —— 主面板族：`bar/`（顶栏，含 Media/SysTray/Workspaces/Resources 等）、`sidebarLeft/`、`sidebarRight/`（日历/节假日）、`overview/`（搜索框+emoji）、`overlay/`（截图/录屏区域）、`recordingStatus/`、`mediaControls/`、`background/` 等
@@ -57,6 +57,12 @@
 - `scripts/bluetooth/oplus-buds3-bridge.rs` 使用 Rust 原生 Linux RFCOMM 套接字与私有 SPP 协议帧，无第三方依赖；启动脚本 `oplus-buds3-bridge.sh` 用 `rustc -O` 按需编译至 `~/.cache/quickshell/helpers/`
 - 协议字段按 `Osilvfe/OppoPodsManager-linux` 的 OnePlus Buds 3（产品 ID `063C14`）实现：电量、降噪/通透、EQ、空间音频、游戏模式/音效、双设备和佩戴检测。游戏音效与空间音频、非默认 EQ 的互斥在桥接器中同步处理
 
+### 心率广播接收与顶栏脉搏指示器（本项目定制）
+- 支持接收低功耗蓝牙标准心率服务（BLE GATT Heart Rate Service `0x180D` / `0x2A37`，兼容小米手环、佳明、华为、高驰、Polar、迈金等广播模式）与局域网 UDP/OSC 网络广播流（默认端口 9000，兼容 VRChat/OSC 与 JSON）
+- 后端采用纯原生 Rust 实现（`scripts/bluetooth/heart-rate-bridge.rs`），标准库零依赖，由 `heart-rate-bridge.sh` 自动按需编译至 `~/.cache/quickshell/helpers/heart-rate-bridge`；采用 `stdbuf -oL -eL` 规避管道全缓冲陷阱，内置 ANSI 彩色转义序列清洗器与多设备关键词/MAC 智能过滤
+- 前端单例服务 `services/HeartRate.qml`，顶栏胶囊组件 `modules/ii/bar/HeartRateIndicator.qml` 与悬浮详情卡片 `modules/ii/bar/HeartRatePopup.qml`；脉搏图标依据当前 BPM 周期计算精准律动缩放动画，动态呈现静息/热身/燃脂/有氧/无氧/极限心率区间色阶，并提供近 60 秒平滑走势图（Sparkline）与模拟测试（Mock）切换
+- IPC 接口：`qs -c ii ipc call heartRate <toggleMock|setMock|connect|disconnect|scan|resetStats>`
+
 ### 快捷键（`keybinds.lua`）
 - `SUPER` 单按=搜索框 toggle（`SUPER_L`/`SUPER_R`，`release=true`）；`SUPER+Tab`=**scrolloverview 插件**概览（不是 qs Overview）；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件
 
@@ -65,6 +71,7 @@
 - `hyprland/scripts/gamepad-active.sh` —— 手柄检测（hypridle 用，Rust `gamepad-active.rs` 原生 evdev 探测，保留 `.py` 兼容包装）
 - `quickshell/ii/scripts/launch-detached-qs.sh` —— 开 settings/welcome
 - `quickshell/ii/scripts/bluetooth/oplus-buds3-bridge.sh` —— 按需编译并启动 OnePlus Buds 3 原生 RFCOMM 桥接器
+- `quickshell/ii/scripts/bluetooth/heart-rate-bridge.sh` —— 按需编译并启动原生 BLE/UDP 心率广播监听桥接器
 - `quickshell/ii/scripts/network/ethernet-info.sh` —— 按需编译并执行有线以太网硬件/链路信息探测 Rust 模块（`ethernet-info.rs`）
 - `fuzzel-emoji.sh`、`snip_to_search.sh`、`launch_first_available.sh`、`switchfloatfocus.sh`
 
@@ -121,6 +128,7 @@
 - **顶栏耳机双耳电量支持**：在顶栏蓝牙电量指示器中，针对 TWS 蓝牙耳机（如 OnePlus Buds 3）获取并显示左右耳与充电盒独立电量；支持配置默认显示双耳中电量较低的一只耳（`bar.indicators.bluetoothBatteryLowestEarbud`，默认开启），图标自动切换为专属 `earbuds_2`（真无线双耳）符号；鼠标悬停提示弹窗展示各单耳及耳机盒精确电量与充电状态（配备 `earbud_left`、`earbud_right` 与 `earbud_case` 专属图标）
 - **剪贴板智能语义识别与本地快捷动作**：在 Overview 剪贴板历史（`SUPER+V` / `:clip`）中引入纯本地语义分析单例服务 `ClipboardInspector.qml`，零网络请求、零外部依赖。自动识别颜色代码（HEX/RGB/HSL，条目直观渲染动态色块，支持格式一键互转）、纯算术算式（安全数学求值与 `= 结果` 胶囊徽章）、Unix 时间戳（本地时区日期换算与相对时间）、URL 链接（默认浏览器打开）、本地文件路径（打开文件/定位目录）、JSON（格式化/单行压缩）及 Base64（本地解码），并在条目右侧动态注入最多 5 个专属动作快捷按钮。
 - **媒体控制弹窗与歌词居中对齐**：顶栏媒体控制器卡片（`MediaControls.qml`）在点击或快捷键呼出时与顶栏歌词/媒体文本区域（`SyncedLyricText`）保持水平居中对齐，支持多屏幕坐标映射与边界防溢出保护，取代原本基于屏幕中心偏置的死板偏移。
+- **心率广播接收与顶栏脉搏律动组件**：支持标准 BLE GATT 心率广播（`0x180D`/`0x2A37`，如小米手环、佳明、华为、高驰、Polar、迈金等广播模式）与局域网 UDP/OSC 流（端口 9000），使用原生标准库 Rust 桥接（`heart-rate-bridge.rs`）零依赖按需编译。顶栏胶囊指示器（`HeartRateIndicator.qml`）依据实时 BPM 呈现精准物理脉搏缩放动画与区间颜色（静息/热身/燃脂/有氧/无氧/极限），悬停卡片（`HeartRatePopup.qml`）展示传感器来源、电池电量、均值统计与近 60 秒平滑曲线走势图（Sparkline），并支持一键模拟测试（Mock）。
 
 ### 本地修复（无对应 PR）
 - **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示

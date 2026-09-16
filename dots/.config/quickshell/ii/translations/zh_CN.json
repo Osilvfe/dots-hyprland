@@ -1004,7 +1004,28 @@
   "just now": "刚刚",
   "min": "分钟",
   "hr": "小时",
-  "day": "天"
+  "day": "天",
+  "Heart rate monitor": "心率广播监测",
+  "Show real-time heart rate broadcast and pulse on the bar": "在顶栏显示实时心率广播与随心跳律动的脉搏动画",
+  "Heart Rate": "心率",
+  "Current:": "当前心率:",
+  "Source:": "数据来源:",
+  "Sensor Battery:": "传感器电量:",
+  "Min / Max:": "最低 / 最高:",
+  "Average:": "平均心率:",
+  "Recent Trend": "近期趋势",
+  "Simulation (Mock)": "模拟测试 (Mock)",
+  "UDP (Port 9000)": "UDP 网络广播 (9000 端口)",
+  "Bluetooth LE": "低功耗蓝牙 (BLE)",
+  "Mock: On": "测试模式: 开",
+  "Test Mock": "模拟心率",
+  "Resting": "静息",
+  "Warm Up": "热身",
+  "Fat Burn": "燃脂",
+  "Aerobic": "有氧",
+  "Anaerobic": "无氧",
+  "Maximum": "极限",
+  "No Data": "无数据"
 }
 
 

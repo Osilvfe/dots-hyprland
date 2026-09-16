@@ -284,6 +284,7 @@ Singleton {
                     property bool showBluetoothBattery: true
                     property bool bluetoothBatteryLowestEarbud: true
                     property bool showCodexUsage: true
+                    property bool showHeartRate: true
                 }
                 property JsonObject tooltips: JsonObject {
                     property bool clickToShow: false
@@ -338,6 +339,16 @@ Singleton {
                 property list<string> pinnedApps: [ // IDs of pinned entries
                     "org.kde.dolphin", "kitty",]
                 property list<string> ignoredAppRegexes: []
+            }
+
+            property JsonObject heartRate: JsonObject {
+                property bool enable: true
+                property string preferredDevice: "5D3C"
+                property bool autoConnect: true
+                property int maxHr: 190
+                property int restingHr: 60
+                property int udpPort: 9000
+                property bool mock: false
             }
 
             property JsonObject interactions: JsonObject {

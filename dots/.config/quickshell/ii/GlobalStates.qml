@@ -46,6 +46,8 @@ Singleton {
         OplusBuds3.syncBridge();
         // Ensure Polkit authentication agent is initialized immediately
         PolkitService.init();
+        // Initialize heart rate service if enabled
+        HeartRate.init();
     }
     property bool recordRegionMic: false
     property bool regionSelectorOpen: false

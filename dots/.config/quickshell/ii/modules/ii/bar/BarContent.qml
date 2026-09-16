@@ -330,6 +330,13 @@ Item { // Bar content region
                         }
                     }
                 }
+
+                Revealer {
+                    reveal: (Config.options?.bar?.indicators?.showHeartRate ?? true) && HeartRate.active
+                    Layout.alignment: Qt.AlignVCenter
+
+                    HeartRateIndicator {}
+                }
             }
         }
     }
