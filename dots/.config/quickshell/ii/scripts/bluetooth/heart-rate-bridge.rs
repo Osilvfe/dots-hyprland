@@ -709,48 +709,73 @@ fn main() {
                 continue;
             }
 
-            // Device discovery: [NEW] Device AA:BB:CC:DD:EE:FF Name
+            // Device discovery: [NEW] Device AA:BB:CC:DD:EE:FF Name or [CHG] Device ...
             if trimmed.contains("Device ") && (trimmed.contains("[NEW]") || trimmed.contains("[CHG]")) && trimmed.contains(":") {
                 let parts: Vec<&str> = trimmed.split_whitespace().collect();
                 if let Some(pos) = parts.iter().position(|&p| p == "Device") {
                     if pos + 1 < parts.len() {
                         let mac = parts[pos + 1].to_uppercase();
-                        let name = if pos + 2 < parts.len() {
-                            parts[pos + 2..].join(" ")
-                        } else {
-                            String::new()
-                        };
+                        let mut new_name = String::new();
+                        if trimmed.contains("[NEW]") {
+                            if pos + 2 < parts.len() {
+                                new_name = parts[pos + 2..].join(" ");
+                            }
+                        } else if trimmed.contains("[CHG]") && pos + 2 < parts.len() {
+                            if parts[pos + 2] == "Name:" || parts[pos + 2] == "Alias:" {
+                                new_name = parts[pos + 3..].join(" ");
+                            }
+                        }
 
                         let mut s = state.lock().unwrap();
                         let mut found = false;
+                        let mut existing_name = String::new();
                         for d in &mut s.discovered_devices {
                             if d.address == mac {
-                                if !name.is_empty() {
-                                    d.name = name.clone();
+                                if !new_name.is_empty() {
+                                    d.name = new_name.clone();
                                 }
+                                existing_name = d.name.clone();
                                 found = true;
                                 break;
                             }
                         }
+                        let effective_name = if !new_name.is_empty() {
+                            new_name
+                        } else if !existing_name.is_empty() {
+                            existing_name
+                        } else {
+                            String::new()
+                        };
                         if !found {
                             s.discovered_devices.push(DiscoveredDevice {
                                 address: mac.clone(),
-                                name: name.clone(),
+                                name: effective_name.clone(),
                                 rssi: -60,
                                 connected: false,
                             });
                         }
 
-                        // Auto-connect condition
-                        let lower_name = name.to_lowercase();
+                        // Flexible address matching for user's MAC 08:16:D5:B9:5D:3C or 5D3C
+                        let clean_mac = mac.replace(":", "");
+                        let clean_pref = preferred_device.replace(":", "");
+
+                        let matches_mac = (!clean_pref.is_empty() && clean_mac.contains(&clean_pref))
+                            || clean_mac.ends_with("5D3C")
+                            || mac.ends_with("5D:3C")
+                            || mac == "08:16:D5:B9:5D:3C";
+
+                        let lower_name = effective_name.to_lowercase();
+                        let upper_name = effective_name.to_uppercase();
                         let is_phone = lower_name.contains("xiaomi 14")
                             || lower_name.contains("oppo")
                             || lower_name.contains("phone")
                             || lower_name.contains("pencil")
                             || lower_name.contains("controller");
 
-                        let is_hr_device = !is_phone && ((!preferred_device.is_empty() && (preferred_device == mac || name.contains(&preferred_device)))
-                            || name.to_uppercase().contains("5D3C")
+                        let matches_name = (!preferred_device.is_empty() && upper_name.contains(&preferred_device))
+                            || (!clean_pref.is_empty() && upper_name.contains(&clean_pref))
+                            || upper_name.contains("5D3C")
+                            || upper_name.contains("5D:3C")
                             || lower_name.contains("smart band")
                             || lower_name.contains("band 9")
                             || lower_name.contains("band 8")
@@ -764,10 +789,14 @@ fn main() {
                             || lower_name.contains("coros")
                             || lower_name.contains("suunto")
                             || lower_name.contains("coospo")
-                            || lower_name.contains("wahoo"));
+                            || lower_name.contains("wahoo");
+
+                        let is_hr_uuid = trimmed.contains("0000180d") || trimmed.to_lowercase().contains("heart rate");
+
+                        let is_hr_device = !is_phone && (matches_mac || matches_name || is_hr_uuid);
 
                         if !s.connected && !s.is_mock && auto_connect && is_hr_device {
-                            eprintln!("[HeartRateBridge] Auto-connecting to potential HR device: {} ({})", name, mac);
+                            eprintln!("[HeartRateBridge] Auto-connecting to potential HR device: {} ({})", effective_name, mac);
                             current_connected_mac = mac.clone();
                             btctl.send(&format!("connect {}", mac));
                         }
@@ -840,16 +869,22 @@ fn main() {
                 }
             }
 
-            // Disconnection detection
-            if trimmed.contains("Connected: no") || trimmed.contains("Successful disconnected") {
+            // Connection failure or disconnection detection
+            if trimmed.contains("Connected: no")
+                || trimmed.contains("Successful disconnected")
+                || trimmed.contains("Failed to connect")
+                || trimmed.contains("not available")
+                || trimmed.contains("Connection refused")
+            {
                 let mut s = state.lock().unwrap();
-                if s.source == "ble" {
+                if s.source == "ble" || !s.connected {
                     s.connected = false;
                     s.bpm = 0;
                     s.source = "none".to_string();
                     emit_state(&s, &state_file);
                 }
                 hrm_attr_path.clear();
+                current_connected_mac.clear();
                 // Resume scan to auto-reconnect
                 if auto_connect {
                     btctl.send("scan on");
