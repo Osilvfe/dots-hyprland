@@ -119,15 +119,22 @@ Scope {
                 readonly property bool sidebarOpen: GlobalStates.sidebarRightOpen
                 property real drawerOffsetScale: sidebarOpen ? 1.0 : 0.0
 
+                // 动画运行状态指示器 (用于开启 GPU 纹理加速)
+                readonly property bool isAnimating: drawerOffsetAnim.running
+
                 Behavior on drawerOffsetScale {
                     NumberAnimation {
-                        duration: 350
-                        easing.type: Easing.OutBack
-                        easing.overshoot: 0.6
+                        id: drawerOffsetAnim
+                        duration: rootWindow.sidebarOpen ? 500 : 380
+                        easing.type: Easing.BezierSpline
+                        // Caelestia Expressive Wave: 展开时过冲至 1.21 水波回荡归位；收起时 Expressive Decel 快速平滑吸入
+                        easing.bezierCurve: rootWindow.sidebarOpen
+                            ? [0.38, 1.21, 0.22, 1.0, 1.0, 1.0]
+                            : [0.4, 0.0, 0.2, 1.0, 1.0, 1.0]
                     }
                 }
 
-                // 核心输入遮罩：正向声明可交互区域（顶栏 + 展开抽屉），中央工作区天然穿透
+                // 核心输入遮罩：静态解耦设计，运动全程 0 次 Wayland IPC 提交，彻底根除高频重绘掉帧
                 mask: Region {
                     id: screenMask
 
@@ -139,27 +146,27 @@ Scope {
                         height: rootWindow.frameTop
                     }
 
-                    // 2. 抽屉面板区域（展开时动态接收交互）
+                    // 2. 抽屉面板区域：展开状态下覆盖最终静止目标矩形，动画期间零高频重绘
                     Region {
-                        x: drawerPanel.x
+                        x: rootWindow.width - drawerPanel.targetWidth - rootWindow.frameRight
                         y: drawerPanel.y
-                        width: rootWindow.drawerOffsetScale > 0.01 ? drawerPanel.width : 0
-                        height: rootWindow.drawerOffsetScale > 0.01 ? drawerPanel.height : 0
+                        width: rootWindow.sidebarOpen ? drawerPanel.targetWidth : 0
+                        height: rootWindow.sidebarOpen ? drawerPanel.targetHeight : 0
                     }
 
                     // 3. 抽屉展开时，覆盖中央工作区遮罩用于点击收起
                     Region {
                         x: rootWindow.frameLeft
                         y: rootWindow.frameTop
-                        width: rootWindow.drawerOffsetScale > 0.05 ? Math.max(0, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight - drawerPanel.width) : 0
-                        height: rootWindow.drawerOffsetScale > 0.05 ? Math.max(0, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) : 0
+                        width: rootWindow.sidebarOpen ? Math.max(0, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight - drawerPanel.targetWidth) : 0
+                        height: rootWindow.sidebarOpen ? Math.max(0, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) : 0
                     }
                 }
 
                 // 点击抽屉外部空白区域自动收起抽屉
                 MouseArea {
                     anchors.fill: parent
-                    enabled: rootWindow.drawerOffsetScale > 0.05
+                    enabled: rootWindow.sidebarOpen && rootWindow.drawerOffsetScale > 0.05
                     z: 50
                     onClicked: {
                         GlobalStates.sidebarRightOpen = false;
@@ -195,25 +202,50 @@ Scope {
                     z: 60
 
                     readonly property real targetWidth: Appearance.sizes.sidebarWidth
-                    readonly property real targetHeight: rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom - 8
+                    readonly property real targetHeight: rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom
+                    readonly property real targetX: rootWindow.width - rootWindow.frameRight - targetWidth
+                    // 收起时退到屏幕之外 smoothVal + 15 距离，彻底杜绝边框边缘的 smin 凸起鼓包
+                    readonly property real hiddenX: rootWindow.width + rootWindow.smoothVal + 15
 
                     width: targetWidth
                     height: targetHeight
 
-                    // 从右边缘向左滑入桌面
-                    x: rootWindow.width - (targetWidth + rootWindow.frameRight) * rootWindow.drawerOffsetScale - rootWindow.frameRight
-                    y: rootWindow.frameTop + 4
+                    // 从屏幕外向左波浪涌入
+                    x: targetX + (hiddenX - targetX) * (1.0 - rootWindow.drawerOffsetScale)
+                    // 顶端无缝贴合顶栏下沿，最大化 Liquid Bridge 流体粘连桥
+                    y: rootWindow.frameTop
 
                     radius: Appearance.rounding.windowRounding
-                    deformScale: 0.0006
+                    // 动态左下圆角溶出渐变（刚展开时如液滴被拔出边框）
+                    bottomLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * Appearance.rounding.windowRounding
 
-                    // 挂载完整原生 SidebarRightContent
-                    Loader {
+                    deformScale: 0.0006
+                    stiffness: 220.0
+                    damping: 14.0
+
+                    // 抽屉内容容器：果冻张量拉伸联动 + GPU 纹理层加速
+                    Item {
+                        id: drawerContentContainer
                         anchors.fill: parent
                         anchors.margins: 4
                         clip: true
-                        active: rootWindow.drawerOffsetScale > 0.01 || (Config?.options.sidebar.keepRightSidebarLoaded ?? false)
-                        source: "../sidebarRight/SidebarRightContent.qml"
+
+                        // 动画期间开启 GPU 纹理缓存加速，杜绝子组件逐帧重排
+                        layer.enabled: rootWindow.isAnimating
+
+                        // 核心流体联动：内容跟随 Rust 动力学弹簧应变张量一起产生果冻水波形变！
+                        transform: Matrix4x4 {
+                            matrix: drawerPanel.deformMatrix
+                        }
+
+                        // 挂载完整原生 SidebarRightContent (预热常驻，避免展开首帧卡顿)
+                        Loader {
+                            id: sidebarLoader
+                            anchors.fill: parent
+                            active: true
+                            visible: rootWindow.drawerOffsetScale > 0.001
+                            source: "../sidebarRight/SidebarRightContent.qml"
+                        }
                     }
                 }
 
