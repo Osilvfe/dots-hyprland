@@ -125,12 +125,9 @@ Scope {
                 Behavior on drawerOffsetScale {
                     NumberAnimation {
                         id: drawerOffsetAnim
-                        duration: rootWindow.sidebarOpen ? 500 : 380
-                        easing.type: Easing.BezierSpline
-                        // Caelestia Expressive Wave: 展开时过冲至 1.21 水波回荡归位；收起时 Expressive Decel 快速平滑吸入
-                        easing.bezierCurve: rootWindow.sidebarOpen
-                            ? [0.38, 1.21, 0.22, 1.0, 1.0, 1.0]
-                            : [0.4, 0.0, 0.2, 1.0, 1.0, 1.0]
+                        duration: 350
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 0.6
                     }
                 }
 
