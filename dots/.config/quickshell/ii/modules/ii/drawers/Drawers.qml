@@ -192,14 +192,15 @@ Scope {
                     borderBottom: rootWindow.frameBottom
                 }
 
-                // 2. 右侧滑出的抽屉纯流体色块（与顶栏在同个着色器中无缝粘连）
+                // 2. 右侧滑出的抽屉纯流体浮岛胶囊（独立浮岛，上下流出空间让着色器充分拉出双向波浪桥）
                 BlobRect {
                     id: drawerPanel
                     group: fluidBlobGroup
                     z: 60
 
                     readonly property real targetWidth: Appearance.sizes.sidebarWidth
-                    readonly property real targetHeight: rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom
+                    // 浮岛胶囊高度：上下留出开阔净空，让着色器在上下两端充分拉出圆滑波浪颈部！
+                    readonly property real targetHeight: Math.min(840, Math.max(520, Math.round((rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) * 0.74)))
                     readonly property real targetX: rootWindow.width - rootWindow.frameRight - targetWidth
                     // 收起时退到屏幕之外 smoothVal + 15 距离，彻底杜绝边框边缘的 smin 凸起鼓包
                     readonly property real hiddenX: rootWindow.width + rootWindow.smoothVal + 15
@@ -209,12 +210,14 @@ Scope {
 
                     // 从屏幕外向左波浪涌入
                     x: targetX + (hiddenX - targetX) * (1.0 - rootWindow.drawerOffsetScale)
-                    // 顶端无缝贴合顶栏下沿，最大化 Liquid Bridge 流体粘连桥
-                    y: rootWindow.frameTop
+                    // 垂直居中于顶栏下沿与底座之间，上下均拥有 100~200px 广阔流体场
+                    y: rootWindow.frameTop + (rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom - targetHeight) / 2
 
-                    radius: Appearance.rounding.windowRounding
-                    // 动态左下圆角溶出渐变（刚展开时如液滴被拔出边框）
-                    bottomLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * Appearance.rounding.windowRounding
+                    // 完整的四角大圆角胶囊
+                    radius: 28
+                    // 动态左侧双圆角溶出渐变（刚展开时如液滴被拔出边框）
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * 28
+                    bottomLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * 28
 
                     deformScale: 0.0006
                     stiffness: 220.0
@@ -222,7 +225,7 @@ Scope {
                 }
 
                 // ==========================================
-                // 3. 独立上层侧边栏交互与内容层（后渲染/延后淡入，与底层流体联动）
+                // 3. 独立上层侧边栏交互与内容层（后渲染/延后淡入，与底层流体浮岛联动）
                 // ==========================================
                 Item {
                     id: drawerContentLayer
@@ -233,7 +236,7 @@ Scope {
                     height: drawerPanel.height
 
                     // 视觉核心：后渲染/延后渐入感知
-                    // 前半程 (0~0.35) 纯净展示流体波浪从边框拔出与粘连，后半程 (0.35~1.0) 平滑浮现内容
+                    // 前半程 (0~0.35) 纯净展示流体双向波浪拔出与粘连，后半程 (0.35~1.0) 平滑浮现内容
                     opacity: Math.max(0, Math.min(1, (rootWindow.drawerOffsetScale - 0.35) / 0.65))
                     visible: rootWindow.drawerOffsetScale > 0.001
 
@@ -249,7 +252,7 @@ Scope {
                     Loader {
                         id: sidebarLoader
                         anchors.fill: parent
-                        anchors.margins: 4
+                        anchors.margins: 6
                         clip: true
                         active: true
                         source: "../sidebarRight/SidebarRightContent.qml"
