@@ -127,18 +127,11 @@ Scope {
                     }
                 }
 
-                // 核心输入遮罩：中间主工作区彻底挖空直通 Hyprland 桌面窗口
+                // 核心输入遮罩：正向声明可交互区域（顶栏 + 展开抽屉），中央工作区天然穿透
                 mask: Region {
                     id: screenMask
 
-                    // 1. 中间主工作区挖空区域 (保证窗口点击与穿透)
-                    x: rootWindow.frameLeft
-                    y: rootWindow.frameTop
-                    width: Math.max(10, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight)
-                    height: Math.max(10, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom)
-                    intersection: Intersection.Xor
-
-                    // 2. 顶栏区域（常驻保留输入交互）
+                    // 1. 顶栏区域（常驻保留输入交互）
                     Region {
                         x: 0
                         y: 0
@@ -146,15 +139,15 @@ Scope {
                         height: rootWindow.frameTop
                     }
 
-                    // 3. 抽屉面板区域（展开时保留输入交互）
+                    // 2. 抽屉面板区域（展开时动态接收交互）
                     Region {
                         x: drawerPanel.x
                         y: drawerPanel.y
-                        width: drawerPanel.width
-                        height: drawerPanel.height
+                        width: rootWindow.drawerOffsetScale > 0.01 ? drawerPanel.width : 0
+                        height: rootWindow.drawerOffsetScale > 0.01 ? drawerPanel.height : 0
                     }
 
-                    // 4. 抽屉展开时，覆盖中央工作区遮罩用于点击收起
+                    // 3. 抽屉展开时，覆盖中央工作区遮罩用于点击收起
                     Region {
                         x: rootWindow.frameLeft
                         y: rootWindow.frameTop
@@ -248,6 +241,10 @@ Scope {
     // 抽屉与一体化流体 IPC 控制通道
     IpcHandler {
         target: "drawers"
+
+        function toggle(): void {
+            GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
+        }
 
         function toggleRight(): void {
             GlobalStates.sidebarRightOpen = !GlobalStates.sidebarRightOpen;
