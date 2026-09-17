@@ -9,11 +9,28 @@ local hyprScripts = "$HOME/.config/hypr/hyprland/scripts"
 local qsIpcCall = "qs -c $qsConfig ipc call"
 local qsIsAlive = qsIpcCall .. " TEST_ALIVE"
 
--- Toggle search on Super release, but only if no other key was pressed while Super was held
+-- Super key search toggle: press sets flag, release checks flag.
+-- Any SUPER+key combo must clear the flag to prevent false triggers.
+-- Since Hyprland Lua's hl.bind("SUPER+catchall") does NOT have real catch_all semantics,
+-- we wrap hl.bind to auto-append a transparent interrupt bind for every SUPER+X combo.
+local _interrupt_dsp = hl.dsp.global("quickshell:searchToggleReleaseInterrupt")
+local _orig_bind = hl.bind
+hl.bind = function(keys, action, opts)
+    _orig_bind(keys, action, opts)
+    -- For any SUPER+X bind (not SUPER_L/SUPER_R itself, not release-only, not mouse),
+    -- append a transparent interrupt so the flag is cleared before Super is released.
+    local k = keys:upper()
+    local isSuper = k:find("SUPER") ~= nil
+    local isSuperSelf = k:find("SUPER_L") or k:find("SUPER_R")
+    local isRelease = opts and opts.release
+    local isMouse = opts and opts.mouse
+    if isSuper and not isSuperSelf and not isRelease and not isMouse then
+        _orig_bind(keys, _interrupt_dsp, { transparent = true })
+    end
+end
+
 hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:searchToggleRelease"), { description = "Shell: Toggle search" })
 hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"), { release = true })
--- Interrupt: any SUPER+key combo cancels the pending search toggle (non-consuming so the actual bind still fires)
-hl.bind("SUPER + catchall", hl.dsp.global("quickshell:searchToggleReleaseInterrupt"), { non_consuming = true })
 
 hl.bind("SUPER + Tab", function()
     if hl.plugin.scrolloverview then
