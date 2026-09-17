@@ -119,6 +119,7 @@ Scope {
     }
 
     function toggleClipboard() {
+        GlobalStates.superReleaseMightTrigger = false;
         if (GlobalStates.overviewOpen && overviewScope.dontAutoCancelSearch) {
             GlobalStates.overviewOpen = false;
             return;
@@ -129,6 +130,7 @@ Scope {
     }
 
     function toggleEmojis() {
+        GlobalStates.superReleaseMightTrigger = false;
         if (GlobalStates.overviewOpen && overviewScope.dontAutoCancelSearch) {
             GlobalStates.overviewOpen = false;
             return;

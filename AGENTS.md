@@ -58,7 +58,7 @@
 - 协议字段按 `Osilvfe/OppoPodsManager-linux` 的 OnePlus Buds 3（产品 ID `063C14`）实现：电量、降噪/通透、EQ、空间音频、游戏模式/音效、双设备和佩戴检测。游戏音效与空间音频、非默认 EQ 的互斥在桥接器中同步处理
 
 ### 快捷键（`keybinds.lua`）
-- `SUPER` 单按=搜索框 toggle（`SUPER_L`/`SUPER_R`，`release=true`）；`SUPER+Tab`=**scrolloverview 插件**概览（不是 qs Overview）；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件
+- `SUPER` 单按=搜索框 toggle（`SUPER_L`/`SUPER_R`，组合键自动打断防误触发）；`SUPER+Tab`=**scrolloverview 插件**概览（不是 qs Overview）；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件
 
 ### 常用脚本
 - `hyprland/scripts/mask_kded6.sh` —— 非 KDE：假 D-Bus service `Exec=/bin/false` + `systemctl --user mask plasma-kded6.service`；`XDG_CURRENT_DESKTOP=KDE` 时执行则还原。安装 `3.files-exp.sh` 会跑一次
@@ -139,6 +139,7 @@
 - **`399352bd`** 农历位运算、SPlayer 空闲退避、playerctld 始终过滤、蓝牙分组
 - **截图与选区冻结帧防崩溃**：NVIDIA 新版驱动配合 10-bit 色深（`XBGR2101010`）时，`ScreencopyView` 在 `dmabuf.cpp` 中将 dmabuf 导入为 EGL 图像失败报 `EGL_BAD_MATCH` 触发 `qFatal` 导致 Quickshell 瞬间硬崩（`SIGABRT`）。在 `RegionSelection.qml` 与 `ScreenTranslatorPanel.qml` 中，将原 `ScreencopyView` 替换为 Qt 原生 `Image` 渲染已由 `grim` 提前写入的 8-bit PNG 缓存文件，规避 EGL dmabuf 缺陷；并在 `RegionSelector.qml` 与 `ScreenTranslator.qml` 中补齐 IPC `dismiss()` 方法支持。
 - **Polkit 权限认证代理注册防丢与动态重试**：Quickshell 内置 `PolkitAgent` 向 PolicyKit 注册时，若遇到旧进程尚未解绑或重启竞态（`An authentication agent already exists for the given subject`），C++ 层默认直接报错且不再重试，导致整个桌面环境失去 GUI 提权代理（表现为 `systemctl` 回退 TTY 认证、Code OSS 等无控制台应用直接报错找不到认证服务）。在 `PolkitService.qml` 中将 `PolkitAgent` 封装为 `Loader` 动态重试机制，未就绪时自动退避重试直至注册成功；在 `GlobalStates.qml` 常驻启动项显式调用 `PolkitService.init()` 避免懒加载滞后；并在 `keybinds.lua` 中将重载快捷键改为 `killall -w -q` 确保旧进程彻底退出后再启动新实例。
+- **SUPER 组合键松开防误唤出搜索栏**：修复单按 SUPER 开关搜索栏（Overview）在执行组合键（如 `SUPER+V`、`SUPER+Tab`、`SUPER+Return`、窗口移动缩放等）后松开 SUPER 依然误触发搜索栏弹出的问题。移除 `keybinds.lua` 中无条件触发 `searchToggle` 的错误释放绑定；在 `keybinds.lua` 中封装 `hl.bind` 劫持层，在执行任何含 `SUPER` 的有效组合键时自动派发 `quickshell:searchToggleReleaseInterrupt` 打断释放触发器；针对窗口拖拽与缩放（`SUPER+mouse:272/273/274`）补充透明非消耗性中断绑定；并在 `GlobalStates.qml` 与 `Overview.qml` 各面板切换与剪贴板/Emoji 呼出时同步重置 `superReleaseMightTrigger = false`。
 
 ## 踩坑记录
 

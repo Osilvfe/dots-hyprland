@@ -62,17 +62,32 @@ Singleton {
     property bool wallpaperSelectorOpen: false
     property bool workspaceShowNumbers: false
 
+    onSidebarLeftOpenChanged: {
+        if (root.sidebarLeftOpen) root.superReleaseMightTrigger = false;
+    }
+
     onSidebarRightOpenChanged: {
         if (GlobalStates.sidebarRightOpen) {
+            root.superReleaseMightTrigger = false;
             Notifications.timeoutAll();
             Notifications.markAllRead();
         }
     }
 
     onMediaControlsOpenChanged: {
-        if (!root.mediaControlsOpen) {
+        if (root.mediaControlsOpen) {
+            root.superReleaseMightTrigger = false;
+        } else {
             root.mediaButtonScreen = null;
         }
+    }
+
+    onSessionOpenChanged: {
+        if (root.sessionOpen) root.superReleaseMightTrigger = false;
+    }
+
+    onOskOpenChanged: {
+        if (root.oskOpen) root.superReleaseMightTrigger = false;
     }
 
     GlobalShortcut {

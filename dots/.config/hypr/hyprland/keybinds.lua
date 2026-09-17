@@ -9,15 +9,43 @@ local hyprScripts = "$HOME/.config/hypr/hyprland/scripts"
 local qsIpcCall = "qs -c $qsConfig ipc call"
 local qsIsAlive = qsIpcCall .. " TEST_ALIVE"
 
+local orig_bind = hl.bind
+local interrupt_dispatcher = hl.dsp.global("quickshell:searchToggleReleaseInterrupt")
+
+hl.bind = function(keys, action, flags)
+    -- Don't wrap the search toggle itself or pure modifier binds
+    if keys:match("SUPER%s*%+%s*SUPER_[LR]") or keys:match("^SUPER_[LR]$") then
+        return orig_bind(keys, action, flags)
+    end
+
+    -- If the bind includes SUPER and is not a release bind and not mouse drag/resize
+    if keys:match("SUPER") and not (flags and flags.release) and not (flags and flags.mouse) then
+        local wrapped_action
+        if type(action) == "function" then
+            wrapped_action = function(...)
+                hl.dispatch(interrupt_dispatcher)
+                return action(...)
+            end
+        elseif action then
+            wrapped_action = function(...)
+                hl.dispatch(interrupt_dispatcher)
+                hl.dispatch(action)
+            end
+        else
+            wrapped_action = action
+        end
+        return orig_bind(keys, wrapped_action, flags)
+    end
+
+    return orig_bind(keys, action, flags)
+end
+
 hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:searchToggleRelease"), { description = "Shell: Toggle search" })
 hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:searchToggleRelease"))
 hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"))
 hl.bind("SUPER + SUPER_R", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"))
+hl.bind("SUPER + Escape", interrupt_dispatcher, { description = "Cancel Super key" })
 
-hl.bind("SUPER_L", hl.dsp.global("quickshell:searchToggle"),
-    { ignore_mods = true, transparent = true, release = true })
-hl.bind("SUPER_R", hl.dsp.global("quickshell:searchToggle"),
-    { ignore_mods = true, transparent = true, release = true })
 hl.bind("SUPER + Tab", function()
     if hl.plugin.scrolloverview then
         hl.plugin.scrolloverview.overview("toggle")
@@ -143,6 +171,9 @@ hl.bind("SUPER + ALT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_SOURCE@ togg
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true, description = "Window: Move" })
 hl.bind("SUPER + mouse:274", hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "Window: Resize" })
+for _, mouseKey in ipairs({ "mouse:272", "mouse:273", "mouse:274" }) do
+    orig_bind("SUPER + " .. mouseKey, interrupt_dispatcher, { transparent = true, non_consuming = true })
+end
 --#/# bind = SUPER + ←/↑/→/↓,, -- Focus column/window (scrolling-aware, no monitor cross)
 for i = 1, 4 do
     local arrowkey = { "Left", "Right", "Up", "Down" }
