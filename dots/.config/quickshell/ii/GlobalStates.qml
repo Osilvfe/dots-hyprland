@@ -30,6 +30,7 @@ Singleton {
     property bool oskOpen: false
     property bool overlayOpen: false
     property bool overviewOpen: false
+    property real overviewContentHeight: 80
     property bool recordingMenuOpen: false
     property bool recordRegionRequest: false
     property bool recordRegionSystem: false

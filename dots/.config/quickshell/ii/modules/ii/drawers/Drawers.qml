@@ -187,12 +187,12 @@ Scope {
                         height: rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetHeight : 0
                     }
 
-                    // 4. 搜索水滴面板区域：展开状态下覆盖最终静止目标矩形
+                    // 4. 搜索面板区域：展开状态下覆盖最终静止目标矩形
                     Region {
-                        x: overviewDropPanel.targetX
-                        y: overviewDropPanel.targetY
-                        width: rootWindow.overviewOpen ? overviewDropPanel.targetWidth : 0
-                        height: rootWindow.overviewOpen ? overviewDropPanel.targetHeight : 0
+                        x: overviewBottomPanel.targetX
+                        y: rootWindow.height - rootWindow.frameBottom - 640
+                        width: rootWindow.overviewOpen ? overviewBottomPanel.targetWidth : 0
+                        height: rootWindow.overviewOpen ? 640 : 0
                     }
 
                     // 5. 抽屉或搜索展开时，覆盖中央工作区遮罩用于点击收起
@@ -307,30 +307,31 @@ Scope {
                     damping: 14.0
                 }
 
-                // 4. 顶栏下垂搜索流体水滴胶囊（从顶栏中下沿溶出，与顶栏拉出平滑双向垂悬波浪桥）
+                // 4. 底部搜索流体抽屉胶囊 (参考 Caelestia 底部抽屉体系，自底沿向上滑入)
                 BlobRect {
-                    id: overviewDropPanel
+                    id: overviewBottomPanel
                     group: fluidBlobGroup
                     z: 60
 
                     readonly property real targetWidth: Math.min(680, rootWindow.width - 80)
-                    readonly property real targetHeight: 460
+                    readonly property real targetHeight: Math.min(640, Math.max(80, GlobalStates.overviewContentHeight))
                     readonly property real targetX: (rootWindow.width - targetWidth) / 2
-                    readonly property real targetY: rootWindow.frameTop - 12
+                    readonly property real targetY: rootWindow.height - rootWindow.frameBottom - targetHeight
+                    readonly property real hiddenY: rootWindow.height + rootWindow.smoothVal + 15
 
                     width: targetWidth
-                    height: targetHeight * rootWindow.overviewOffsetScale
+                    height: targetHeight
 
                     x: targetX
-                    y: targetY
+                    y: targetY + (hiddenY - targetY) * (1.0 - rootWindow.overviewOffsetScale)
 
                     // 四角大圆角胶囊
                     radius: 28
-                    // 顶部与顶栏内凹粘连渐变
-                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.overviewOffsetScale / 0.35)) * 28
-                    topRightRadius: Math.max(0, Math.min(1, rootWindow.overviewOffsetScale / 0.35)) * 28
-                    bottomLeftRadius: 28
-                    bottomRightRadius: 28
+                    topLeftRadius: 28
+                    topRightRadius: 28
+                    // 底部圆角在拔出过程中动态平滑溶出
+                    bottomLeftRadius: Math.max(0, Math.min(1, rootWindow.overviewOffsetScale / 0.35)) * 28
+                    bottomRightRadius: Math.max(0, Math.min(1, rootWindow.overviewOffsetScale / 0.35)) * 28
 
                     deformScale: 0.00001
                     stiffness: 240.0
