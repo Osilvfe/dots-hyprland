@@ -6,6 +6,8 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Caelestia.Blobs
+import "../../common"
+
 
 PanelWindow {
     id: rootWindow
@@ -23,13 +25,19 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     exclusiveZone: 0
 
-    // 边框几何尺寸
-    property real frameLeft: 42.0     // 模拟左侧栏或状态栏宽度
-    property real frameRight: 14.0    // 右侧边框厚度
-    property real frameTop: 14.0      // 顶部边框厚度
-    property real frameBottom: 14.0   // 底部边框厚度
-    property real frameRadius: 26.0   // 屏幕内凹圆角半径
-    property real smoothingVal: 32.0  // 流体融合平滑度
+    // 系统几何规范参数严谨对齐 (源自 Hyprland gaps_out=5, rounding=18, quickshell barHeight=40)
+    readonly property real gapsOut: 5.0
+    readonly property real barHeight: 40.0
+    readonly property real defaultRounding: 23.0 // screenRounding
+
+    // 动态自适应边框几何厚度 (默认顶部容纳顶栏，四周为 5px gaps 缝隙)
+    property real frameLeft: gapsOut
+    property real frameRight: gapsOut
+    property real frameTop: barHeight + gapsOut  // 45px (顶栏 + 缝隙)
+    property real frameBottom: gapsOut          // 5px
+    property real frameRadius: defaultRounding  // 23px 内凹倒角
+    property real smoothingVal: 32.0            // 流体表面融合平滑度
+
 
     // 抽屉展开状态 (0.0: 完全收起贴合边缘, 1.0: 完全滑入桌面)
     property real drawerOffsetScale: 0.0
@@ -46,11 +54,11 @@ PanelWindow {
     mask: Region {
         id: screenMask
 
-        // 中间主工作区挖空区域
-        x: rootWindow.frameLeft + 1
-        y: rootWindow.frameTop + 1
-        width: Math.max(10, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight - 2)
-        height: Math.max(10, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom - 2)
+        // 中间主工作区挖空区域 (精确匹配窗口外边缘)
+        x: rootWindow.frameLeft
+        y: rootWindow.frameTop
+        width: Math.max(10, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight)
+        height: Math.max(10, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom)
         intersection: Intersection.Xor
 
         // 控制面板区域（保留输入）
@@ -70,12 +78,14 @@ PanelWindow {
         }
     }
 
-    // 流体形态渲染总控群组 (同一 Group 下的所有形体会通过 GPU SDF 融合)
+    // 流体形态渲染总控群组 (默认采用系统 Material 3 暗色底色 #141313)
     BlobGroup {
         id: fluidBlobGroup
-        color: "#1e1e2e" // Material 3 / Catppuccin Base 经典色
+        color: "#141313"
         smoothing: rootWindow.smoothingVal
     }
+
+
 
     // 1. 屏幕边缘一体化环绕内衬 (Inverted Frame)
     BlobInvertedRect {
@@ -199,19 +209,24 @@ PanelWindow {
             RowLayout {
                 Layout.fillWidth: true
                 Button {
-                    text: rootWindow.drawerOffsetScale > 0.5 ? "收起侧边抽屉" : "展开侧边抽屉"
+                    text: rootWindow.drawerOffsetScale > 0.5 ? "收起侧边抽屉" : "展开侧边抽屉 (观察边缘凹坑)"
                     Layout.fillWidth: true
                     onClicked: {
                         rootWindow.drawerOffsetScale = rootWindow.drawerOffsetScale > 0.5 ? 0.0 : 1.0;
                     }
                 }
                 Button {
-                    text: "切换左侧栏加厚 (42px / 14px)"
+                    text: rootWindow.frameTop > rootWindow.gapsOut ? "边框模式: 容纳顶栏 (" + Math.round(rootWindow.frameTop) + "px)" : "边框模式: 仅缝隙 (" + Math.round(rootWindow.gapsOut) + "px)"
                     onClicked: {
-                        rootWindow.frameLeft = rootWindow.frameLeft > 20 ? 14 : 42;
+                        if (rootWindow.frameTop > rootWindow.gapsOut) {
+                            rootWindow.frameTop = rootWindow.gapsOut;
+                        } else {
+                            rootWindow.frameTop = rootWindow.barHeight + (rootWindow.isBarCornerFloating ? rootWindow.gapsOut : 0);
+                        }
                     }
                 }
             }
         }
     }
 }
+
