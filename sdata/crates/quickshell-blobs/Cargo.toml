@@ -1,0 +1,12 @@
+[package]
+name = "quickshell-blobs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Osilvfe"]
+description = "High-performance Rust engine for fluid morphing SDF shapes and jelly physics in Quickshell"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+# 纯标准库或基础数学依赖，保证编译飞快且零外部 C 库依赖

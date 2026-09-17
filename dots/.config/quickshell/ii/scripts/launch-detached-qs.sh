@@ -15,6 +15,8 @@ fi
 unset __QUICKSHELL_CRASH_INFO_FD __QUICKSHELL_CRASH_DUMP_PID __QUICKSHELL_CRASH_SIGNAL
 export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP_OVERRIDE:-gnome}"
 export QS_CLIENT=1
+export QML_IMPORT_PATH="$HOME/.local/lib/qt6/qml:${QML_IMPORT_PATH:-}"
+export QML2_IMPORT_PATH="$HOME/.local/lib/qt6/qml:${QML2_IMPORT_PATH:-}"
 if [[ $# -ge 2 && -n "$2" ]]; then
     export QS_SETTINGS_TARGET="$2"
 fi
