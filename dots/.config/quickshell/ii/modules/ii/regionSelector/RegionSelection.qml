@@ -11,6 +11,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Caelestia.Blobs
 
 PanelWindow {
     id: root
@@ -511,6 +512,47 @@ PanelWindow {
             }
         }
 
+        readonly property bool isFluid: Config.options.appearance.fluidMorphing.enable ?? false
+
+        // 流体胶囊渲染组 (当启用 fluidMorphing 时接管工具栏背景与圆滑液态连接)
+        BlobGroup {
+            id: toolbarBlobGroup
+            color: Appearance.m3colors.m3surfaceContainer
+            smoothing: 18.0
+        }
+
+        BlobRect {
+            id: optionsToolbarBlob
+            group: toolbarBlobGroup
+            z: 9
+            visible: root.isFluid && regionSelectionControls.visible
+            opacity: regionSelectionControls.opacity
+            x: regionSelectionControls.x + optionsToolbar.x
+            y: regionSelectionControls.y + optionsToolbar.y
+            width: optionsToolbar.width
+            height: optionsToolbar.height
+            radius: optionsToolbar.height / 2
+            deformScale: 0.05
+            stiffness: 280.0
+            damping: 18.0
+        }
+
+        BlobRect {
+            id: closeFabBlob
+            group: toolbarBlobGroup
+            z: 9
+            visible: root.isFluid && regionSelectionControls.visible
+            opacity: regionSelectionControls.opacity
+            x: regionSelectionControls.x + closeFab.x
+            y: regionSelectionControls.y + closeFab.y
+            width: closeFab.width
+            height: closeFab.height
+            radius: closeFab.width / 2
+            deformScale: 0.05
+            stiffness: 280.0
+            damping: 18.0
+        }
+
         // Controls
         Row {
             id: regionSelectionControls
@@ -539,6 +581,9 @@ PanelWindow {
             spacing: 6
 
             OptionsToolbar {
+                id: optionsToolbar
+                enableShadow: !root.isFluid
+                colBackground: root.isFluid ? "transparent" : Appearance.m3colors.m3surfaceContainer
                 Synchronizer on action {
                     property alias source: root.action
                 }
@@ -548,6 +593,8 @@ PanelWindow {
                 onDismiss: root.dismiss();
             }
             ToolbarPairedFab {
+                id: closeFab
+                enableShadow: !root.isFluid
                 anchors.verticalCenter: parent.verticalCenter
                 iconText: "close"
                 onClicked: root.dismiss();

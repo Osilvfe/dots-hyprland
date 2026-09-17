@@ -114,21 +114,24 @@ Item { // Wrapper
         }
     }
 
+    readonly property bool isFluid: Config.options.appearance.fluidMorphing.enable ?? false
+
     StyledRectangularShadow {
         target: searchWidgetContent
+        visible: !root.isFluid
     }
     Rectangle { // Background
         id: searchWidgetContent
         anchors {
             top: parent.top
             horizontalCenter: parent.horizontalCenter
-            topMargin: Appearance.sizes.elevationMargin
+            topMargin: root.isFluid ? 0 : Appearance.sizes.elevationMargin
         }
         clip: true
         implicitWidth: columnLayout.implicitWidth
         implicitHeight: columnLayout.implicitHeight
         radius: searchBar.height / 2 + searchBar.verticalPadding
-        color: Appearance.colors.colBackgroundSurfaceContainer
+        color: root.isFluid ? "transparent" : Appearance.colors.colBackgroundSurfaceContainer
 
         Behavior on implicitHeight {
             id: searchHeightBehavior

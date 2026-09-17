@@ -52,7 +52,10 @@ Scope {
     PanelLoader { component: ScreenCorners {} }
     PanelLoader { component: ScreenTranslator {} }
     PanelLoader { component: SessionScreen {} }
-    PanelLoader { component: SidebarLeft {} }
+    PanelLoader {
+        extraCondition: !(Config.options.appearance.fluidMorphing.enable ?? false)
+        component: SidebarLeft {}
+    }
     PanelLoader {
         extraCondition: !(Config.options.appearance.fluidMorphing.enable ?? false)
         component: SidebarRight {}

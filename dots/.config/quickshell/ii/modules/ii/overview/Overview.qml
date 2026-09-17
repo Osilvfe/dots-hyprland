@@ -87,11 +87,15 @@ Scope {
             searchWidget.focusFirstItem();
         }
 
+        readonly property bool isFluid: Config.options.appearance.fluidMorphing.enable ?? false
+
         Column {
             id: columnLayout
             width: Math.min(680, panelWindow.width - 80)
             anchors.horizontalCenter: parent.horizontalCenter
-            y: panelWindow.height * 0.18 + BarState.offset(panelWindow.screen?.name ?? "") + (GlobalStates.overviewOpen ? 0 : 16)
+            y: panelWindow.isFluid
+                ? (Appearance.sizes.baseBarHeight + Appearance.sizes.hyprlandGapsOut + 4)
+                : (panelWindow.height * 0.18 + BarState.offset(panelWindow.screen?.name ?? "") + (GlobalStates.overviewOpen ? 0 : 16))
             spacing: -8
             opacity: GlobalStates.overviewOpen ? 1 : 0
             scale: GlobalStates.overviewOpen ? 1 : 0.94
