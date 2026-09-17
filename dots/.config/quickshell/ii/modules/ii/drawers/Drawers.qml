@@ -195,7 +195,7 @@ Scope {
                     borderBottom: rootWindow.frameBottom
                 }
 
-                // 2. 右侧滑出的抽屉面板（与顶栏在同个着色器中无缝粘连）
+                // 2. 右侧滑出的抽屉纯流体色块（与顶栏在同个着色器中无缝粘连）
                 BlobRect {
                     id: drawerPanel
                     group: fluidBlobGroup
@@ -222,30 +222,40 @@ Scope {
                     deformScale: 0.0006
                     stiffness: 220.0
                     damping: 14.0
+                }
 
-                    // 抽屉内容容器：果冻张量拉伸联动 + GPU 纹理层加速
-                    Item {
-                        id: drawerContentContainer
+                // ==========================================
+                // 3. 独立上层侧边栏交互与内容层（后渲染/延后淡入，与底层流体联动）
+                // ==========================================
+                Item {
+                    id: drawerContentLayer
+                    z: 65
+                    x: drawerPanel.x
+                    y: drawerPanel.y
+                    width: drawerPanel.width
+                    height: drawerPanel.height
+
+                    // 视觉核心：后渲染/延后渐入感知
+                    // 前半程 (0~0.35) 纯净展示流体波浪从边框拔出与粘连，后半程 (0.35~1.0) 平滑浮现内容
+                    opacity: Math.max(0, Math.min(1, (rootWindow.drawerOffsetScale - 0.35) / 0.65))
+                    visible: rootWindow.drawerOffsetScale > 0.001
+
+                    // 动画期间开启 GPU 纹理缓存加速
+                    layer.enabled: rootWindow.isAnimating
+
+                    // 核心流体联动：内容跟随 Rust 动力学弹簧应变张量一起产生果冻水波形变！
+                    transform: Matrix4x4 {
+                        matrix: drawerPanel.deformMatrix
+                    }
+
+                    // 挂载完整原生 SidebarRightContent (预热常驻)
+                    Loader {
+                        id: sidebarLoader
                         anchors.fill: parent
                         anchors.margins: 4
                         clip: true
-
-                        // 动画期间开启 GPU 纹理缓存加速，杜绝子组件逐帧重排
-                        layer.enabled: rootWindow.isAnimating
-
-                        // 核心流体联动：内容跟随 Rust 动力学弹簧应变张量一起产生果冻水波形变！
-                        transform: Matrix4x4 {
-                            matrix: drawerPanel.deformMatrix
-                        }
-
-                        // 挂载完整原生 SidebarRightContent (预热常驻，避免展开首帧卡顿)
-                        Loader {
-                            id: sidebarLoader
-                            anchors.fill: parent
-                            active: true
-                            visible: rootWindow.drawerOffsetScale > 0.001
-                            source: "../sidebarRight/SidebarRightContent.qml"
-                        }
+                        active: true
+                        source: "../sidebarRight/SidebarRightContent.qml"
                     }
                 }
 
