@@ -57,6 +57,14 @@
 - `scripts/bluetooth/oplus-buds3-bridge.rs` 使用 Rust 原生 Linux RFCOMM 套接字与私有 SPP 协议帧，无第三方依赖；启动脚本 `oplus-buds3-bridge.sh` 用 `rustc -O` 按需编译至 `~/.cache/quickshell/helpers/`
 - 协议字段按 `Osilvfe/OppoPodsManager-linux` 的 OnePlus Buds 3（产品 ID `063C14`）实现：电量、降噪/通透、EQ、空间音频、游戏模式/音效、双设备和佩戴检测。游戏音效与空间音频、非默认 EQ 的互斥在桥接器中同步处理
 
+### 流体形态引擎（Caelestia.Blobs / Rust 动力学重构）
+- 基于 Caelestia 的 SDF 2D 距离场（Signed Distance Field）与 `smin` 多体圆滑粘连算法，通过 GPU 片元着色器实时计算 Metaball 液态粘连
+- 底层使用 Rust 原生重构（`sdata/crates/quickshell-blobs/`）：
+  - `physics.rs`：半隐式阻尼弹簧积分（Underdamped Spring）与应变张量拉伸形变（Jelly Physics），零速度收敛保护，绝不发散或空转
+  - `ubo.rs`：1440 字节连续内存的严格 std140 内存对齐打包，与 GPU 着色器零拷贝安全绑定
+- 构建与部署：通过 `dots/.config/quickshell/ii/scripts/build-blobs.sh` 编译并安装至 `~/.local/lib/qt6/qml/Caelestia/Blobs`，QML 中直接 `import Caelestia.Blobs`
+- 测试沙盒：`dots/.config/quickshell/ii/modules/ii/bar/test_blob.qml`（支持自由拖拽融合、平滑度调节及往返动效预览）
+
 ### 快捷键（`keybinds.lua`）
 - `SUPER` 单按=搜索框 toggle（`SUPER_L`/`SUPER_R`，组合键自动打断防误触发）；`SUPER+Tab`=**scrolloverview 插件**概览（不是 qs Overview）；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件
 
