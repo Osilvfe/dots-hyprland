@@ -10,7 +10,6 @@ import Caelestia.Blobs
 PanelWindow {
     id: rootWindow
 
-    title: "Caelestia Inverted Frame & Drawer Sandbox"
     color: "transparent"
 
     anchors {
