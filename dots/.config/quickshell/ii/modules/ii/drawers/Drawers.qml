@@ -219,7 +219,7 @@ Scope {
                     topLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * 28
                     bottomLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * 28
 
-                    deformScale: 0.0006
+                    deformScale: 0.00001
                     stiffness: 220.0
                     damping: 14.0
                 }
@@ -242,11 +242,6 @@ Scope {
 
                     // 动画期间开启 GPU 纹理缓存加速
                     layer.enabled: rootWindow.isAnimating
-
-                    // 核心流体联动：内容跟随 Rust 动力学弹簧应变张量一起产生果冻水波形变！
-                    transform: Matrix4x4 {
-                        matrix: drawerPanel.deformMatrix
-                    }
 
                     // 挂载完整原生 SidebarRightContent (预热常驻)
                     Loader {
