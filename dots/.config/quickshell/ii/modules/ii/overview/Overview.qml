@@ -91,7 +91,7 @@ Scope {
             id: columnLayout
             width: Math.min(680, panelWindow.width - 80)
             anchors.horizontalCenter: parent.horizontalCenter
-            y: panelWindow.height * 0.18 + (GlobalStates.overviewOpen ? 0 : 16)
+            y: panelWindow.height * 0.18 + BarState.offset(panelWindow.screen?.name ?? "") + (GlobalStates.overviewOpen ? 0 : 16)
             spacing: -8
             opacity: GlobalStates.overviewOpen ? 1 : 0
             scale: GlobalStates.overviewOpen ? 1 : 0.94

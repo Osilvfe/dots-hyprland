@@ -4,6 +4,9 @@ require("hyprland.variables")
 -- XWayland apps: no backdrop blur (avoids the blur ring around XWayland splash/UI windows)
 hl.window_rule({match = { xwayland = true }, no_blur = true })
 
+-- Hide the Xwayland container used by xembedsniproxy for legacy tray icons.
+hl.window_rule({match = {class = "^xembedsniproxy$" }, float = true, opacity = 0.0, no_blur = true })
+
 -- New tiled windows always begin in a half-width scrolling column.
 hl.window_rule({match = { class = ".*" }, scrolling_width = 0.5 })
 

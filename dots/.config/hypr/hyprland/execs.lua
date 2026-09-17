@@ -29,6 +29,10 @@ hl.on("hyprland.start", function ()
     -- input method
     hl.exec_cmd("fcitx5 -d")
 
+    -- Bridge legacy XEmbed tray icons (such as Wine/Proton) to the SNI tray.
+    -- plasma-workspace provides xembedsniproxy; skip it when unavailable.
+    hl.exec_cmd("command -v xembedsniproxy >/dev/null 2>&1 && xembedsniproxy")
+
     -- for plugin
     hl.exec_cmd("hyprpm reload")
 end)

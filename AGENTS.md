@@ -102,6 +102,11 @@
 - **#3616** `KeyringStorage` 异步初次加载前的写入队列保护，防止覆盖抹除已有密钥
 - **#3617** `SqueezedAnnotationStyledText` 翻译自适应尺寸增加宽度溢出检测、尺寸为 0 守卫与 resize 重新计算
 - **#3599** `random_osu_wall.sh` 遭遇 Cloudflare 人机拦截时优雅降级并弹窗提示
+- **#3646** 特殊工作区指示器在休眠唤醒或多显示器重连时状态重置与响应式刷新（`WorkspaceModel.qml` / `Workspaces.qml`）
+- **#3649** 咖啡因模式（Idle Inhibitor）在 Quickshell 重启后防锁屏时序竞态修复（1000ms 映射延时与 helper surface 1x1）
+- **#3640** 修复 `services/Ai.qml` 中 `get_shell_config` 空 Schema `{}` 导致 DeepSeek/Ollama/Qwen 报 HTTP 400
+- **#3642** Booru 图源请求失败与解析错误细分提示（区分 HTTP 状态码与无搜索结果）
+- **#3643** Booru 屏蔽当前失效图源（Danbooru 403 / Gelbooru 401），安全回退并在 `/mode` 中过滤
 
 ### 本地补丁 · 功能
 - **#3533** OSD/顶栏滚轮音量上限（`audio.osdMaxPercent`，默认 150；不影响键盘 `wpctl -l 1.5`）
@@ -109,6 +114,9 @@
 - **#3538** 顶栏蓝牙电量（`bar.indicators.showBluetoothBattery`，默认开）
 - **#3581** 可选通知提示音（`sounds.notifications`，默认关）
 - **#3144** Gemini `thought_signature` + 完整 `functionCall`（无设置开关）
+- **#3641** AI 系统提示词模板支持 `{MODEL}` 模型名称变量替换
+- **#3610** 自动隐藏顶栏/侧栏支持在空白工作区保持常驻可见（`bar.autoHide.showOnEmptyWorkspace`）及多组件几何联动
+- **#3650** 集成 `xembedsniproxy` 自动桥接 Wine/Proton 等旧式 X11 XEmbed 托盘图标至 SNI 顶栏
 - **#3600** 设置页自定义主题主色（复用 `switchwall.sh --color`）
 - **#3598** 主题槽位：保存/恢复/删除壁纸、明暗模式、配色方案与自定义主色（10 个槽位）
 - **#3546** Overview 剪贴板清除全部/筛选结果按钮与空状态提示
