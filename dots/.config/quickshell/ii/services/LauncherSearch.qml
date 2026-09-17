@@ -28,19 +28,24 @@ Singleton {
     // DesktopEntry's `categories` - see the comment in AppSearch.qml.
     property list<string> appCategories: []
     function rebuildAppCategories() {
-        const acc = [];
+        const catSet = new Set();
+        const registered = mainRegisteredCategories;
         for (const entry of AppSearch.list) {
+            if (!entry || !entry.categories) continue;
             for (const category of entry.categories) {
-                if (!acc.includes(category) && mainRegisteredCategories.includes(category)) {
-                    acc.push(category);
+                if (registered.includes(category)) {
+                    catSet.add(category);
                 }
             }
         }
-        root.appCategories = acc.sort();
+        root.appCategories = Array.from(catSet).sort();
     }
     Connections {
         target: AppSearch
-        function onListChanged() { root.rebuildAppCategories(); }
+        function onListChanged() {
+            root.rebuildAppCategories();
+            if (root.query !== "") rebuildResultsTimer.restart();
+        }
     }
     Component.onCompleted: rebuildAppCategories()
 
@@ -148,13 +153,14 @@ Singleton {
         return StringUtils.stringListContainsSubstring(entry.toLowerCase(), unsafeKeywords);
     }
 
-    function buildClipboardActions(entry, cleanText, info) {
+    function buildClipboardActions(entry, cleanText, info, createObj) {
+        const create = createObj || ((props) => resultComp.createObject(null, props));
         const actions = [];
 
         if (info) {
             if (info.type === "color") {
                 if (info.originalFormat === "hex") {
-                    actions.push(resultComp.createObject(null, {
+                    actions.push(create({
                         name: `${Translation.tr("Copy RGB")}: ${info.rgb}`,
                         iconName: "colorize",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -162,7 +168,7 @@ Singleton {
                             Quickshell.clipboardText = info.rgb;
                         }
                     }));
-                    actions.push(resultComp.createObject(null, {
+                    actions.push(create({
                         name: `${Translation.tr("Copy HSL")}: ${info.hsl}`,
                         iconName: "palette",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -171,7 +177,7 @@ Singleton {
                         }
                     }));
                 } else if (info.originalFormat === "rgb") {
-                    actions.push(resultComp.createObject(null, {
+                    actions.push(create({
                         name: `${Translation.tr("Copy HEX")}: ${info.hex}`,
                         iconName: "palette",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -179,7 +185,7 @@ Singleton {
                             Quickshell.clipboardText = info.hex;
                         }
                     }));
-                    actions.push(resultComp.createObject(null, {
+                    actions.push(create({
                         name: `${Translation.tr("Copy HSL")}: ${info.hsl}`,
                         iconName: "colorize",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -188,7 +194,7 @@ Singleton {
                         }
                     }));
                 } else if (info.originalFormat === "hsl") {
-                    actions.push(resultComp.createObject(null, {
+                    actions.push(create({
                         name: `${Translation.tr("Copy HEX")}: ${info.hex}`,
                         iconName: "palette",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -196,7 +202,7 @@ Singleton {
                             Quickshell.clipboardText = info.hex;
                         }
                     }));
-                    actions.push(resultComp.createObject(null, {
+                    actions.push(create({
                         name: `${Translation.tr("Copy RGB")}: ${info.rgb}`,
                         iconName: "colorize",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -206,7 +212,7 @@ Singleton {
                     }));
                 }
             } else if (info.type === "math") {
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: `${Translation.tr("Copy result")}: ${info.result}`,
                     iconName: "calculate",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -215,7 +221,7 @@ Singleton {
                     }
                 }));
             } else if (info.type === "timestamp") {
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: `${Translation.tr("Copy date")}: ${info.formatted}`,
                     iconName: "schedule",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -223,7 +229,7 @@ Singleton {
                         Quickshell.clipboardText = info.formatted;
                     }
                 }));
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: Translation.tr("Copy ISO 8601"),
                     iconName: "calendar_month",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -232,7 +238,7 @@ Singleton {
                     }
                 }));
             } else if (info.type === "url") {
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: Translation.tr("Open in browser"),
                     iconName: "open_in_browser",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -241,7 +247,7 @@ Singleton {
                     }
                 }));
             } else if (info.type === "path") {
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: Translation.tr("Open file"),
                     iconName: "open_in_new",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -250,7 +256,7 @@ Singleton {
                     }
                 }));
                 if (info.directory) {
-                    actions.push(resultComp.createObject(null, {
+                    actions.push(create({
                         name: Translation.tr("Open directory"),
                         iconName: "folder_open",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -260,7 +266,7 @@ Singleton {
                     }));
                 }
             } else if (info.type === "json") {
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: Translation.tr("Copy formatted JSON"),
                     iconName: "data_object",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -268,7 +274,7 @@ Singleton {
                         Quickshell.clipboardText = info.pretty;
                     }
                 }));
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: Translation.tr("Copy minified JSON"),
                     iconName: "compress",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -277,7 +283,7 @@ Singleton {
                     }
                 }));
             } else if (info.type === "base64") {
-                actions.push(resultComp.createObject(null, {
+                actions.push(create({
                     name: Translation.tr("Copy decoded text"),
                     iconName: "lock_open",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -289,7 +295,7 @@ Singleton {
         }
 
         // Standard actions: Copy & Delete
-        actions.push(resultComp.createObject(null, {
+        actions.push(create({
             name: Translation.tr("Copy"),
             iconName: "content_copy",
             iconType: LauncherSearchResult.IconType.Material,
@@ -297,7 +303,7 @@ Singleton {
                 Cliphist.copy(entry);
             }
         }));
-        actions.push(resultComp.createObject(null, {
+        actions.push(create({
             name: Translation.tr("Delete"),
             iconName: "delete",
             iconType: LauncherSearchResult.IconType.Material,
@@ -336,17 +342,54 @@ Singleton {
         }
     }
 
-    property list<var> results: {
-        // Search results are handled here
-        ////////////////// Skip? //////////////////
-        if (root.query == "")
-            return [];
+    property list<var> results: []
+    property var _activeObjects: []
+
+    onQueryChanged: {
+        nonAppResultsTimer.restart();
+        rebuildResultsTimer.restart();
+    }
+
+    onMathResultChanged: {
+        rebuildResultsTimer.restart();
+    }
+
+    Timer {
+        id: rebuildResultsTimer
+        interval: 10
+        repeat: false
+        onTriggered: root.rebuildResults()
+    }
+
+    function clearOldObjects() {
+        const old = root._activeObjects;
+        root._activeObjects = [];
+        for (let i = 0; i < old.length; i++) {
+            if (old[i]) {
+                old[i].destroy();
+            }
+        }
+    }
+
+    function rebuildResults() {
+        if (root.query === "") {
+            root.results = [];
+            clearOldObjects();
+            return;
+        }
+
+        const createdObjects = [];
+        function createResultObj(properties) {
+            const obj = resultComp.createObject(null, properties);
+            if (obj) createdObjects.push(obj);
+            return obj;
+        }
 
         ///////////// Special cases ///////////////
         if (root.query.startsWith(Config.options.search.prefix.clipboard)) {
             // Clipboard
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.clipboard);
-            return Cliphist.fuzzyQuery(searchString).map((entry, index, array) => {
+            const clipObjects = Cliphist.fuzzyQuery(searchString).map((entry, index, array) => {
                 const mightBlurImage = Cliphist.entryIsImage(entry) && root.clipboardWorkSafetyActive;
                 let shouldBlurImage = mightBlurImage;
                 if (mightBlurImage) {
@@ -373,7 +416,7 @@ Singleton {
                         type = `#${idNum} · Base64`;
                     }
                 }
-                return resultComp.createObject(null, {
+                return createResultObj({
                     rawValue: entry,
                     name: cleanText,
                     verb: "",
@@ -381,16 +424,24 @@ Singleton {
                     execute: () => {
                         Cliphist.copy(entry);
                     },
-                    actions: root.buildClipboardActions(entry, cleanText, info),
+                    actions: root.buildClipboardActions(entry, cleanText, info, createResultObj),
                     blurImage: shouldBlurImage
                 });
             }).filter(Boolean);
+
+            const oldObjects = root._activeObjects;
+            root.results = clipObjects;
+            root._activeObjects = createdObjects;
+            for (let i = 0; i < oldObjects.length; i++) {
+                if (oldObjects[i]) oldObjects[i].destroy();
+            }
+            return;
         } else if (root.query.startsWith(Config.options.search.prefix.emojis)) {
-            // Clipboard
+            // Emojis
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.emojis);
-            return Emojis.fuzzyQuery(searchString).map(entry => {
+            const emojiObjects = Emojis.fuzzyQuery(searchString).map(entry => {
                 const emoji = entry.match(/^\s*(\S+)/)?.[1] || "";
-                return resultComp.createObject(null, {
+                return createResultObj({
                     rawValue: entry,
                     name: entry.replace(/^\s*\S+\s+/, ""),
                     iconName: emoji,
@@ -402,11 +453,18 @@ Singleton {
                     }
                 });
             }).filter(Boolean);
+
+            const oldObjects = root._activeObjects;
+            root.results = emojiObjects;
+            root._activeObjects = createdObjects;
+            for (let i = 0; i < oldObjects.length; i++) {
+                if (oldObjects[i]) oldObjects[i].destroy();
+            }
+            return;
         }
 
         ////////////////// Init ///////////////////
-        nonAppResultsTimer.restart();
-        const mathResultObject = resultComp.createObject(null, {
+        const mathResultObject = createResultObj({
             name: root.mathResult,
             verb: Translation.tr("Copy"),
             type: Translation.tr("Math result"),
@@ -418,7 +476,7 @@ Singleton {
             }
         });
         const appResultObjects = AppSearch.fuzzyQuery(StringUtils.cleanPrefix(root.query, Config.options.search.prefix.app)).map(entry => {
-            return resultComp.createObject(null, {
+            return createResultObj({
                 type: Translation.tr("App"),
                 id: entry.id,
                 name: entry.name,
@@ -438,7 +496,7 @@ Singleton {
                 genericName: entry.genericName,
                 keywords: entry.keywords,
                 actions: entry.actions.map(action => {
-                    return resultComp.createObject(null, {
+                    return createResultObj({
                         name: action.name,
                         iconName: action.icon,
                         iconType: LauncherSearchResult.IconType.System,
@@ -453,7 +511,7 @@ Singleton {
                 })
             });
         });
-        const commandResultObject = resultComp.createObject(null, {
+        const commandResultObject = createResultObj({
             name: StringUtils.cleanPrefix(root.query, Config.options.search.prefix.shellCommand).replace("file://", ""),
             verb: Translation.tr("Run"),
             type: Translation.tr("Command"),
@@ -469,7 +527,7 @@ Singleton {
                 Quickshell.execDetached(["bash", "-c", root.query.startsWith('sudo') ? `${Config.options.apps.terminal} fish -C '${cleanedCommand}'` : cleanedCommand]);
             }
         });
-        const webSearchResultObject = resultComp.createObject(null, {
+        const webSearchResultObject = createResultObj({
             name: StringUtils.cleanPrefix(root.query, Config.options.search.prefix.webSearch),
             verb: Translation.tr("Search"),
             type: Translation.tr("Web search"),
@@ -487,7 +545,7 @@ Singleton {
         const launcherActionObjects = root.allActions.map(action => {
             const actionString = `${Config.options.search.prefix.action}${action.action}`;
             if (actionString.startsWith(root.query) || root.query.startsWith(actionString)) {
-                return resultComp.createObject(null, {
+                return createResultObj({
                     name: root.query.startsWith(actionString) ? root.query : actionString,
                     verb: Translation.tr("Run"),
                     type: Translation.tr("Action"),
@@ -502,36 +560,41 @@ Singleton {
         }).filter(Boolean);
 
         //////// Prioritized by prefix /////////
-        let result = [];
+        let finalResults = [];
         const startsWithNumber = /^\d/.test(root.query);
         const startsWithMathPrefix = root.query.startsWith(Config.options.search.prefix.math);
         const startsWithShellCommandPrefix = root.query.startsWith(Config.options.search.prefix.shellCommand);
         const startsWithWebSearchPrefix = root.query.startsWith(Config.options.search.prefix.webSearch);
         if (startsWithNumber || startsWithMathPrefix) {
-            result.push(mathResultObject);
+            finalResults.push(mathResultObject);
         } else if (startsWithShellCommandPrefix) {
-            result.push(commandResultObject);
+            finalResults.push(commandResultObject);
         } else if (startsWithWebSearchPrefix) {
-            result.push(webSearchResultObject);
+            finalResults.push(webSearchResultObject);
         }
 
         //////////////// Apps //////////////////
-        result = result.concat(appResultObjects);
+        finalResults = finalResults.concat(appResultObjects);
 
         ////////// Launcher actions ////////////
-        result = result.concat(launcherActionObjects);
+        finalResults = finalResults.concat(launcherActionObjects);
 
         /// Math result, command, web search ///
         if (Config.options.search.prefix.showDefaultActionsWithoutPrefix) {
             if (!startsWithShellCommandPrefix)
-                result.push(commandResultObject);
+                finalResults.push(commandResultObject);
             if (!startsWithNumber && !startsWithMathPrefix)
-                result.push(mathResultObject);
+                finalResults.push(mathResultObject);
             if (!startsWithWebSearchPrefix)
-                result.push(webSearchResultObject);
+                finalResults.push(webSearchResultObject);
         }
 
-        return result;
+        const oldObjects = root._activeObjects;
+        root.results = finalResults;
+        root._activeObjects = createdObjects;
+        for (let i = 0; i < oldObjects.length; i++) {
+            if (oldObjects[i]) oldObjects[i].destroy();
+        }
     }
 
     Component {

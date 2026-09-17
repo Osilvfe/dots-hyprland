@@ -107,6 +107,7 @@
 - **#3640** 修复 `services/Ai.qml` 中 `get_shell_config` 空 Schema `{}` 导致 DeepSeek/Ollama/Qwen 报 HTTP 400
 - **#3642** Booru 图源请求失败与解析错误细分提示（区分 HTTP 状态码与无搜索结果）
 - **#3643** Booru 屏蔽当前失效图源（Danbooru 403 / Gelbooru 401），安全回退并在 `/mode` 中过滤
+- **#3639** 启动器搜索重构与性能优化（选择性合并）：`AppSearch.qml` 引入 `_iconCache` 缓存已解析应用图标哈希，避免任务栏/概览窗口重复执行正则与模糊匹配；`LauncherSearch.qml` 根治 `results` 属性绑定导致每次击键泄漏大量未释放 QML 对象的问题，重构为防抖管道 `rebuildResults()`、对象生命周期追踪与安全 `.destroy()` 销毁，支持剪贴板智能语义动作对象销毁联动，修复计算器异步结果显示刷新，保持对动态用户动作脚本的兼容
 
 ### 本地补丁 · 功能
 - **#3533** OSD/顶栏滚轮音量上限（`audio.osdMaxPercent`，默认 150；不影响键盘 `wpctl -l 1.5`）
