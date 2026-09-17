@@ -130,6 +130,7 @@
 - **顶栏耳机双耳电量支持**：在顶栏蓝牙电量指示器中，针对 TWS 蓝牙耳机（如 OnePlus Buds 3）获取并显示左右耳与充电盒独立电量；支持配置默认显示双耳中电量较低的一只耳（`bar.indicators.bluetoothBatteryLowestEarbud`，默认开启），图标自动切换为专属 `earbuds_2`（真无线双耳）符号；鼠标悬停提示弹窗展示各单耳及耳机盒精确电量与充电状态（配备 `earbud_left`、`earbud_right` 与 `earbud_case` 专属图标）
 - **剪贴板智能语义识别与本地快捷动作**：在 Overview 剪贴板历史（`SUPER+V` / `:clip`）中引入纯本地语义分析单例服务 `ClipboardInspector.qml`，零网络请求、零外部依赖。自动识别颜色代码（HEX/RGB/HSL，条目直观渲染动态色块，支持格式一键互转）、纯算术算式（安全数学求值与 `= 结果` 胶囊徽章）、Unix 时间戳（本地时区日期换算与相对时间）、URL 链接（默认浏览器打开）、本地文件路径（打开文件/定位目录）、JSON（格式化/单行压缩）及 Base64（本地解码），并在条目右侧动态注入最多 5 个专属动作快捷按钮。
 - **媒体控制弹窗与歌词居中对齐**：顶栏媒体控制器卡片（`MediaControls.qml`）在点击或快捷键呼出时与顶栏歌词/媒体文本区域（`SyncedLyricText`）保持水平居中对齐，支持多屏幕坐标映射与边界防溢出保护，取代原本基于屏幕中心偏置的死板偏移。
+- **Wi-Fi 与蓝牙设置页优先展示已保存项并去重扫描项**：在系统设置中，调整 Wi-Fi 设置（`WifiConfig.qml`）与蓝牙设置（`BluetoothConfig.qml`）的层级排布，将“已保存的设备/网络”（Saved devices / networks）置顶展示于“扫描/附近设备”（Nearby / Available）上方；蓝牙已保存设备列表按 MAC 地址去重，扫描发现列表严格排除已配对保存的设备并去重；Wi-Fi 已保存网络按当前已连接、信号范围内（按信号强弱排序）、超出范围（按首字母排序）三级动态优选排序，并呈现动态信号强度图标与范围状态（“在范围内 (X%)”/“已连接”），同时支持断开/重新连接切换；Wi-Fi 扫描可用列表过滤所有已保存 SSID，彻底杜绝重复列出。
 
 ### 本地修复（无对应 PR）
 - **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示

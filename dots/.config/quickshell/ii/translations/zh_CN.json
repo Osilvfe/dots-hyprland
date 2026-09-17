@@ -1007,8 +1007,10 @@
   "day": "天",
   "Keep visible on empty workspace": "空白工作区时保持可见",
   "The request failed (HTTP %1).\nTips:\n- Try another provider with `/mode`\n- Some providers reject anonymous requests": "请求失败（HTTP %1）。\n提示：\n- 使用 `/mode` 切换其他源\n- 部分图源拒绝匿名请求",
-  "Couldn't understand the response from the provider": "无法解析图源返回的数据"
+  "Couldn't understand the response from the provider": "无法解析图源返回的数据",
+  "In range": "在范围内"
 }
+
 
 
 

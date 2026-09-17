@@ -15,7 +15,45 @@ ContentPage {
     readonly property bool bluetoothAvailable: BluetoothStatus.available
     readonly property bool bluetoothEnabled: Bluetooth.defaultAdapter?.enabled ?? false
     readonly property bool bluetoothScanning: Bluetooth.defaultAdapter?.discovering ?? false
-    readonly property int savedDeviceCount: BluetoothStatus.connectedDevices.length + BluetoothStatus.pairedButNotConnectedDevices.length
+    readonly property var savedDevicesList: {
+        const seen = new Set();
+        const list = [];
+        const allSaved = [
+            ...BluetoothStatus.connectedDevices,
+            ...BluetoothStatus.pairedButNotConnectedDevices
+        ];
+        for (const dev of allSaved) {
+            if (!dev) continue;
+            const addr = (dev.address ?? "").toUpperCase();
+            const key = addr || dev.name || "";
+            if (key && seen.has(key)) continue;
+            if (key) seen.add(key);
+            list.push(dev);
+        }
+        return list;
+    }
+    readonly property int savedDeviceCount: savedDevicesList.length
+
+    readonly property var nearbyDevicesList: {
+        const savedAddrs = new Set();
+        for (const dev of root.savedDevicesList) {
+            if (!dev) continue;
+            const addr = (dev.address ?? "").toUpperCase();
+            if (addr) savedAddrs.add(addr);
+        }
+        const seen = new Set();
+        const list = [];
+        for (const dev of BluetoothStatus.unpairedDevices) {
+            if (!dev) continue;
+            const addr = (dev.address ?? "").toUpperCase();
+            if (addr && savedAddrs.has(addr)) continue;
+            const key = addr || (dev.name ? `NAME:${dev.name}` : "");
+            if (key && seen.has(key)) continue;
+            if (key) seen.add(key);
+            list.push(dev);
+        }
+        return list;
+    }
     property bool showingOplusBuds3Controls: false
 
     function isOplusBuds3(device) {
@@ -239,6 +277,41 @@ ContentPage {
     }
 
     ContentSection {
+        visible: !root.showingOplusBuds3Controls && root.bluetoothEnabled
+        icon: "bookmark"
+        title: Translation.tr("Saved devices")
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 14
+            text: root.savedDeviceCount === 1
+                ? Translation.tr("1 saved Bluetooth device")
+                : Translation.tr("%1 saved Bluetooth devices").arg(root.savedDeviceCount)
+            color: Appearance.colors.colSubtext
+            wrapMode: Text.Wrap
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            visible: root.savedDeviceCount === 0
+            text: Translation.tr("No paired Bluetooth devices found.")
+            color: Appearance.colors.colSubtext
+            wrapMode: Text.Wrap
+        }
+
+        Repeater {
+            model: ScriptModel {
+                values: root.savedDevicesList
+            }
+
+            BluetoothSettingsDeviceItem {
+                required property BluetoothDevice modelData
+                device: modelData
+            }
+        }
+    }
+
+    ContentSection {
         id: nearbySection
         visible: !root.showingOplusBuds3Controls && root.bluetoothEnabled && (root.scanRequested || opacity > 0)
         property real animatedHeight: root.bluetoothEnabled && root.scanRequested ? implicitHeight : 0
@@ -264,7 +337,7 @@ ContentPage {
 
         StyledText {
             Layout.fillWidth: true
-            visible: root.bluetoothScanning && BluetoothStatus.unpairedDevices.length === 0
+            visible: root.bluetoothScanning && root.nearbyDevicesList.length === 0
             text: Translation.tr("Scanning for devices...")
             color: Appearance.colors.colSubtext
             wrapMode: Text.Wrap
@@ -272,7 +345,7 @@ ContentPage {
 
         StyledText {
             Layout.fillWidth: true
-            visible: !root.bluetoothScanning && BluetoothStatus.unpairedDevices.length === 0
+            visible: !root.bluetoothScanning && root.nearbyDevicesList.length === 0
             text: Translation.tr("No nearby devices found.")
             color: Appearance.colors.colSubtext
             wrapMode: Text.Wrap
@@ -280,51 +353,13 @@ ContentPage {
 
         Repeater {
             model: ScriptModel {
-                values: BluetoothStatus.unpairedDevices
+                values: root.nearbyDevicesList
             }
 
             BluetoothSettingsDeviceItem {
                 required property BluetoothDevice modelData
                 device: modelData
                 nearby: true
-            }
-        }
-    }
-
-    ContentSection {
-        visible: !root.showingOplusBuds3Controls && root.bluetoothEnabled
-        icon: "bookmark"
-        title: Translation.tr("Saved devices")
-
-        StyledText {
-            Layout.fillWidth: true
-            Layout.leftMargin: 14
-            text: root.savedDeviceCount === 1
-                ? Translation.tr("1 saved Bluetooth device")
-                : Translation.tr("%1 saved Bluetooth devices").arg(root.savedDeviceCount)
-            color: Appearance.colors.colSubtext
-            wrapMode: Text.Wrap
-        }
-
-        StyledText {
-            Layout.fillWidth: true
-            visible: root.savedDeviceCount === 0
-            text: Translation.tr("No paired Bluetooth devices found.")
-            color: Appearance.colors.colSubtext
-            wrapMode: Text.Wrap
-        }
-
-        Repeater {
-            model: ScriptModel {
-                values: [
-                    ...BluetoothStatus.connectedDevices,
-                    ...BluetoothStatus.pairedButNotConnectedDevices
-                ]
-            }
-
-            BluetoothSettingsDeviceItem {
-                required property BluetoothDevice modelData
-                device: modelData
             }
         }
     }

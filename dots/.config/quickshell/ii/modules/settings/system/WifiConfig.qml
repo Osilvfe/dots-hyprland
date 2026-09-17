@@ -16,6 +16,39 @@ ContentPage {
     property var savedNetworks: []
     property var savedNetworkAutoconnectOverrides: ({})
 
+    readonly property var sortedSavedNetworks: {
+        const list = [...root.savedNetworks];
+        const activeName = Network.networkName || Network.active?.ssid || "";
+        const inRangeMap = new Map();
+        if (Network.friendlyWifiNetworks) {
+            for (const ap of Network.friendlyWifiNetworks) {
+                if (ap && ap.ssid) inRangeMap.set(ap.ssid, ap.strength ?? 0);
+            }
+        }
+
+        return list.sort((a, b) => {
+            const aActive = a.name === activeName;
+            const bActive = b.name === activeName;
+            if (aActive !== bActive) return aActive ? -1 : 1;
+
+            const aInRange = inRangeMap.has(a.name);
+            const bInRange = inRangeMap.has(b.name);
+            if (aInRange !== bInRange) return aInRange ? -1 : 1;
+
+            if (aInRange && bInRange) {
+                return inRangeMap.get(b.name) - inRangeMap.get(a.name);
+            }
+
+            return (a.name || "").localeCompare(b.name || "");
+        });
+    }
+
+    readonly property var availableUnsavedNetworks: {
+        if (!Network.friendlyWifiNetworks) return [];
+        const savedNames = new Set(root.savedNetworks.map(s => s.name).filter(Boolean));
+        return Network.friendlyWifiNetworks.filter(ap => ap && ap.ssid && !savedNames.has(ap.ssid));
+    }
+
     function parseNmcliLine(line) {
         const placeholder = "ESCAPED_COLON_PLACEHOLDER";
         return line.replace(/\\:/g, placeholder).split(":").map(part => part.replace(new RegExp(placeholder, "g"), ":"));
@@ -170,7 +203,15 @@ ContentPage {
         id: itemRoot
         required property var network
         property bool expanded: root.expandedSavedNetworkUuid === network.uuid
-        property bool active: network.name === Network.networkName
+        property bool active: network.name === (Network.networkName || Network.active?.ssid)
+        readonly property WifiAccessPoint inRangeAp: {
+            const list = Network.friendlyWifiNetworks;
+            if (!list) return null;
+            for (let i = 0; i < list.length; i++) {
+                if (list[i]?.ssid === itemRoot.network.name) return list[i];
+            }
+            return null;
+        }
 
         Layout.fillWidth: true
         implicitHeight: savedNetworkContent.implicitHeight + 16
@@ -213,7 +254,14 @@ ContentPage {
                         spacing: 10
 
                         MaterialSymbol {
-                            text: itemRoot.active ? "check" : "bookmark"
+                            text: itemRoot.active
+                                ? "check"
+                                : itemRoot.inRangeAp
+                                    ? (itemRoot.inRangeAp.strength > 80 ? "signal_wifi_4_bar" :
+                                       itemRoot.inRangeAp.strength > 60 ? "network_wifi_3_bar" :
+                                       itemRoot.inRangeAp.strength > 40 ? "network_wifi_2_bar" :
+                                       itemRoot.inRangeAp.strength > 20 ? "network_wifi_1_bar" : "signal_wifi_0_bar")
+                                    : "bookmark"
                             iconSize: Appearance.font.pixelSize.larger
                             color: Appearance.colors.colOnSurfaceVariant
                         }
@@ -231,7 +279,17 @@ ContentPage {
 
                             StyledText {
                                 Layout.fillWidth: true
-                                text: root.savedNetworkAutoconnectEnabled(itemRoot.network) ? Translation.tr("Connects automatically") : Translation.tr("Manual connection")
+                                text: {
+                                    const autoConnectStr = root.savedNetworkAutoconnectEnabled(itemRoot.network)
+                                        ? Translation.tr("Connects automatically")
+                                        : Translation.tr("Manual connection");
+                                    if (itemRoot.active) {
+                                        return Translation.tr("Connected") + " · " + autoConnectStr;
+                                    } else if (itemRoot.inRangeAp) {
+                                        return Translation.tr("In range") + ` (${itemRoot.inRangeAp.strength}%) · ` + autoConnectStr;
+                                    }
+                                    return autoConnectStr;
+                                }
                                 color: Appearance.colors.colSubtext
                                 font.pixelSize: Appearance.font.pixelSize.smallie
                                 elide: Text.ElideRight
@@ -242,11 +300,15 @@ ContentPage {
                 }
 
                 DialogButton {
-                    buttonText: Translation.tr("Connect")
-                    enabled: !itemRoot.active
+                    buttonText: itemRoot.active ? Translation.tr("Disconnect") : Translation.tr("Connect")
                     onClicked: {
-                        Quickshell.execDetached(["nmcli", "connection", "up", "uuid", itemRoot.network.uuid]);
-                        savedNetworksRefreshTimer.restart();
+                        if (itemRoot.active) {
+                            Quickshell.execDetached(["nmcli", "connection", "down", "uuid", itemRoot.network.uuid]);
+                            savedNetworksRefreshTimer.restart();
+                        } else {
+                            Quickshell.execDetached(["nmcli", "connection", "up", "uuid", itemRoot.network.uuid]);
+                            savedNetworksRefreshTimer.restart();
+                        }
                     }
                 }
 
@@ -334,7 +396,7 @@ ContentPage {
         })
         stdout: StdioCollector {
             onStreamFinished: {
-                root.savedNetworks = text.trim().split("\n").filter(line => line.length > 0).map(line => {
+                const raw = text.trim().split("\n").filter(line => line.length > 0).map(line => {
                     const fields = root.parseNmcliLine(line);
                     return {
                         name: fields[0] ?? "",
@@ -343,6 +405,15 @@ ContentPage {
                         autoconnect: fields[3] ?? ""
                     };
                 }).filter(network => network.type === "802-11-wireless" || network.type === "wifi");
+
+                const seen = new Set();
+                const deduped = [];
+                for (const net of raw) {
+                    if (!net.name || seen.has(net.name)) continue;
+                    seen.add(net.name);
+                    deduped.push(net);
+                }
+                root.savedNetworks = deduped;
                 root.savedNetworkAutoconnectOverrides = ({});
             }
         }
@@ -433,6 +504,45 @@ ContentPage {
         }
     }
 
+    ContentSection {
+        icon: "bookmark"
+        title: Translation.tr("Saved networks")
+
+        ConfigRow {
+            DialogButton {
+                buttonText: Translation.tr("Refresh")
+                onClicked: root.refreshSavedNetworks()
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                text: root.sortedSavedNetworks.length === 1
+                    ? Translation.tr("1 saved Wi-Fi profile")
+                    : Translation.tr("%1 saved Wi-Fi profiles").arg(root.sortedSavedNetworks.length)
+                color: Appearance.colors.colSubtext
+                wrapMode: Text.Wrap
+            }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            visible: root.sortedSavedNetworks.length === 0
+            text: Translation.tr("No saved Wi-Fi networks found.")
+            color: Appearance.colors.colSubtext
+            wrapMode: Text.Wrap
+        }
+
+        Repeater {
+            model: root.sortedSavedNetworks
+
+            SavedNetworkItem {
+                required property var modelData
+                Layout.fillWidth: true
+                network: modelData
+            }
+        }
+    }
+
     ColumnLayout {
         Layout.fillWidth: true
         spacing: 6
@@ -488,9 +598,9 @@ ContentPage {
                 Layout.fillWidth: true
                 text: Network.wifiScanning
                     ? Translation.tr("Scanning for networks...")
-                    : Network.friendlyWifiNetworks.length === 1
+                    : root.availableUnsavedNetworks.length === 1
                         ? Translation.tr("1 network found")
-                        : Translation.tr("%1 networks found").arg(Network.friendlyWifiNetworks.length)
+                        : Translation.tr("%1 networks found").arg(root.availableUnsavedNetworks.length)
                 color: Appearance.colors.colSubtext
                 wrapMode: Text.Wrap
             }
@@ -506,7 +616,7 @@ ContentPage {
 
         StyledText {
             Layout.fillWidth: true
-            visible: root.availableNetworksExpanded && Network.wifiEnabled && !Network.wifiScanning && Network.friendlyWifiNetworks.length === 0
+            visible: root.availableNetworksExpanded && Network.wifiEnabled && !Network.wifiScanning && root.availableUnsavedNetworks.length === 0
             text: Translation.tr("No networks found.")
             color: Appearance.colors.colSubtext
             wrapMode: Text.Wrap
@@ -514,51 +624,12 @@ ContentPage {
 
         Repeater {
             model: ScriptModel {
-                values: root.availableNetworksExpanded ? Network.friendlyWifiNetworks : []
+                values: root.availableNetworksExpanded ? root.availableUnsavedNetworks : []
             }
 
             SettingsWifiNetworkItem {
                 required property WifiAccessPoint modelData
                 wifiNetwork: modelData
-            }
-        }
-    }
-
-    ContentSection {
-        icon: "bookmark"
-        title: Translation.tr("Saved networks")
-
-        ConfigRow {
-            DialogButton {
-                buttonText: Translation.tr("Refresh")
-                onClicked: root.refreshSavedNetworks()
-            }
-
-            StyledText {
-                Layout.fillWidth: true
-                text: root.savedNetworks.length === 1
-                    ? Translation.tr("1 saved Wi-Fi profile")
-                    : Translation.tr("%1 saved Wi-Fi profiles").arg(root.savedNetworks.length)
-                color: Appearance.colors.colSubtext
-                wrapMode: Text.Wrap
-            }
-        }
-
-        StyledText {
-            Layout.fillWidth: true
-            visible: root.savedNetworks.length === 0
-            text: Translation.tr("No saved Wi-Fi networks found.")
-            color: Appearance.colors.colSubtext
-            wrapMode: Text.Wrap
-        }
-
-        Repeater {
-            model: root.savedNetworks
-
-            SavedNetworkItem {
-                required property var modelData
-                Layout.fillWidth: true
-                network: modelData
             }
         }
     }
