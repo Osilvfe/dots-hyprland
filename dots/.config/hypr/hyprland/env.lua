@@ -45,3 +45,9 @@ hl.env("ILLOGICAL_IMPULSE_VIRTUAL_ENV", home_dir .. "/.local/state/quickshell/.v
 -- Cursor (XWayland)
 hl.env("XCURSOR_THEME", "Bibata-Modern-Classic")
 hl.env("XCURSOR_SIZE", "48")
+
+-- QML module paths
+local qml_user_dir = home_dir .. "/.local/lib/qt6/qml"
+hl.env("QML_IMPORT_PATH", qml_user_dir)
+hl.env("QML2_IMPORT_PATH", qml_user_dir)
+
