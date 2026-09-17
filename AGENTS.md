@@ -8,7 +8,7 @@
 - `dots/.config/` —— 全部配置（**部署源**），子目录即 `~/.config/<name>/`
 - `sdata/dist-arch/` —— 自维护的 AUR 包 PKGBUILD 与 patch（`illogical-impulse-*`）
 - `AGENTS.md` —— 本文档
-- 远端：`origin`=Osilvfe/dots-hyprland（推送）、`upstream`=end-4 原仓库（仅跟踪）、`quickshell-sample`=StatIndet/quickshell（参考，不合并）
+- 远端：`origin`=Osilvfe/dots-hyprland（推送）、`upstream`=end-4 原仓库（仅跟踪）、`quickshell-sample`=StatIndet/quickshell（参考，不合并）、`caelestia-shell`=caelestia-dots/shell（参考，不合并）
 
 ### Hyprland 配置（`dots/.config/hypr/`）
 - `hyprland.lua` —— 入口，逐段 require 下面各 lua
