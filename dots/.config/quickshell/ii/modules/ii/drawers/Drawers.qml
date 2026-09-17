@@ -32,22 +32,48 @@ Scope {
             active: !GlobalStates.screenLocked
             required property ShellScreen modelData
 
-            component: PanelWindow {
-                id: rootWindow
-                screen: drawerLoader.modelData
+            component: Scope {
+                id: monitorScope
 
-                color: "transparent"
+                // 1. 顶栏单向排他避让表面 (仅让普通窗口避让顶栏高度)
+                PanelWindow {
+                    id: barExclusionWindow
+                    screen: drawerLoader.modelData
+                    WlrLayershell.namespace: "quickshell:drawers_bar_exclusion"
+                    WlrLayershell.layer: WlrLayer.Top
 
-                anchors {
-                    top: true
-                    bottom: true
-                    left: true
-                    right: true
+                    anchors {
+                        top: true
+                        left: true
+                        right: true
+                    }
+
+                    implicitHeight: 1
+                    exclusiveZone: Appearance.sizes.baseBarHeight + Appearance.sizes.hyprlandGapsOut
+                    color: "transparent"
+
+                    // 空 Region：鼠标事件 100% 穿透，不拦截任何交互
+                    mask: Region {}
                 }
 
-                WlrLayershell.namespace: "quickshell:drawers"
-                WlrLayershell.layer: WlrLayer.Top
-                exclusiveZone: Appearance.sizes.baseBarHeight + Appearance.sizes.hyprlandGapsOut
+                // 2. 全屏一体化流体画框与抽屉交互主表面
+                PanelWindow {
+                    id: rootWindow
+                    screen: drawerLoader.modelData
+
+                    color: "transparent"
+
+                    anchors {
+                        top: true
+                        bottom: true
+                        left: true
+                        right: true
+                    }
+
+                    WlrLayershell.namespace: "quickshell:drawers"
+                    WlrLayershell.layer: WlrLayer.Top
+                    WlrLayershell.exclusionMode: ExclusionMode.Ignore
+                    exclusiveZone: 0
 
                 // 严谨对齐 Hyprland gaps 与顶栏高度
                 readonly property real gapsOut: Appearance.sizes.hyprlandGapsOut
@@ -188,6 +214,7 @@ Scope {
                 }
             }
         }
+    }
     }
 
     // 抽屉与一体化流体 IPC 控制通道
