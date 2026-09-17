@@ -977,4 +977,37 @@ ContentPage {
         }
     }
 
+    ContentSection {
+        icon: "water_drop"
+        title: Translation.tr("Fluid morphing frame")
+
+        ConfigSwitch {
+            buttonIcon: "shapes"
+            text: Translation.tr("Enable fluid morphing frame")
+            checked: Config.options.appearance.fluidMorphing.enable ?? false
+            onCheckedChanged: {
+                Config.options.appearance.fluidMorphing.enable = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Enables Caelestia-style fluid morphing inverted frame with embedded top bar and metaball drawers")
+            }
+        }
+
+        ConfigSlider {
+            buttonIcon: "blur_on"
+            text: Translation.tr("Fluid smoothing radius")
+            value: Config.options.appearance.fluidMorphing.smoothing ?? 34.0
+            usePercentTooltip: false
+            textWidth: 220
+            from: 10
+            to: 60
+            onValueChanged: {
+                Config.options.appearance.fluidMorphing.smoothing = value;
+            }
+            StyledToolTip {
+                text: Translation.tr("Adjusts the blend distance between the frame, top bar and drawers")
+            }
+        }
+    }
+
 }

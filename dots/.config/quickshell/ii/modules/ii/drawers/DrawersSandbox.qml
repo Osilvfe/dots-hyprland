@@ -197,7 +197,7 @@ PanelWindow {
     }
 
     // ==========================================
-    // 3. 真正内嵌于流体内衬之中的顶栏交互层 (Top Bar)
+    // 3. 真正内嵌于流体内衬之中的完整顶栏 (Authentic BarContent)
     // ==========================================
     Item {
         id: integratedTopBar
@@ -206,94 +206,22 @@ PanelWindow {
         width: parent.width
         height: rootWindow.barHeight // 40px
 
-        RowLayout {
+        // 直接复用仓库中拥有全部歌词/工作区/托盘/电量功能的真实顶栏内容！
+        Loader {
             anchors.fill: parent
-            anchors.leftMargin: rootWindow.frameLeft + 12
-            anchors.rightMargin: rootWindow.frameRight + 12
-            spacing: 12
-
-            // 左侧：Logo 与工作区指示胶囊
-            Rectangle {
-                width: 32
-                height: 32
-                radius: 16
-                color: "#313244"
-                Text {
-                    anchors.centerIn: parent
-                    text: "󰣇"
-                    color: "#89b4fa"
-                    font.pixelSize: 18
-                }
-            }
-
-            // 模拟工作区胶囊
-            Row {
-                spacing: 6
-                Repeater {
-                    model: ["1", "2", "3", "4", "5"]
-                    delegate: Rectangle {
-                        required property string modelData
-                        width: modelData === "1" ? 28 : 10
-                        height: 10
-                        radius: 5
-                        color: modelData === "1" ? "#89b4fa" : "#45475a"
-                    }
-                }
-            }
-
-
-            Item { Layout.fillWidth: true }
-
-            // 中间：时间与日期
-            Text {
-                text: Qt.formatDateTime(new Date(), "hh:mm  MM月dd日 ddd")
-                color: "#cdd6f4"
-                font.bold: true
-                font.pixelSize: 14
-            }
-
-            Item { Layout.fillWidth: true }
-
-            // 右侧：系统状态与抽屉触发按钮
-            RowLayout {
-                spacing: 8
-
-                Rectangle {
-                    width: 28
-                    height: 28
-                    radius: 14
-                    color: "#313244"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "󰤨"
-                        color: "#a6e3a1"
-                        font.pixelSize: 14
-                    }
-                }
-
-                Rectangle {
-                    width: 28
-                    height: 28
-                    radius: 14
-                    color: "#313244"
-                    Text {
-                        anchors.centerIn: parent
-                        text: "󰂯"
-                        color: "#89b4fa"
-                        font.pixelSize: 14
-                    }
-                }
-
-                // 侧栏控制中心开关按钮
-                Button {
-                    text: rootWindow.drawerOffsetScale > 0.5 ? "收起侧栏" : "打开侧栏"
-                    onClicked: {
-                        rootWindow.drawerOffsetScale = rootWindow.drawerOffsetScale > 0.5 ? 0.0 : 1.0;
+            sourceComponent: Component {
+                // 优先加载本地真实 BarContent
+                Item {
+                    anchors.fill: parent
+                    Loader {
+                        anchors.fill: parent
+                        source: "../bar/BarContent.qml"
                     }
                 }
             }
         }
     }
+
 
     // ==========================================
     // 4. 调试与参数调节卡片

@@ -63,7 +63,8 @@
   - `physics.rs`：半隐式阻尼弹簧积分（Underdamped Spring）与应变张量拉伸形变（Jelly Physics），零速度收敛保护，绝不发散或空转
   - `ubo.rs`：1440 字节连续内存的严格 std140 内存对齐打包，与 GPU 着色器零拷贝安全绑定
 - 构建与部署：通过 `dots/.config/quickshell/ii/scripts/build-blobs.sh` 编译并安装至 `~/.local/lib/qt6/qml/Caelestia/Blobs`，QML 中直接 `import Caelestia.Blobs`
-- 测试沙盒：`dots/.config/quickshell/ii/modules/ii/bar/test_blob.qml`（支持自由拖拽融合、平滑度调节及往返动效预览）
+- 一体化画框与顶栏融合（`Drawers.qml`）：基于方案一「无损借壳复用」，100% 保留原有 `BarContent.qml` 业务；全屏 `BlobInvertedRect` 提供统一四周与顶栏内凹底座，工作区通过 `Intersection.Xor` 穿透遮罩直通桌面窗口；右侧抽屉展开时与顶栏下沿丝滑粘连；通过 `Config.options.appearance.fluidMorphing.enable` 实现渐进式开关，兼容原生 `sidebarRight` 与 `bar` 的 IPC/快捷键
+- 测试沙盒：`dots/.config/quickshell/ii/modules/ii/bar/test_blob.qml`（Metaball 特性调节）与 `dots/.config/quickshell/ii/modules/ii/drawers/DrawersSandbox.qml`（画框与抽屉粘连沙盒）
 
 ### 快捷键（`keybinds.lua`）
 - `SUPER` 单按=搜索框 toggle（`SUPER_L`/`SUPER_R`，组合键自动打断防误触发）；`SUPER+Tab`=**scrolloverview 插件**概览（不是 qs Overview）；`SUPER+V` 剪贴板；`SUPER+Period` emoji；`SUPER+SHIFT+S` 截图工具菜单；`SUPER+SHIFT+A` 图像搜索；`SUPER+SHIFT+X` OCR；`Print` 全屏截图 / `CTRL+Print` 存文件

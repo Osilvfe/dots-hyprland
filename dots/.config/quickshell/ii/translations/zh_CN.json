@@ -1008,7 +1008,12 @@
   "Keep visible on empty workspace": "空白工作区时保持可见",
   "The request failed (HTTP %1).\nTips:\n- Try another provider with `/mode`\n- Some providers reject anonymous requests": "请求失败（HTTP %1）。\n提示：\n- 使用 `/mode` 切换其他源\n- 部分图源拒绝匿名请求",
   "Couldn't understand the response from the provider": "无法解析图源返回的数据",
-  "In range": "在范围内"
+  "In range": "在范围内",
+  "Fluid morphing frame": "流体形态与一体化外框",
+  "Enable fluid morphing frame": "启用流体形态画框",
+  "Enables Caelestia-style fluid morphing inverted frame with embedded top bar and metaball drawers": "启用 Caelestia 风格的流体形态内凹画框，融合顶栏并支持抽屉液态粘连拉伸",
+  "Fluid smoothing radius": "流体融合平滑度",
+  "Adjusts the blend distance between the frame, top bar and drawers": "调节全屏边框、顶栏和侧边抽屉之间的液态粘连距离"
 }
 
 
