@@ -35,24 +35,52 @@ Scope {
             component: Scope {
                 id: monitorScope
 
-                // 1. 顶栏单向排他避让表面 (仅让普通窗口避让顶栏高度)
+                // 1. 四周画框固定排他避让 (对齐 Caelestia ExclusionZone 体系)
+                // 顶部：45px (顶栏 40px + 外边距 5px)
                 PanelWindow {
-                    id: barExclusionWindow
                     screen: drawerLoader.modelData
-                    WlrLayershell.namespace: "quickshell:drawers_bar_exclusion"
+                    WlrLayershell.namespace: "quickshell:drawers_top_exclusion"
                     WlrLayershell.layer: WlrLayer.Top
-
-                    anchors {
-                        top: true
-                        left: true
-                        right: true
-                    }
-
+                    anchors { top: true; left: true; right: true }
                     implicitHeight: 1
                     exclusiveZone: Appearance.sizes.baseBarHeight + Appearance.sizes.hyprlandGapsOut
                     color: "transparent"
+                    mask: Region {}
+                }
 
-                    // 空 Region：鼠标事件 100% 穿透，不拦截任何交互
+                // 左侧：5px (画框左侧固定边距)
+                PanelWindow {
+                    screen: drawerLoader.modelData
+                    WlrLayershell.namespace: "quickshell:drawers_left_exclusion"
+                    WlrLayershell.layer: WlrLayer.Top
+                    anchors { left: true; top: true; bottom: true }
+                    implicitWidth: 1
+                    exclusiveZone: Appearance.sizes.hyprlandGapsOut
+                    color: "transparent"
+                    mask: Region {}
+                }
+
+                // 右侧：5px (画框右侧固定边距，无论抽屉是否展开均恒定为 5px，抽屉纯悬浮浮于窗口之上！)
+                PanelWindow {
+                    screen: drawerLoader.modelData
+                    WlrLayershell.namespace: "quickshell:drawers_right_exclusion"
+                    WlrLayershell.layer: WlrLayer.Top
+                    anchors { right: true; top: true; bottom: true }
+                    implicitWidth: 1
+                    exclusiveZone: Appearance.sizes.hyprlandGapsOut
+                    color: "transparent"
+                    mask: Region {}
+                }
+
+                // 底部：5px (画框底部固定边距)
+                PanelWindow {
+                    screen: drawerLoader.modelData
+                    WlrLayershell.namespace: "quickshell:drawers_bottom_exclusion"
+                    WlrLayershell.layer: WlrLayer.Top
+                    anchors { bottom: true; left: true; right: true }
+                    implicitHeight: 1
+                    exclusiveZone: Appearance.sizes.hyprlandGapsOut
+                    color: "transparent"
                     mask: Region {}
                 }
 
