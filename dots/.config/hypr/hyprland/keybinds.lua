@@ -9,10 +9,11 @@ local hyprScripts = "$HOME/.config/hypr/hyprland/scripts"
 local qsIpcCall = "qs -c $qsConfig ipc call"
 local qsIsAlive = qsIpcCall .. " TEST_ALIVE"
 
-hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:searchToggle"), { release = true, description = "Shell: Toggle search" })
-hl.bind("SUPER + SUPER_R", hl.dsp.global("quickshell:searchToggle"), { release = true })
+-- Toggle search on Super release, but only if no other key was pressed while Super was held
+hl.bind("SUPER + SUPER_L", hl.dsp.global("quickshell:searchToggleRelease"), { description = "Shell: Toggle search" })
 hl.bind("SUPER + SUPER_L", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"), { release = true })
-hl.bind("SUPER + SUPER_R", hl.dsp.exec_cmd(qsIsAlive .. " || pkill fuzzel || fuzzel"), { release = true })
+-- Interrupt: any SUPER+key combo cancels the pending search toggle (non-consuming so the actual bind still fires)
+hl.bind("SUPER + catchall", hl.dsp.global("quickshell:searchToggleReleaseInterrupt"), { non_consuming = true })
 
 hl.bind("SUPER + Tab", function()
     if hl.plugin.scrolloverview then
