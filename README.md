@@ -43,6 +43,10 @@
   - **稳定 SNI 系统托盘**：Quickshell 自建 `org.kde.StatusNotifierWatcher`，配合 `mask_kded6.sh` 阻止 KDE 服务抢占，托盘图标不再失效丢失。
 - **Material You 动态主题系统**：
   - 根据壁纸实时提取 Material 3 动态色彩体系，提供 10 个主题快照槽位（壁纸、明暗模式、自定义主色一键保存与切换）。
+- **Caelestia.Blobs 流体一体化画框**：
+  - 使用自维护的原生 QML 插件（`sdata/crates/quickshell-blobs/`），基于 SDF + `smin` 在 GPU 片元着色器中实时计算圆角 Blob / Metaball 粘连，并结合 Rust 弹簧动力学实现果冻形变。
+  - `Drawers.qml` 将顶栏、四周内凹画框、左右抽屉、Overview 搜索、媒体控制、OSD 等统一到同一流体渲染组中，可在设置中通过 **Fluid morphing frame** 开关启用。
+  - 对少量会在窗口空闲时发生内容驱动尺寸变化的 Blob，可显式设置 `forceWindowUpdate: true` 请求窗口下一帧；默认关闭，避免给持续动画组件制造额外重绘。当前 Overview 搜索果冻使用该机制，解决无鼠标活动时动态高度可能停留在旧帧的问题。
 - **侧边栏与日历**：
   - 中文日历公历农历双轨支持：节日当天精确对应，搭配中国法定节假日与调休补班彩色徽章（“休”/“班”），离线多轨缓存保障离线可用。
 
@@ -126,7 +130,22 @@ cd ~/dots-hyprland
 ./setup install
 ```
 
-### 3. 安装与启用滚动概览插件
+### 3. 构建 Caelestia.Blobs 流体原生插件
+流体形态由仓库内的 Rust/C++ QML 原生模块提供。首次安装、更新 `sdata/crates/quickshell-blobs/` 或修改 `qml-plugin/*.cpp|hpp` 后，执行：
+
+```bash
+./dots/.config/quickshell/ii/scripts/build-blobs.sh
+```
+
+模块会安装到：
+
+```text
+~/.local/lib/qt6/qml/Caelestia/Blobs
+```
+
+仅修改 QML 时通常无需重新编译；修改原生插件后，仅重启 Quickshell 不会替换已安装的 `.so`。
+
+### 4. 安装与启用滚动概览插件
 若自动化安装未成功安装插件，可手动初始化 `hyprpm`：
 ```bash
 sudo mkdir -p /usr/share/hyprpm && sudo chown -R "$USER:$USER" /usr/share/hyprpm
@@ -135,7 +154,7 @@ hyprpm update
 hyprpm enable scrolloverview
 ```
 
-### 4. 重载与启动
+### 5. 重载与启动
 重新登录或启动 Hyprland 即可体验完整桌面环境！
 
 ---
@@ -146,6 +165,7 @@ hyprpm enable scrolloverview
   - `dots/.config/hypr/`：Hyprland Lua 配置、快捷键、动画与脚本；
   - `dots/.config/quickshell/ii/`：Quickshell 主 Shell、组件模块、单例服务与辅助工具；
 - `sdata/dist-arch/`：本地自维护的 AUR 包 PKGBUILD 与 patch；
+- `sdata/crates/quickshell-blobs/`：`Caelestia.Blobs` 原生流体形态引擎，包含 Rust 动力学核心、Qt/QML C++ 插件与 SDF shader；
 - `AGENTS.md`：详细的维护与开发规约文档。
 
 > [!IMPORTANT]
@@ -153,6 +173,11 @@ hyprpm enable scrolloverview
 > 修改 Quickshell 组件后，需清理缓存并重载：
 > ```bash
 > rm -rf ~/.cache/quickshell/qmlcache && pkill -x qs && nohup qs -c ii &
+> ```
+>
+> 修改 `sdata/crates/quickshell-blobs/qml-plugin/*.cpp|hpp` 后，还必须先重新执行：
+> ```bash
+> ./dots/.config/quickshell/ii/scripts/build-blobs.sh
 > ```
 
 ---
