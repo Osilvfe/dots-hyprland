@@ -14,6 +14,7 @@ class BlobShape : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(caelestia::blobs::BlobGroup* group READ group WRITE setGroup NOTIFY groupChanged)
     Q_PROPERTY(qreal radius READ radius WRITE setRadius NOTIFY radiusChanged)
+    Q_PROPERTY(bool forceWindowUpdate READ forceWindowUpdate WRITE setForceWindowUpdate NOTIFY forceWindowUpdateChanged)
     Q_PROPERTY(QMatrix4x4 deformMatrix READ deformMatrix NOTIFY deformMatrixChanged)
     Q_PROPERTY(QMatrix4x4 rawDeformMatrix READ rawDeformMatrix NOTIFY rawDeformMatrixChanged)
 
@@ -29,12 +30,16 @@ public:
     [[nodiscard]] qreal radius() const;
     void setRadius(qreal r);
 
+    [[nodiscard]] bool forceWindowUpdate() const;
+    void setForceWindowUpdate(bool enabled);
+
     [[nodiscard]] QMatrix4x4 deformMatrix() const;
     [[nodiscard]] QMatrix4x4 rawDeformMatrix() const;
 
 signals:
     void groupChanged();
     void radiusChanged();
+    void forceWindowUpdateChanged();
     void deformMatrixChanged();
     void rawDeformMatrixChanged();
 
@@ -71,6 +76,7 @@ protected:
 
     BlobGroup* m_group = nullptr;
     qreal m_radius = 0;
+    bool m_forceWindowUpdate = false;
     QMatrix4x4 m_deformMatrix; // identity by default
     QMatrix4x4 m_centeredDeformMatrix;
 
