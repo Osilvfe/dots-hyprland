@@ -402,6 +402,7 @@ Scope {
                 BlobRect {
                     id: overviewBottomPanel
                     group: fluidBlobGroup
+                    forceWindowUpdate: true
                     visible: rootWindow.isCurrentMonitorFocused && (rootWindow.overviewOpen || rootWindow.overviewOffsetScale > 0.001)
                     z: 60
 
