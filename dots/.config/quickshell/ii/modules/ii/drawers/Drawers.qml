@@ -126,6 +126,11 @@ Scope {
                         return GlobalStates.mediaButtonScreen.name === drawerLoader.modelData.name;
                     return isCurrentMonitorFocused;
                 }
+                readonly property bool isCurrentTrayScreen: {
+                    if (GlobalStates.trayButtonScreen)
+                        return GlobalStates.trayButtonScreen.name === drawerLoader.modelData.name;
+                    return isCurrentMonitorFocused;
+                }
 
                 // 抽屉与弹出气泡展开状态联动 GlobalStates (仅在当前聚焦/目标显示器展开)
                 readonly property bool sidebarOpen: GlobalStates.sidebarRightOpen && isCurrentMonitorFocused
@@ -143,8 +148,14 @@ Scope {
                 readonly property bool wallpaperSelectorOpen: GlobalStates.wallpaperSelectorOpen && isCurrentMonitorFocused
                 property real wallpaperOffsetScale: wallpaperSelectorOpen ? 1.0 : 0.0
 
+                readonly property bool trayOverflowOpen: GlobalStates.trayOverflowOpen && isCurrentTrayScreen
+                property real trayOffsetScale: trayOverflowOpen ? 1.0 : 0.0
+
+                readonly property bool osdOpen: GlobalStates.osdVolumeOpen && isCurrentMonitorFocused
+                property real osdOffsetScale: osdOpen ? 1.0 : 0.0
+
                 // 动画运行状态指示器 (用于开启 GPU 纹理加速)
-                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running || mediaOffsetAnim.running || wallpaperOffsetAnim.running
+                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running || mediaOffsetAnim.running || wallpaperOffsetAnim.running || trayOffsetAnim.running || osdOffsetAnim.running
 
                 Behavior on drawerOffsetScale {
                     NumberAnimation {
@@ -186,6 +197,24 @@ Scope {
                     NumberAnimation {
                         id: wallpaperOffsetAnim
                         duration: 350
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 0.5
+                    }
+                }
+
+                Behavior on trayOffsetScale {
+                    NumberAnimation {
+                        id: trayOffsetAnim
+                        duration: 300
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 0.5
+                    }
+                }
+
+                Behavior on osdOffsetScale {
+                    NumberAnimation {
+                        id: osdOffsetAnim
+                        duration: 280
                         easing.type: Easing.OutBack
                         easing.overshoot: 0.5
                     }
@@ -235,15 +264,31 @@ Scope {
                         height: rootWindow.wallpaperSelectorOpen ? wallpaperSelectorPanel.targetHeight : 0
                     }
 
-                    // 6. 抽屉与浮层展开时，覆盖中央工作区遮罩用于点击收起
+                    // 6. 系统托盘折叠溢出气泡区域：展开状态下覆盖最终静止目标矩形
+                    Region {
+                        x: trayPopoutPanel.targetX
+                        y: rootWindow.frameTop
+                        width: rootWindow.trayOverflowOpen ? trayPopoutPanel.targetWidth : 0
+                        height: rootWindow.trayOverflowOpen ? trayPopoutPanel.targetHeight : 0
+                    }
+
+                    // 7. 音量/亮度/Gamma OSD 药丸区域：展开状态下覆盖最终静止目标矩形
+                    Region {
+                        x: osdPopoutPanel.targetX
+                        y: rootWindow.frameTop
+                        width: rootWindow.osdOpen ? osdPopoutPanel.targetWidth : 0
+                        height: rootWindow.osdOpen ? osdPopoutPanel.targetHeight : 0
+                    }
+
+                    // 8. 抽屉与浮层展开时，覆盖中央工作区遮罩用于点击收起
                     Region {
                         x: rootWindow.frameLeft + (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)
                         y: rootWindow.frameTop
-                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen || rootWindow.wallpaperSelectorOpen) ?
+                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen || rootWindow.wallpaperSelectorOpen || rootWindow.trayOverflowOpen) ?
                                Math.max(0, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight 
                                            - (rootWindow.sidebarOpen ? drawerPanel.targetWidth : 0)
                                            - (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)) : 0
-                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen || rootWindow.wallpaperSelectorOpen) ?
+                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen || rootWindow.wallpaperSelectorOpen || rootWindow.trayOverflowOpen) ?
                                 Math.max(0, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) : 0
                     }
                 }
@@ -254,13 +299,15 @@ Scope {
                     enabled: (rootWindow.sidebarOpen && rootWindow.drawerOffsetScale > 0.05) ||
                              (rootWindow.sidebarLeftOpen && rootWindow.drawerLeftOffsetScale > 0.05) ||
                              (rootWindow.mediaControlsOpen && rootWindow.mediaOffsetScale > 0.05) ||
-                             (rootWindow.wallpaperSelectorOpen && rootWindow.wallpaperOffsetScale > 0.05)
+                             (rootWindow.wallpaperSelectorOpen && rootWindow.wallpaperOffsetScale > 0.05) ||
+                             (rootWindow.trayOverflowOpen && rootWindow.trayOffsetScale > 0.05)
                     z: 50
                     onClicked: {
                         GlobalStates.sidebarRightOpen = false;
                         GlobalStates.sidebarLeftOpen = false;
                         GlobalStates.mediaControlsOpen = false;
                         GlobalStates.wallpaperSelectorOpen = false;
+                        GlobalStates.trayOverflowOpen = false;
                     }
                 }
 
@@ -457,9 +504,129 @@ Scope {
                     damping: 15.0
                 }
 
+                // 7. 音量/亮度/Gamma 中央流体药丸 (OSD Fluid Popout)
+                // 自顶栏正中央向下拔出熔出，呈现全圆角流体药丸，超时自动缩回顶栏底座
+                BlobRect {
+                    id: osdPopoutPanel
+                    group: fluidBlobGroup
+                    z: 60
+
+                    readonly property real targetWidth: Appearance.sizes.osdWidth
+                    readonly property real targetHeight: Math.min(100, Math.max(52, osdContentLoader.item?.implicitHeight ?? 52))
+
+                    readonly property real targetX: (rootWindow.width - targetWidth) / 2
+                    readonly property real targetY: rootWindow.frameTop - 10
+                    readonly property real hiddenY: -targetHeight - rootWindow.smoothVal - 15
+
+                    width: targetWidth
+                    height: targetHeight
+
+                    x: targetX
+                    y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.osdOffsetScale)
+
+                    // 全圆角药丸
+                    radius: 26
+                    bottomLeftRadius: 26
+                    bottomRightRadius: 26
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.osdOffsetScale / 0.35)) * 26
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.osdOffsetScale / 0.35)) * 26
+
+                    deformScale: 0.00001
+                    stiffness: 260.0
+                    damping: 16.0
+                }
+
+                // 8. 系统托盘折叠溢出气泡 (SysTray Fluid Popout)
+                // 自顶栏托盘折叠箭头处向下熔出展开，与顶栏和右侧画框在 GPU 着色器中拉出双向波浪
+                BlobRect {
+                    id: trayPopoutPanel
+                    group: fluidBlobGroup
+                    z: 60
+
+                    readonly property real targetWidth: Math.min(320, Math.max(120, trayContentLoader.item?.contentWidth ?? 160))
+                    readonly property real targetHeight: Math.min(300, Math.max(50, trayContentLoader.item?.contentHeight ?? 60))
+
+                    // 水平位置：跟随托盘箭头点击中心（trayCenterX），且具备右侧与左侧边界保护
+                    readonly property real targetX: {
+                        if (GlobalStates.trayCenterX > 0) {
+                            const minLeft = rootWindow.frameLeft + 10;
+                            const maxLeft = Math.max(minLeft, rootWindow.width - rootWindow.frameRight - targetWidth - 10);
+                            const targetLeft = GlobalStates.trayCenterX - (targetWidth / 2);
+                            return Math.max(minLeft, Math.min(maxLeft, targetLeft));
+                        }
+                        return rootWindow.width - rootWindow.frameRight - targetWidth - 20;
+                    }
+
+                    readonly property real targetY: rootWindow.frameTop - 10
+                    readonly property real hiddenY: -targetHeight - rootWindow.smoothVal - 15
+
+                    width: targetWidth
+                    height: targetHeight
+
+                    x: targetX
+                    y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.trayOffsetScale)
+
+                    // 四角大圆角胶囊
+                    radius: 24
+                    bottomLeftRadius: 24
+                    bottomRightRadius: 24
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.trayOffsetScale / 0.35)) * 24
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.trayOffsetScale / 0.35)) * 24
+
+                    deformScale: 0.00001
+                    stiffness: 240.0
+                    damping: 15.0
+                }
+
                 // ==========================================
                 // 3. 独立上层侧边栏交互与内容层（后渲染/延后淡入，与底层流体浮岛联动）
                 // ==========================================
+                // 音量/亮度/Gamma OSD 内容层 (后渲染延后淡入，与底层流体药丸联动)
+                Item {
+                    id: osdContentLayer
+                    z: 65
+                    x: osdPopoutPanel.x
+                    y: osdPopoutPanel.y + 10 // 抵消深入顶栏的 10px
+                    width: osdPopoutPanel.width
+                    height: osdPopoutPanel.height - 10
+
+                    // 视觉核心：后渲染/延后渐入感知
+                    opacity: Math.max(0, Math.min(1, (rootWindow.osdOffsetScale - 0.35) / 0.65))
+                    visible: rootWindow.osdOffsetScale > 0.001
+
+                    layer.enabled: rootWindow.isAnimating
+
+                    Loader {
+                        id: osdContentLoader
+                        anchors.fill: parent
+                        active: rootWindow.osdOffsetScale > 0.001
+                        source: "../onScreenDisplay/OsdContent.qml"
+                    }
+                }
+
+                // 托盘溢出内容层 (后渲染延后淡入，与底层流体气泡联动)
+                Item {
+                    id: trayContentLayer
+                    z: 65
+                    x: trayPopoutPanel.x
+                    y: trayPopoutPanel.y + 10 // 抵消深入顶栏的 10px
+                    width: trayPopoutPanel.width
+                    height: trayPopoutPanel.height - 10
+
+                    // 视觉核心：后渲染/延后渐入感知
+                    opacity: Math.max(0, Math.min(1, (rootWindow.trayOffsetScale - 0.35) / 0.65))
+                    visible: rootWindow.trayOffsetScale > 0.001
+
+                    layer.enabled: rootWindow.isAnimating
+
+                    Loader {
+                        id: trayContentLoader
+                        anchors.fill: parent
+                        active: rootWindow.trayOffsetScale > 0.001
+                        source: "../bar/SysTrayOverflowContent.qml"
+                    }
+                }
+
                 // 壁纸选择器内容层 (后渲染延后淡入，与底层流体画卷联动)
                 Item {
                     id: wallpaperContentLayer

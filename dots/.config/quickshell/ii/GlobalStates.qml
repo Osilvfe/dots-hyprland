@@ -25,8 +25,13 @@ Singleton {
     property bool mediaControlsOpen: false
     property real mediaCenterX: 0
     property var mediaButtonScreen: null
+    property bool trayOverflowOpen: false
+    property real trayCenterX: 0
+    property var trayButtonScreen: null
     property bool osdBrightnessOpen: false
     property bool osdVolumeOpen: false
+    property string osdIndicator: "volume"
+    property string osdProtectionMessage: ""
     property bool oskOpen: false
     property bool overlayOpen: false
     property bool overviewOpen: false
@@ -80,6 +85,12 @@ Singleton {
             root.superReleaseMightTrigger = false;
         } else {
             root.mediaButtonScreen = null;
+        }
+    }
+
+    onTrayOverflowOpenChanged: {
+        if (!root.trayOverflowOpen) {
+            root.trayButtonScreen = null;
         }
     }
 

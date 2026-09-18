@@ -46,6 +46,27 @@ Item {
         focusGrab.active = false;
     }
 
+    function updateTrayPosition() {
+        try {
+            let pos = trayOverflowButton.mapToItem(null, trayOverflowButton.width / 2, trayOverflowButton.height / 2);
+            if (pos && typeof pos.x === "number" && !isNaN(pos.x)) {
+                GlobalStates.trayCenterX = pos.x;
+                GlobalStates.trayButtonScreen = root.QsWindow?.window?.screen ?? null;
+            }
+        } catch (e) {
+            console.warn("Error updating tray position:", e);
+        }
+    }
+
+    Connections {
+        target: GlobalStates
+        function onTrayOverflowOpenChanged() {
+            if (root.trayOverflowOpen !== GlobalStates.trayOverflowOpen) {
+                root.trayOverflowOpen = GlobalStates.trayOverflowOpen;
+            }
+        }
+    }
+
     onTrayOverflowOpenChanged: {
         if (root.trayOverflowOpen) {
             root.grabFocus();
@@ -58,6 +79,7 @@ Item {
         windows: [trayOverflowLayout.QsWindow?.window, root.activeMenu]
         onCleared: {
             root.trayOverflowOpen = false;
+            GlobalStates.trayOverflowOpen = false;
             if (root.activeMenu) {
                 root.activeMenu.close();
                 root.activeMenu = null;
@@ -78,7 +100,11 @@ Item {
             toggled: root.trayOverflowOpen
             property bool containsMouse: hovered
 
-            downAction: () => root.trayOverflowOpen = !root.trayOverflowOpen
+            downAction: () => {
+                root.updateTrayPosition();
+                root.trayOverflowOpen = !root.trayOverflowOpen;
+                GlobalStates.trayOverflowOpen = root.trayOverflowOpen;
+            }
 
             Layout.fillHeight: !root.vertical
             Layout.fillWidth: root.vertical
@@ -104,7 +130,7 @@ Item {
             StyledPopup {
                 id: overflowPopup
                 hoverTarget: trayOverflowButton
-                active: root.trayOverflowOpen && root.unpinnedItems.length > 0
+                active: root.trayOverflowOpen && root.unpinnedItems.length > 0 && !(Config.options.appearance.fluidMorphing.enable ?? false)
 
                 GridLayout {
                     id: trayOverflowLayout
