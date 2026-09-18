@@ -150,9 +150,11 @@ Item { // Wrapper
 
         Behavior on height {
             id: searchHeightBehavior
-            enabled: GlobalStates.overviewOpen
+            // In fluid mode the Blob panel is the visual transition. Feeding it
+            // an already-animated height makes the jelly chase a moving target.
+            enabled: GlobalStates.overviewOpen && !root.isFluid
             NumberAnimation {
-                duration: root.isFluid ? 60 : 90
+                duration: 90
                 easing.type: Easing.OutCubic
             }
         }
