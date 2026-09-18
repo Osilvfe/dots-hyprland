@@ -62,7 +62,9 @@
 - 底层使用 Rust 原生重构（`sdata/crates/quickshell-blobs/`）：
   - `physics.rs`：半隐式阻尼弹簧积分（Underdamped Spring）与应变张量拉伸形变（Jelly Physics），零速度收敛保护，绝不发散或空转
   - `ubo.rs`：1440 字节连续内存的严格 std140 内存对齐打包，与 GPU 着色器零拷贝安全绑定
-- 构建与部署：通过 `dots/.config/quickshell/ii/scripts/build-blobs.sh` 编译并安装至 `~/.local/lib/qt6/qml/Caelestia/Blobs`，QML 中直接 `import Caelestia.Blobs`
+- 构建与部署：通过 `dots/.config/quickshell/ii/scripts/build-blobs.sh` 编译并安装至 `~/.local/lib/qt6/qml/Caelestia/Blobs`，QML 中直接 `import Caelestia.Blobs`。修改 `qml-plugin/*.cpp|hpp` 后必须重新执行该脚本；仅重启 Quickshell 不会替换已安装的原生插件。
+- `BlobShape.forceWindowUpdate`：可选的窗口级重绘开关，默认 `false`。启用后，当该 Blob 的几何变化触发 `BlobGroup::markShapeDirty()`（或组级 `markDirty()` 命中已启用的 shape）时，除常规 `QQuickItem::polish()/update()` 外还会调用所在 `QQuickWindow::update()`，显式请求下一帧。用于处理 layer-shell/空闲 render loop 中“状态已经更新但画面停在旧帧，直到鼠标/键盘事件后才刷新”的场景。
+- `forceWindowUpdate` **按需使用，不要全局开启**：持续动画中的 Blob 本身已有帧驱动，额外窗口级刷新只会制造冗余提交。优先只给“内容驱动几何变化、变化频率不高、且窗口可能处于空闲状态”的 Blob 打开。当前仅 `Drawers.qml` 的 `overviewBottomPanel` 设置 `forceWindowUpdate: true`，因为搜索结果会动态改变面板高度，而此时可能没有其它输入/动画事件持续唤醒 scene graph。
 - 一体化画框与顶栏融合（`Drawers.qml`）：基于方案一「无损借壳复用」，100% 保留原有 `BarContent.qml` 业务；全屏 `BlobInvertedRect` 提供统一四周与顶栏内凹底座，工作区通过 `Intersection.Xor` 穿透遮罩直通桌面窗口；右侧抽屉展开时与顶栏下沿丝滑粘连；通过 `Config.options.appearance.fluidMorphing.enable` 实现渐进式开关，兼容原生 `sidebarRight` 与 `bar` 的 IPC/快捷键
 - 测试沙盒：`dots/.config/quickshell/ii/modules/ii/bar/test_blob.qml`（Metaball 特性调节）与 `dots/.config/quickshell/ii/modules/ii/drawers/DrawersSandbox.qml`（画框与抽屉粘连沙盒）
 
@@ -154,6 +156,7 @@
 
 ### Quickshell/II 开发经验
 - **qmlcache 缓存**：`~/.cache/quickshell/qmlcache/` 缓存 import 模块编译结果，**自动 reload 不会失效**。修改 import 的组件后必须 `rm -rf ~/.cache/quickshell/qmlcache` + 重启 qs（`pkill -x qs; nohup qs -c ii &`）
+- **Blob 画面“鼠标一动才刷新”**：若 QML 属性/几何已经变化，但 `Caelestia.Blobs` 画面只有在鼠标移动或其它输入事件后才追上，优先判断为窗口 render loop 未主动产生下一帧，而不是继续调 QML 动画时长、`contentHeight` 或 Rust 弹簧参数。对少量内容驱动、低频变化的 shape 使用 `forceWindowUpdate: true`；不要为了规避该问题给整个 BlobGroup 全局强制刷新。
 - **pgrep 自匹配**：`bash -c` 里 `pgrep -f 'pattern'` 匹配 bash 自身；用 `pgrep -x <进程名>`（精确匹配）
 - **组件 import 归属**：`PanelWindow`/`GlobalShortcut`=`Quickshell`(+`Quickshell.Hyprland`)；`WlrLayershell`=`Quickshell.Wayland`；`IpcHandler`=`Quickshell.Io`；`Translation`=`qs.services`
 - **Repeater 限制**：JS 对象数组作 model 不创建 delegate（用 ListModel/字符串数组）；QtQuick.Controls 组件作 delegate 动态创建失败（用 Rectangle+MouseArea）
