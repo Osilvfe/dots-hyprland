@@ -177,7 +177,6 @@ void main() {
         float dOuter = sdBox(pixel, invertedOuter.xy, invertedOuter.zw) - 1.0;
         float dInner = sdRoundedBox4(pixel, invertedInner.xy, invertedInner.zw, invertedRadii);
 
-        // Border sinks: track the opposite rect edge, clamped to border thickness
         float innerTop = invertedInner.y - invertedInner.w;
         float innerBot = invertedInner.y + invertedInner.w;
         float innerLeft = invertedInner.x - invertedInner.z;
@@ -186,57 +185,6 @@ void main() {
         float outerBot = invertedOuter.y + invertedOuter.w;
         float outerLeft = invertedOuter.x - invertedOuter.z;
         float outerRight = invertedOuter.x + invertedOuter.z;
-
-        float sinkValue = 0.0;
-        for (int i = 0; i < rectCount; i++) {
-            vec4 rect = rectData[i * 5];
-            vec4 sinkProps = rectData[i * 5 + 1];
-            vec2 sinkSh = rectData[i * 5 + 3].xy;
-
-            // Screen-space center (with offset) and pre-computed AABB half-extents
-            vec2 ctr = rect.xy + sinkProps.yz;
-
-            // Sink onset / residual overlap: how far a rect must penetrate the border before
-            // the inner wall recedes to form its pocket. Too low and the wall recedes faster
-            // than the junction can stay convex, denting the inner edge inward near the rect's
-            // (squared) corners; too high and the rect nestles too deep before the wall yields.
-            // Tuned between the old cubic blend depth (k/6, too shallow) and the circular blend
-            // depth ((sqrt2-1)k): half the circular smin gap-closing distance, (2-sqrt2)k/2.
-            float preOff = smoothFactor * (2.0 - sqrt(2.0)) * 0.5;
-
-            // Top border: track rect's BOTTOM edge, only within border thickness
-            float topPen = clamp(innerTop - (ctr.y + sinkSh.y) - preOff, 0.0, innerTop - outerTop);
-
-            // Bottom border: track rect's TOP edge
-            float botPen = clamp((ctr.y - sinkSh.y) - innerBot - preOff, 0.0, outerBot - innerBot);
-
-            // Left border: track rect's RIGHT edge
-            float leftPen = clamp(innerLeft - (ctr.x + sinkSh.x) - preOff, 0.0, innerLeft - outerLeft);
-
-            // Right border: track rect's LEFT edge
-            float rightPen = clamp((ctr.x - sinkSh.x) - innerRight - preOff, 0.0, outerRight - innerRight);
-
-            // Lateral distance from pixel to rect's extent along each edge
-            float hLat = max(abs(pixel.x - ctr.x) - sinkSh.x, 0.0);
-            float vLat = max(abs(pixel.y - ctr.y) - sinkSh.y, 0.0);
-
-            // Perpendicular proximity: full strength in border, fade inside inner area
-            float topZone = 1.0 - smoothstep(innerTop, innerTop + smoothFactor, pixel.y);
-            float botZone = smoothstep(innerBot - smoothFactor, innerBot, pixel.y);
-            float leftZone = 1.0 - smoothstep(innerLeft, innerLeft + smoothFactor, pixel.x);
-            float rightZone = smoothstep(innerRight - smoothFactor, innerRight, pixel.x);
-
-            float s = smoothFactor * 2.0;
-            float sink = max(
-                max(topPen * smoothstep(s, 0.0, hLat) * topZone,
-                    botPen * smoothstep(s, 0.0, hLat) * botZone),
-                max(leftPen * smoothstep(s, 0.0, vLat) * leftZone,
-                    rightPen * smoothstep(s, 0.0, vLat) * rightZone)
-            );
-            sinkValue = max(sinkValue, sink);
-        }
-
-        dInner -= sinkValue;
 
         // The circular smax fillet has radius kFrame; when it exceeds the border thickness
         // it can't complete inside the border, so the sharp outer-box term bleeds onto the

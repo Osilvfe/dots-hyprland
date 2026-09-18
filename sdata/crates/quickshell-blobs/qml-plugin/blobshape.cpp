@@ -274,8 +274,8 @@ void BlobShape::collectNearbyRects(float pad, QVector<BlobShape*>& rectShapes) {
         if (other->isInvertedRect())
             continue;
 
-        // Skip zero-size rects
-        if (other->width() <= 0 || other->height() <= 0)
+        // Skip zero-size or invisible rects
+        if (other->width() <= 0 || other->height() <= 0 || !other->isVisible())
             continue;
 
         if (isExcluded(other))

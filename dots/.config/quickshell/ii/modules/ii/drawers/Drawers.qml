@@ -320,18 +320,13 @@ Scope {
                     smoothing: rootWindow.smoothVal
                 }
 
-                // 1. 全屏一体化环绕内框 (顶部包含顶栏实体底色，顶端平直无内凹圆角)
+                // 1. 全屏一体化环绕内框 (顶部包含顶栏实体底色)
                 BlobInvertedRect {
                     id: invertedFrame
                     group: fluidBlobGroup
                     anchors.fill: parent
 
                     radius: rootWindow.frameRadius
-                    topLeftRadius: 0
-                    topRightRadius: 0
-                    bottomLeftRadius: rootWindow.frameRadius
-                    bottomRightRadius: rootWindow.frameRadius
-
                     borderLeft: rootWindow.frameLeft
                     borderRight: rootWindow.frameRight
                     borderTop: rootWindow.frameTop
@@ -342,6 +337,7 @@ Scope {
                 BlobRect {
                     id: drawerPanel
                     group: fluidBlobGroup
+                    visible: rootWindow.isCurrentMonitorFocused && (rootWindow.sidebarOpen || rootWindow.drawerOffsetScale > 0.001)
                     z: 60
 
                     readonly property real targetWidth: Appearance.sizes.sidebarWidth
@@ -374,6 +370,7 @@ Scope {
                 BlobRect {
                     id: drawerLeftPanel
                     group: fluidBlobGroup
+                    visible: rootWindow.isCurrentMonitorFocused && (rootWindow.sidebarLeftOpen || rootWindow.drawerLeftOffsetScale > 0.001)
                     z: 60
 
                     readonly property real targetWidth: Appearance.sizes.sidebarWidth
@@ -405,6 +402,7 @@ Scope {
                 BlobRect {
                     id: overviewBottomPanel
                     group: fluidBlobGroup
+                    visible: rootWindow.isCurrentMonitorFocused && (rootWindow.overviewOpen || rootWindow.overviewOffsetScale > 0.001)
                     z: 60
 
                     readonly property real targetWidth: Math.min(680, rootWindow.width - 80)
@@ -437,6 +435,7 @@ Scope {
                 BlobRect {
                     id: mediaPopoutPanel
                     group: fluidBlobGroup
+                    visible: rootWindow.isCurrentScreenTarget && (rootWindow.mediaControlsOpen || rootWindow.mediaOffsetScale > 0.001)
                     z: 60
 
                     readonly property real targetWidth: Appearance.sizes.mediaControlsWidth
@@ -482,6 +481,7 @@ Scope {
                 BlobRect {
                     id: wallpaperSelectorPanel
                     group: fluidBlobGroup
+                    visible: rootWindow.isCurrentMonitorFocused && (rootWindow.wallpaperSelectorOpen || rootWindow.wallpaperOffsetScale > 0.001)
                     z: 60
 
                     readonly property real targetWidth: Math.min(1080, Math.max(800, Appearance.sizes.wallpaperSelectorWidth))
@@ -514,6 +514,7 @@ Scope {
                 BlobRect {
                     id: osdPopoutPanel
                     group: fluidBlobGroup
+                    visible: rootWindow.isCurrentMonitorFocused && (rootWindow.osdOpen || rootWindow.osdOffsetScale > 0.001)
                     z: 60
 
                     readonly property real targetWidth: Appearance.sizes.osdWidth
@@ -546,6 +547,7 @@ Scope {
                 BlobRect {
                     id: trayPopoutPanel
                     group: fluidBlobGroup
+                    visible: rootWindow.isCurrentTrayScreen && (rootWindow.trayOverflowOpen || rootWindow.trayOffsetScale > 0.001)
                     z: 60
 
                     readonly property real targetWidth: Math.min(320, Math.max(120, trayContentLoader.item?.contentWidth ?? 160))
