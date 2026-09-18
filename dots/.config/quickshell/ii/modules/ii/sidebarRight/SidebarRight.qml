@@ -13,6 +13,7 @@ Scope {
 
     PanelWindow {
         id: panelWindow
+        screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
         visible: GlobalStates.sidebarRightOpen
 
         function hide() {

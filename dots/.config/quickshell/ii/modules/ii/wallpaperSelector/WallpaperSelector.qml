@@ -19,6 +19,7 @@ Scope {
 
         sourceComponent: PanelWindow {
             id: panelWindow
+            screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
             readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
             property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
 

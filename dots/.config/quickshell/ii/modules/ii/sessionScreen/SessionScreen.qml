@@ -34,6 +34,7 @@ Scope {
 
         sourceComponent: PanelWindow { // Session menu
             id: sessionRoot
+            screen: root.focusedScreen ?? Quickshell.screens[0]
             visible: sessionLoader.active
             property string subtitle
 

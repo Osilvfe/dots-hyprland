@@ -119,14 +119,15 @@ Scope {
                 readonly property real frameTop: barHeight + gapsOut
                 readonly property real frameBottom: gapsOut
 
-                // 抽屉展开状态联动 GlobalStates
-                readonly property bool sidebarOpen: GlobalStates.sidebarRightOpen
+                readonly property bool isCurrentMonitorFocused: (Hyprland.focusedMonitor?.name === drawerLoader.modelData.name)
+
+                // 抽屉展开状态联动 GlobalStates (仅在当前聚焦显示器展开)
+                readonly property bool sidebarOpen: GlobalStates.sidebarRightOpen && isCurrentMonitorFocused
                 property real drawerOffsetScale: sidebarOpen ? 1.0 : 0.0
 
-                readonly property bool sidebarLeftOpen: GlobalStates.sidebarLeftOpen
+                readonly property bool sidebarLeftOpen: GlobalStates.sidebarLeftOpen && isCurrentMonitorFocused
                 property real drawerLeftOffsetScale: sidebarLeftOpen ? 1.0 : 0.0
 
-                readonly property bool isCurrentMonitorFocused: (Hyprland.focusedMonitor?.name === drawerLoader.modelData.name)
                 readonly property bool overviewOpen: GlobalStates.overviewOpen && isCurrentMonitorFocused
                 property real overviewOffsetScale: overviewOpen ? 1.0 : 0.0
 

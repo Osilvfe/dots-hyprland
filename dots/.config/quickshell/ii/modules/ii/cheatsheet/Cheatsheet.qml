@@ -30,6 +30,7 @@ Scope { // Scope
 
         sourceComponent: PanelWindow { // Window
             id: cheatsheetRoot
+            screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
             visible: cheatsheetLoader.active
 
             anchors {

@@ -98,6 +98,7 @@ Scope {
 
         sourceComponent: PanelWindow {
             id: osdRoot
+            screen: root.focusedScreen ?? Quickshell.screens[0]
             color: "transparent"
 
             Connections {
