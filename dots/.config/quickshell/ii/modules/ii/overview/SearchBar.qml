@@ -14,6 +14,7 @@ RowLayout {
     property bool animateWidth: false
     property alias searchInput: searchInput
     property string searchingText
+    signal navigateResults()
 
     function forceFocus() {
         searchInput.forceActiveFocus();
@@ -96,6 +97,10 @@ RowLayout {
                 const tabbedText = LauncherSearch.results[0].name;
                 LauncherSearch.query = tabbedText;
                 searchInput.text = tabbedText;
+                event.accepted = true;
+            } else if ((event.key === Qt.Key_Up && (Config.options.appearance.fluidMorphing.enable ?? false)) ||
+                       (event.key === Qt.Key_Down && !(Config.options.appearance.fluidMorphing.enable ?? false))) {
+                root.navigateResults();
                 event.accepted = true;
             }
         }

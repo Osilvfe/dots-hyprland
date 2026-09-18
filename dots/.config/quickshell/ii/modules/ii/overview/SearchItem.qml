@@ -215,7 +215,7 @@ RippleButton {
                     model: root.query == root.itemName ? [] : root.urls
                     Favicon {
                         required property var modelData
-                        size: parent.height
+                        size: parent?.height ?? 16
                         url: modelData
                     }
                 }

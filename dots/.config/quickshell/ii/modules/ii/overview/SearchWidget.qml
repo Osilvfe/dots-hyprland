@@ -25,11 +25,14 @@ Item { // Wrapper
     property string searchingText: LauncherSearch.query
     property bool showResults: searchingText != ""
     property bool emojiMode: searchingText.startsWith(Config.options.search.prefix.emojis)
-    implicitWidth: searchWidgetContent.implicitWidth + Appearance.sizes.elevationMargin * 2
-    implicitHeight: searchWidgetContent.implicitHeight + searchBar.verticalPadding * 2 + Appearance.sizes.elevationMargin * 2
+    implicitWidth: searchWidgetContent.implicitWidth + (root.isFluid ? 0 : Appearance.sizes.elevationMargin * 2)
+    implicitHeight: searchWidgetContent.implicitHeight + (root.isFluid ? 0 : (searchBar.verticalPadding * 2 + Appearance.sizes.elevationMargin * 2))
 
     function focusFirstItem() {
-        appResults.currentIndex = 0;
+        if (appResults.count > 0) {
+            appResults.currentIndex = 0;
+            appResults.forceActiveFocus();
+        }
     }
 
     function focusSearchInput() {
@@ -56,7 +59,8 @@ Item { // Wrapper
         if (event.key === Qt.Key_Escape)
             return;
 
-        if (event.key === Qt.Key_Down && searchingText.startsWith(Config.options.search.prefix.clipboard)) {
+        const clipNavKey = root.isFluid ? Qt.Key_Up : Qt.Key_Down;
+        if (event.key === clipNavKey && searchingText.startsWith(Config.options.search.prefix.clipboard)) {
             if (clipboardSearching && !clearResultsBtn.activeFocus) {
                 clearResultsBtn.forceActiveFocus();
                 event.accepted = true;
@@ -123,310 +127,353 @@ Item { // Wrapper
     Rectangle { // Background
         id: searchWidgetContent
         anchors {
-            top: parent.top
+            top: root.isFluid ? undefined : parent.top
+            bottom: root.isFluid ? parent.bottom : undefined
             horizontalCenter: parent.horizontalCenter
             topMargin: root.isFluid ? 0 : Appearance.sizes.elevationMargin
         }
         clip: true
-        implicitWidth: columnLayout.implicitWidth
-        implicitHeight: columnLayout.implicitHeight
-        radius: searchBar.height / 2 + searchBar.verticalPadding
+        implicitWidth: Math.max(searchBarWrapper.implicitWidth, resultsWrapper.implicitWidth)
+        implicitHeight: searchBarWrapper.implicitHeight + (root.showResults ? (separator.height + resultsWrapper.implicitHeight) : 0)
+        radius: 28
         color: root.isFluid ? "transparent" : Appearance.colors.colBackgroundSurfaceContainer
 
         Behavior on implicitHeight {
             id: searchHeightBehavior
-            enabled: GlobalStates.overviewOpen && root.showResults
-            animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
+            enabled: GlobalStates.overviewOpen
+            NumberAnimation {
+                duration: 180
+                easing.type: Easing.OutCubic
+            }
         }
 
-        ColumnLayout {
-            id: columnLayout
+        Item {
+            id: searchBarWrapper
             anchors {
-                top: parent.top
-                horizontalCenter: parent.horizontalCenter
+                left: parent.left
+                right: parent.right
+                top: root.isFluid ? undefined : parent.top
+                bottom: root.isFluid ? parent.bottom : undefined
             }
-            spacing: 0
-
-            // clip: true
-            layer.enabled: true
-            layer.effect: OpacityMask {
-                maskSource: Rectangle {
-                    width: searchWidgetContent.width
-                    height: searchWidgetContent.width
-                    radius: searchWidgetContent.radius
-                }
-            }
+            implicitHeight: searchBar.implicitHeight + searchBar.verticalPadding * 2
+            implicitWidth: searchBar.implicitWidth + 20
 
             SearchBar {
                 id: searchBar
                 property real verticalPadding: 4
-                Layout.fillWidth: true
-                Layout.leftMargin: 10
-                Layout.rightMargin: 4
-                Layout.topMargin: verticalPadding
-                Layout.bottomMargin: verticalPadding
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    verticalCenter: parent.verticalCenter
+                    leftMargin: 10
+                    rightMargin: 4
+                }
                 Synchronizer on searchingText {
                     property alias source: root.searchingText
                 }
-            }
-
-            Rectangle {
-                // Separator
-                visible: root.showResults
-                Layout.fillWidth: true
-                height: 1
-                color: Appearance.colors.colOutlineVariant
-            }
-
-            RowLayout {
-                visible: root.showResults && root.searchingText.startsWith(Config.options.search.prefix.clipboard)
-                Layout.fillWidth: true
-                Layout.leftMargin: 16
-                Layout.rightMargin: 10
-                Layout.topMargin: 6
-                Layout.bottomMargin: 2
-
-                StyledText {
-                    text: Translation.tr("Clipboard")
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    color: Appearance.colors.colSubtext
-                }
-                Item { Layout.fillWidth: true }
-
-                Button {
-                    id: clearResultsBtn
-                    visible: root.clipboardSearching
-                    implicitHeight: 28
-                    hoverEnabled: true
-                    contentItem: StyledText {
-                        text: Translation.tr("Clear results")
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: clearResultsBtn.focus ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle {
-                        radius: Appearance.rounding.small
-                        color: clearResultsBtn.down ? Appearance.colors.colPrimaryContainerActive : (clearResultsBtn.hovered ? Appearance.colors.colPrimaryContainer : ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1))
-                        border.width: clearResultsBtn.focus ? 2 : 0
-                        border.color: Appearance.colors.colSecondary
-                        Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-                    }
-                    onClicked: {
-                        const query = StringUtils.cleanPrefix(root.searchingText, Config.options.search.prefix.clipboard);
-                        Cliphist.deleteEntries(Cliphist.fuzzyQuery(query));
-                        root.focusSearchInput();
-                    }
-                    KeyNavigation.right: clearClipboardBtn
-                    KeyNavigation.down: appResults
-                }
-
-                Button {
-                    id: clearClipboardBtn
-                    implicitHeight: 28
-                    hoverEnabled: true
-                    contentItem: StyledText {
-                        text: Translation.tr("Clear all")
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: clearClipboardBtn.focus ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                    background: Rectangle {
-                        radius: Appearance.rounding.small
-                        color: clearClipboardBtn.down ? Appearance.colors.colPrimaryContainerActive : (clearClipboardBtn.hovered ? Appearance.colors.colPrimaryContainer : ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1))
-                        border.width: clearClipboardBtn.focus ? 2 : 0
-                        border.color: Appearance.colors.colSecondary
-                        Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-                    }
-                    onClicked: {
-                        Cliphist.wipe();
-                        root.focusSearchInput();
-                    }
-                    KeyNavigation.left: root.clipboardSearching ? clearResultsBtn : searchBar
-                    KeyNavigation.down: appResults
+                onNavigateResults: {
+                    root.focusFirstItem();
                 }
             }
+        }
 
-            Item {
-                visible: root.showResults && root.searchingText.startsWith(Config.options.search.prefix.clipboard) && appResults.count === 0
-                Layout.fillWidth: true
-                implicitHeight: 120
-                readonly property bool hasEntries: Cliphist.entries.length > 0
-                readonly property bool isSearching: hasEntries && root.clipboardSearching
+        Rectangle {
+            id: separator
+            visible: root.showResults
+            height: 1
+            color: Appearance.colors.colOutlineVariant
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: root.isFluid ? undefined : searchBarWrapper.bottom
+                bottom: root.isFluid ? searchBarWrapper.top : undefined
+            }
+        }
 
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 5
-                    MaterialSymbol {
-                        Layout.alignment: Qt.AlignHCenter
-                        iconSize: 48
-                        color: Appearance.m3colors.m3outline
-                        text: parent.parent.isSearching ? "search_off" : "content_paste"
+        Item {
+            id: resultsWrapper
+            visible: root.showResults
+            clip: true
+            anchors {
+                left: parent.left
+                right: parent.right
+                top: root.isFluid ? parent.top : separator.bottom
+                bottom: root.isFluid ? separator.top : parent.bottom
+            }
+            implicitHeight: resultsColumn.implicitHeight
+            implicitWidth: resultsColumn.implicitWidth
+
+            ColumnLayout {
+                id: resultsColumn
+                anchors.fill: parent
+                spacing: 0
+
+                layer.enabled: !root.isFluid
+                layer.effect: OpacityMask {
+                    maskSource: Rectangle {
+                        width: searchWidgetContent.width
+                        height: searchWidgetContent.height
+                        radius: searchWidgetContent.radius
                     }
+                }
+
+                RowLayout {
+                    id: clipboardHeader
+                    visible: root.showResults && root.searchingText.startsWith(Config.options.search.prefix.clipboard)
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 10
+                    Layout.topMargin: 6
+                    Layout.bottomMargin: 2
+
                     StyledText {
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: Appearance.font.pixelSize.normal
-                        font.weight: Font.DemiBold
-                        color: Appearance.m3colors.m3outline
-                        horizontalAlignment: Text.AlignHCenter
-                        text: parent.parent.isSearching ? Translation.tr("No results found") : Translation.tr("Clipboard is empty")
-                    }
-                    StyledText {
-                        Layout.alignment: Qt.AlignHCenter
+                        text: Translation.tr("Clipboard")
                         font.pixelSize: Appearance.font.pixelSize.small
-                        color: Appearance.m3colors.m3outline
-                        horizontalAlignment: Text.AlignHCenter
-                        text: parent.parent.isSearching ? Translation.tr("Try a different search") : Translation.tr("Copy something to see it here")
+                        color: Appearance.colors.colSubtext
                     }
-                }
-            }
+                    Item { Layout.fillWidth: true }
 
-            ListView { // App results
-                id: appResults
-                visible: root.showResults && !root.emojiMode
-                Layout.fillWidth: true
-                implicitHeight: Math.min(600, appResults.contentHeight + topMargin + bottomMargin)
-                clip: true
-                topMargin: 10
-                bottomMargin: 10
-                spacing: 2
-                KeyNavigation.up: searchBar
-                highlightMoveDuration: 100
-
-                onFocusChanged: {
-                    if (focus)
-                        appResults.currentIndex = 1;
-                }
-
-                Connections {
-                    target: root
-                    function onSearchingTextChanged() {
-                        if (appResults.count > 0)
-                            appResults.currentIndex = 0;
-                    }
-                }
-
-                Timer {
-                    id: debounceTimer
-                    interval: root.typingDebounceInterval
-                    onTriggered: {
-                        resultModel.values = LauncherSearch.results ?? [];
-                    }
-                }
-
-                Connections {
-                    target: LauncherSearch
-                    function onResultsChanged() {
-                        resultModel.values = LauncherSearch.results.slice(0, root.typingResultLimit);
-                        root.focusFirstItem();
-                        debounceTimer.restart();
-                    }
-                }
-
-                model: ScriptModel {
-                    id: resultModel
-                    objectProp: "key"
-                }
-
-                delegate: SearchItem {
-                    id: searchItem
-                    // The selectable item for each search result
-                    required property var modelData
-                    required property int index
-                    anchors.left: parent?.left
-                    anchors.right: parent?.right
-                    entry: modelData
-                    clearBtnHasFocus: root.clearBtnHasFocus
-                    query: StringUtils.cleanOnePrefix(root.searchingText, [Config.options.search.prefix.action, Config.options.search.prefix.app, Config.options.search.prefix.clipboard, Config.options.search.prefix.emojis, Config.options.search.prefix.math, Config.options.search.prefix.shellCommand, Config.options.search.prefix.webSearch])
-
-                    Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Tab) {
-                            if (LauncherSearch.results.length === 0)
-                                return;
-                            const tabbedText = searchItem.modelData.name;
-                            LauncherSearch.query = tabbedText;
-                            searchBar.searchInput.text = tabbedText;
-                            event.accepted = true;
+                    Button {
+                        id: clearResultsBtn
+                        visible: root.clipboardSearching
+                        implicitHeight: 28
+                        hoverEnabled: true
+                        contentItem: StyledText {
+                            text: Translation.tr("Clear results")
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: clearResultsBtn.focus ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            radius: Appearance.rounding.small
+                            color: clearResultsBtn.down ? Appearance.colors.colPrimaryContainerActive : (clearResultsBtn.hovered ? Appearance.colors.colPrimaryContainer : ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1))
+                            border.width: clearResultsBtn.focus ? 2 : 0
+                            border.color: Appearance.colors.colSecondary
+                            Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+                        }
+                        onClicked: {
+                            const query = StringUtils.cleanPrefix(root.searchingText, Config.options.search.prefix.clipboard);
+                            Cliphist.deleteEntries(Cliphist.fuzzyQuery(query));
                             root.focusSearchInput();
-                        } else if (event.key === Qt.Key_Up && searchItem.index === 0 && root.searchingText.startsWith(Config.options.search.prefix.clipboard)) {
-                            (root.clipboardSearching ? clearResultsBtn : clearClipboardBtn).forceActiveFocus();
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Down && searchItem.index === searchItem.ListView.view.count - 1) {
-                            event.accepted = true;
+                        }
+                        KeyNavigation.right: clearClipboardBtn
+                        KeyNavigation.down: appResults
+                    }
+
+                    Button {
+                        id: clearClipboardBtn
+                        implicitHeight: 28
+                        hoverEnabled: true
+                        contentItem: StyledText {
+                            text: Translation.tr("Clear all")
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: clearClipboardBtn.focus ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            radius: Appearance.rounding.small
+                            color: clearClipboardBtn.down ? Appearance.colors.colPrimaryContainerActive : (clearClipboardBtn.hovered ? Appearance.colors.colPrimaryContainer : ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 1))
+                            border.width: clearClipboardBtn.focus ? 2 : 0
+                            border.color: Appearance.colors.colSecondary
+                            Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+                        }
+                        onClicked: {
+                            Cliphist.wipe();
+                            root.focusSearchInput();
+                        }
+                        KeyNavigation.left: root.clipboardSearching ? clearResultsBtn : searchBar
+                        KeyNavigation.down: appResults
+                    }
+                }
+
+                Item {
+                    id: clipboardEmpty
+                    visible: root.showResults && root.searchingText.startsWith(Config.options.search.prefix.clipboard) && appResults.count === 0
+                    Layout.fillWidth: true
+                    implicitHeight: 120
+                    readonly property bool hasEntries: Cliphist.entries.length > 0
+                    readonly property bool isSearching: hasEntries && root.clipboardSearching
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        spacing: 5
+                        MaterialSymbol {
+                            Layout.alignment: Qt.AlignHCenter
+                            iconSize: 48
+                            color: Appearance.m3colors.m3outline
+                            text: parent.parent.isSearching ? "search_off" : "content_paste"
+                        }
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.DemiBold
+                            color: Appearance.m3colors.m3outline
+                            horizontalAlignment: Text.AlignHCenter
+                            text: parent.parent.isSearching ? Translation.tr("No results found") : Translation.tr("Clipboard is empty")
+                        }
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: Appearance.m3colors.m3outline
+                            horizontalAlignment: Text.AlignHCenter
+                            text: parent.parent.isSearching ? Translation.tr("Try a different search") : Translation.tr("Copy something to see it here")
                         }
                     }
                 }
-            }
 
-            GridView { // Emoji results (grid picker)
-                id: emojiGrid
-                visible: root.showResults && root.emojiMode
-                Layout.fillWidth: true
-                Layout.preferredHeight: 360
-                clip: true
-                topMargin: 10
-                bottomMargin: 10
-                cellWidth: 56
-                cellHeight: 56
-                flickableDirection: Flickable.VerticalFlick
-                boundsBehavior: Flickable.StopAtBounds
-                KeyNavigation.up: searchBar
-                highlightMoveDuration: 100
+                ListView { // App results
+                    id: appResults
+                    visible: root.showResults && !root.emojiMode && !clipboardEmpty.visible
+                    Layout.fillWidth: true
+                    implicitHeight: Math.min(500, appResults.contentHeight + topMargin + bottomMargin)
+                    clip: true
+                    topMargin: 8
+                    bottomMargin: 8
+                    spacing: 2
+                    KeyNavigation.up: root.isFluid ? null : searchBar
+                    KeyNavigation.down: root.isFluid ? searchBar : null
+                    highlightMoveDuration: 100
 
-                Connections {
-                    target: root
-                    function onSearchingTextChanged() {
-                        if (emojiGrid.count > 0)
-                            emojiGrid.currentIndex = 0;
-                        emojiDebounce.restart();
+                    onFocusChanged: {
+                        if (focus)
+                            appResults.currentIndex = 1;
+                    }
+
+                    Connections {
+                        target: root
+                        function onSearchingTextChanged() {
+                            if (appResults.count > 0)
+                                appResults.currentIndex = 0;
+                        }
+                    }
+
+                    Timer {
+                        id: debounceTimer
+                        interval: root.typingDebounceInterval
+                        onTriggered: {
+                            resultModel.values = LauncherSearch.results ?? [];
+                        }
+                    }
+
+                    Connections {
+                        target: LauncherSearch
+                        function onResultsChanged() {
+                            resultModel.values = LauncherSearch.results.slice(0, root.typingResultLimit);
+                            root.focusFirstItem();
+                            debounceTimer.restart();
+                        }
+                    }
+
+                    model: ScriptModel {
+                        id: resultModel
+                        objectProp: "key"
+                    }
+
+                    delegate: SearchItem {
+                        id: searchItem
+                        // The selectable item for each search result
+                        required property var modelData
+                        required property int index
+                        anchors.left: parent?.left
+                        anchors.right: parent?.right
+                        entry: modelData
+                        clearBtnHasFocus: root.clearBtnHasFocus
+                        query: StringUtils.cleanOnePrefix(root.searchingText, [Config.options.search.prefix.action, Config.options.search.prefix.app, Config.options.search.prefix.clipboard, Config.options.search.prefix.emojis, Config.options.search.prefix.math, Config.options.search.prefix.shellCommand, Config.options.search.prefix.webSearch])
+
+                        Keys.onPressed: event => {
+                            if (event.key === Qt.Key_Tab) {
+                                if (LauncherSearch.results.length === 0)
+                                    return;
+                                const tabbedText = searchItem.modelData.name;
+                                LauncherSearch.query = tabbedText;
+                                searchBar.searchInput.text = tabbedText;
+                                event.accepted = true;
+                                root.focusSearchInput();
+                            } else if (event.key === Qt.Key_Up && searchItem.index === 0 && root.searchingText.startsWith(Config.options.search.prefix.clipboard)) {
+                                (root.clipboardSearching ? clearResultsBtn : clearClipboardBtn).forceActiveFocus();
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Down && searchItem.index === searchItem.ListView.view.count - 1) {
+                                if (root.isFluid) {
+                                    root.focusSearchInput();
+                                }
+                                event.accepted = true;
+                            }
+                        }
                     }
                 }
 
-                Timer {
-                    id: emojiDebounce
-                    interval: root.typingDebounceInterval
-                    onTriggered: {
-                        emojiResultModel.values = LauncherSearch.results.slice(0, 300);
-                    }
-                }
+                GridView { // Emoji results (grid picker)
+                    id: emojiGrid
+                    visible: root.showResults && root.emojiMode
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 360
+                    clip: true
+                    topMargin: 10
+                    bottomMargin: 10
+                    cellWidth: 56
+                    cellHeight: 56
+                    flickableDirection: Flickable.VerticalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    KeyNavigation.up: root.isFluid ? null : searchBar
+                    KeyNavigation.down: root.isFluid ? searchBar : null
+                    highlightMoveDuration: 100
 
-                Connections {
-                    target: LauncherSearch
-                    function onResultsChanged() {
-                        emojiDebounce.restart();
-                    }
-                }
-
-                model: ScriptModel {
-                    id: emojiResultModel
-                    objectProp: "key"
-                }
-
-                delegate: RippleButton {
-                    id: emojiCell
-                    required property var modelData
-                    implicitWidth: emojiGrid.cellWidth - 4
-                    implicitHeight: emojiGrid.cellHeight - 4
-                    buttonRadius: Appearance.rounding.normal
-                    colBackgroundHover: Appearance.colors.colLayer2Hover
-                    colRipple: Appearance.colors.colLayer2Active
-
-                    contentItem: StyledText {
-                        anchors.centerIn: parent
-                        text: modelData.iconName ?? ""
-                        font.pixelSize: Appearance.font.pixelSize.huge + 6
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
+                    Connections {
+                        target: root
+                        function onSearchingTextChanged() {
+                            if (emojiGrid.count > 0)
+                                emojiGrid.currentIndex = 0;
+                            emojiDebounce.restart();
+                        }
                     }
 
-                    onClicked: {
-                        GlobalStates.overviewOpen = false
-                        modelData.execute()
+                    Timer {
+                        id: emojiDebounce
+                        interval: root.typingDebounceInterval
+                        onTriggered: {
+                            emojiResultModel.values = LauncherSearch.results.slice(0, 300);
+                        }
                     }
 
-                    StyledToolTip {
-                        text: modelData.name ?? ""
+                    Connections {
+                        target: LauncherSearch
+                        function onResultsChanged() {
+                            emojiDebounce.restart();
+                        }
+                    }
+
+                    model: ScriptModel {
+                        id: emojiResultModel
+                        objectProp: "key"
+                    }
+
+                    delegate: RippleButton {
+                        id: emojiCell
+                        required property var modelData
+                        implicitWidth: emojiGrid.cellWidth - 4
+                        implicitHeight: emojiGrid.cellHeight - 4
+                        buttonRadius: Appearance.rounding.normal
+                        colBackgroundHover: Appearance.colors.colLayer2Hover
+                        colRipple: Appearance.colors.colLayer2Active
+
+                        contentItem: StyledText {
+                            anchors.centerIn: parent
+                            text: modelData.iconName ?? ""
+                            font.pixelSize: Appearance.font.pixelSize.huge + 6
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            GlobalStates.overviewOpen = false
+                            modelData.execute()
+                        }
+
+                        StyledToolTip {
+                            text: modelData.name ?? ""
+                        }
                     }
                 }
             }

@@ -120,7 +120,7 @@ Scope {
             width: Math.min(680, panelWindow.width - 80)
             anchors.horizontalCenter: parent.horizontalCenter
             y: panelWindow.isFluid
-                ? (panelWindow.height - columnLayout.height - Appearance.sizes.hyprlandGapsOut - 12)
+                ? (panelWindow.height - columnLayout.height - Appearance.sizes.hyprlandGapsOut)
                 : (panelWindow.height * 0.18 + BarState.offset(panelWindow.screen?.name ?? "") + (GlobalStates.overviewOpen ? 0 : 16))
             spacing: -8
             opacity: GlobalStates.overviewOpen ? 1 : 0
@@ -129,7 +129,10 @@ Scope {
 
             Behavior on opacity { RevealAnim {} }
             Behavior on scale { RevealAnim {} }
-            Behavior on y { RevealAnim {} }
+            Behavior on y {
+                enabled: !panelWindow.isFluid
+                RevealAnim {}
+            }
 
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Escape) {

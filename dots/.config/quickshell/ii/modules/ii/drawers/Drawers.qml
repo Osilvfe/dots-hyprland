@@ -406,7 +406,7 @@ Scope {
                     z: 60
 
                     readonly property real targetWidth: Math.min(680, rootWindow.width - 80)
-                    readonly property real targetHeight: Math.min(640, Math.max(80, GlobalStates.overviewContentHeight))
+                    readonly property real targetHeight: Math.min(640, Math.max(64, GlobalStates.overviewContentHeight))
                     readonly property real targetX: (rootWindow.width - targetWidth) / 2
                     readonly property real targetY: rootWindow.height - rootWindow.frameBottom - targetHeight
                     readonly property real hiddenY: rootWindow.height + rootWindow.smoothVal + 15
