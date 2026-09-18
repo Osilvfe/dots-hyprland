@@ -39,7 +39,11 @@ Tips:
 - `cliphist`
   - Used in Hyprland and Quickshell config.
 - `cmake`
-  - Used in building quickshell and MicroTeX.
+  - Used in building Quickshell, MicroTeX and the local `Caelestia.Blobs` QML plugin.
+- `rust`
+  - Provides `cargo`/Rust toolchain used by `sdata/crates/quickshell-blobs/`.
+- `qt6-shadertools`
+  - Provides Qt ShaderTools used by `qt_add_shaders()` when building `Caelestia.Blobs`.
 - `curl`
   - Used in Quickshell config.
 - `wget`
