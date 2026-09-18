@@ -1,5 +1,7 @@
 #include "blobgroup.hpp"
 
+#include <qquickwindow.h>
+
 #include "blobinvertedrect.hpp"
 #include "blobshape.hpp"
 
@@ -87,14 +89,27 @@ BlobInvertedRect* BlobGroup::invertedRect() const {
 
 void BlobGroup::markDirty() {
     m_physicsUpdated = false;
+
+    QQuickWindow* dirtyWindow = nullptr;
     for (auto* shape : std::as_const(m_shapes)) {
         shape->polish();
         shape->update();
+        if (!dirtyWindow)
+            dirtyWindow = shape->window();
     }
     if (m_invertedRect) {
-        static_cast<BlobShape*>(m_invertedRect)->polish();
-        static_cast<BlobShape*>(m_invertedRect)->update();
+        auto* inverted = static_cast<BlobShape*>(m_invertedRect);
+        inverted->polish();
+        inverted->update();
+        if (!dirtyWindow)
+            dirtyWindow = inverted->window();
     }
+
+    // QQuickItem::update() only schedules updatePaintNode() for the item.
+    // Force a window frame as well so layer-shell surfaces repaint even when
+    // there is no pointer/keyboard activity to wake the render loop.
+    if (dirtyWindow)
+        dirtyWindow->update();
 }
 
 void BlobGroup::markShapeDirty(BlobShape* source) {
@@ -124,6 +139,11 @@ void BlobGroup::markShapeDirty(BlobShape* source) {
         static_cast<BlobShape*>(m_invertedRect)->polish();
         static_cast<BlobShape*>(m_invertedRect)->update();
     }
+
+    // Keep the scene graph progressing without relying on incidental input
+    // events (pointer motion used to be the thing that visibly "unstuck" it).
+    if (auto* dirtyWindow = source->window())
+        dirtyWindow->update();
 }
 
 void BlobGroup::ensurePhysicsUpdated() {
