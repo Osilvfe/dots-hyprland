@@ -146,7 +146,7 @@ Item { // Wrapper
             id: searchHeightBehavior
             enabled: GlobalStates.overviewOpen
             NumberAnimation {
-                duration: 180
+                duration: root.isFluid ? 80 : 160
                 easing.type: Easing.OutCubic
             }
         }
@@ -334,8 +334,14 @@ Item { // Wrapper
                     id: appResults
                     visible: root.showResults && !root.emojiMode && !clipboardEmpty.visible
                     Layout.fillWidth: true
-                    implicitHeight: Math.min(500, appResults.contentHeight + topMargin + bottomMargin)
-                    Layout.preferredHeight: implicitHeight
+                    readonly property real estimatedHeight: {
+                        if (!visible || count === 0) return 0;
+                        const naturalH = contentHeight > 0 ? (contentHeight + topMargin + bottomMargin)
+                                                           : (Math.min(root.typingResultLimit, count) * 48 + topMargin + bottomMargin);
+                        return Math.min(500, naturalH);
+                    }
+                    implicitHeight: estimatedHeight
+                    Layout.preferredHeight: estimatedHeight
                     clip: true
                     topMargin: 8
                     bottomMargin: 8
@@ -357,20 +363,11 @@ Item { // Wrapper
                         }
                     }
 
-                    Timer {
-                        id: debounceTimer
-                        interval: root.typingDebounceInterval
-                        onTriggered: {
-                            resultModel.values = LauncherSearch.results ?? [];
-                        }
-                    }
-
                     Connections {
                         target: LauncherSearch
                         function onResultsChanged() {
-                            resultModel.values = LauncherSearch.results.slice(0, root.typingResultLimit);
+                            resultModel.values = LauncherSearch.results ? LauncherSearch.results.slice(0, root.typingResultLimit) : [];
                             root.focusFirstItem();
-                            debounceTimer.restart();
                         }
                     }
 

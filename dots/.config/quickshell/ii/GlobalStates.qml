@@ -35,7 +35,7 @@ Singleton {
     property bool oskOpen: false
     property bool overlayOpen: false
     property bool overviewOpen: false
-    property real overviewContentHeight: 80
+    property real overviewContentHeight: 64
     property bool recordingMenuOpen: false
     property bool recordRegionRequest: false
     property bool recordRegionSystem: false
@@ -52,6 +52,11 @@ Singleton {
         OplusBuds3.syncBridge();
         // Ensure Polkit authentication agent is initialized immediately
         PolkitService.init();
+        // Pre-warm AppSearch and LauncherSearch in idle loop to eliminate first-open latency
+        Qt.callLater(() => {
+            AppSearch.rebuildList();
+            LauncherSearch.rebuildAppCategories();
+        });
     }
     property bool recordRegionMic: false
     property bool regionSelectorOpen: false

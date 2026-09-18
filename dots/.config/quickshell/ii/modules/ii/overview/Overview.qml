@@ -19,12 +19,12 @@ Scope {
         id: panelWindow
         screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
         property string searchingText: ""
-        property bool keepSearchMounted: false
+        property bool keepSearchMounted: true
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
         property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
         readonly property int revealDuration: GlobalStates.overviewOpen ? 280 : 160
         readonly property var revealCurve: GlobalStates.overviewOpen ? Appearance.animationCurves.emphasizedDecel : Appearance.animationCurves.emphasizedAccel
-        visible: keepSearchMounted || GlobalStates.overviewOpen
+        visible: true
 
         WlrLayershell.namespace: "quickshell:overview"
         WlrLayershell.layer: WlrLayer.Overlay
@@ -57,13 +57,6 @@ Scope {
             }
         }
 
-        Timer {
-            id: unmountTimer
-            interval: 180
-            repeat: false
-            onTriggered: panelWindow.keepSearchMounted = false
-        }
-
         Connections {
             target: GlobalStates
             function onOverviewOpenChanged() {
@@ -71,17 +64,12 @@ Scope {
                     searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;
                     GlobalFocusGrab.dismiss();
-                    unmountTimer.restart();
                 } else {
-                    unmountTimer.stop();
-                    panelWindow.keepSearchMounted = true;
                     if (!overviewScope.dontAutoCancelSearch) {
                         searchWidget.cancelSearch();
                     }
                     GlobalFocusGrab.addDismissable(panelWindow);
-                    Qt.callLater(() => {
-                        searchWidget.focusSearchInput();
-                    });
+                    searchWidget.focusSearchInput();
                 }
             }
         }
