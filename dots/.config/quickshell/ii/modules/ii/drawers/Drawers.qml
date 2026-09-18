@@ -126,7 +126,8 @@ Scope {
                 readonly property bool sidebarLeftOpen: GlobalStates.sidebarLeftOpen
                 property real drawerLeftOffsetScale: sidebarLeftOpen ? 1.0 : 0.0
 
-                readonly property bool overviewOpen: GlobalStates.overviewOpen
+                readonly property bool isCurrentMonitorFocused: (Hyprland.focusedMonitor?.name === drawerLoader.modelData.name)
+                readonly property bool overviewOpen: GlobalStates.overviewOpen && isCurrentMonitorFocused
                 property real overviewOffsetScale: overviewOpen ? 1.0 : 0.0
 
                 // 动画运行状态指示器 (用于开启 GPU 纹理加速)
@@ -187,38 +188,28 @@ Scope {
                         height: rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetHeight : 0
                     }
 
-                    // 4. 搜索面板区域：展开状态下覆盖最终静止目标矩形
-                    Region {
-                        x: overviewBottomPanel.targetX
-                        y: rootWindow.height - rootWindow.frameBottom - 640
-                        width: rootWindow.overviewOpen ? overviewBottomPanel.targetWidth : 0
-                        height: rootWindow.overviewOpen ? 640 : 0
-                    }
-
-                    // 5. 抽屉或搜索展开时，覆盖中央工作区遮罩用于点击收起
+                    // 4. 抽屉展开时，覆盖中央工作区遮罩用于点击收起
                     Region {
                         x: rootWindow.frameLeft + (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)
                         y: rootWindow.frameTop
-                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.overviewOpen) ?
+                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen) ?
                                Math.max(0, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight 
                                            - (rootWindow.sidebarOpen ? drawerPanel.targetWidth : 0)
                                            - (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)) : 0
-                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.overviewOpen) ?
+                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen) ?
                                 Math.max(0, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) : 0
                     }
                 }
 
-                // 点击抽屉外部空白区域自动收起抽屉与搜索
+                // 点击抽屉外部空白区域自动收起抽屉
                 MouseArea {
                     anchors.fill: parent
                     enabled: (rootWindow.sidebarOpen && rootWindow.drawerOffsetScale > 0.05) ||
-                             (rootWindow.sidebarLeftOpen && rootWindow.drawerLeftOffsetScale > 0.05) ||
-                             (rootWindow.overviewOpen && rootWindow.overviewOffsetScale > 0.05)
+                             (rootWindow.sidebarLeftOpen && rootWindow.drawerLeftOffsetScale > 0.05)
                     z: 50
                     onClicked: {
                         GlobalStates.sidebarRightOpen = false;
                         GlobalStates.sidebarLeftOpen = false;
-                        GlobalStates.overviewOpen = false;
                     }
                 }
 

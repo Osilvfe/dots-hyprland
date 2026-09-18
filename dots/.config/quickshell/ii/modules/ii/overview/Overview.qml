@@ -17,6 +17,7 @@ Scope {
 
     PanelWindow {
         id: panelWindow
+        screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
         property string searchingText: ""
         property bool keepSearchMounted: false
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
@@ -26,12 +27,18 @@ Scope {
         visible: keepSearchMounted || GlobalStates.overviewOpen
 
         WlrLayershell.namespace: "quickshell:overview"
-        WlrLayershell.layer: WlrLayer.Top
+        WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: GlobalStates.overviewOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         color: "transparent"
 
         mask: Region {
-            item: GlobalStates.overviewOpen ? columnLayout : null
+            Region {
+                item: GlobalStates.overviewOpen ? columnLayout : null
+            }
+            Region {
+                width: GlobalStates.overviewOpen ? panelWindow.width : 0
+                height: GlobalStates.overviewOpen ? panelWindow.height : 0
+            }
         }
 
         anchors {
@@ -39,6 +46,15 @@ Scope {
             bottom: true
             left: true
             right: true
+        }
+
+        // 点击外部空白区域收起搜索框
+        MouseArea {
+            anchors.fill: parent
+            enabled: GlobalStates.overviewOpen
+            onClicked: {
+                GlobalStates.overviewOpen = false;
+            }
         }
 
         Timer {
@@ -63,6 +79,9 @@ Scope {
                         searchWidget.cancelSearch();
                     }
                     GlobalFocusGrab.addDismissable(panelWindow);
+                    Qt.callLater(() => {
+                        searchWidget.focusSearchInput();
+                    });
                 }
             }
         }
@@ -97,6 +116,7 @@ Scope {
 
         Column {
             id: columnLayout
+            z: 2
             width: Math.min(680, panelWindow.width - 80)
             anchors.horizontalCenter: parent.horizontalCenter
             y: panelWindow.isFluid
