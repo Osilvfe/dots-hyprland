@@ -341,9 +341,10 @@ Item { // Wrapper
                     visible: root.showResults && !root.emojiMode && !clipboardEmpty.visible
                     Layout.fillWidth: true
                     readonly property real estimatedHeight: {
-                        if (!visible || count === 0) return 0;
+                        const modelCount = resultModel.values ? resultModel.values.length : 0;
+                        if (!visible || modelCount === 0) return 0;
 
-                        const visibleCount = Math.min(root.typingResultLimit, count);
+                        const visibleCount = Math.min(root.typingResultLimit, modelCount);
                         const immediateH = visibleCount * 48
                             + Math.max(0, visibleCount - 1) * spacing
                             + topMargin + bottomMargin;
