@@ -32,6 +32,12 @@ function build_blobs_plugin(){
 
   echo "Building and installing Caelestia.Blobs QML plugin..."
   v bash "$build_script"
+
+  local install_dir="$HOME/.local/lib/qt6/qml/Caelestia/Blobs"
+  x mkdir -p "$(dirname "$INSTALLED_LISTFILE")"
+  if [[ ! -f "$INSTALLED_LISTFILE" ]] || ! grep -Fxq "$install_dir" "$INSTALLED_LISTFILE"; then
+    printf '%s\n' "$install_dir" >> "$INSTALLED_LISTFILE"
+  fi
 }
 #####################################################################################
 # These python packages are installed using uv into the venv (virtual environment). Once the folder of the venv gets deleted, they are all gone cleanly. So it's considered as setups, not dependencies.
