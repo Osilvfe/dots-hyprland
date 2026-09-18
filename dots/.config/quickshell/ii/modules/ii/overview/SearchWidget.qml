@@ -45,16 +45,10 @@ Item { // Wrapper
         searchBar.animateWidth = false;
     }
 
-    function cancelSearch(animate = true) {
-        // Disable the width transition before clearing the query when an
-        // instant reset is requested. Re-enable it afterwards so normal typing
-        // still expands the search field smoothly.
-        searchBar.animateWidth = animate;
+    function cancelSearch() {
         searchBar.searchInput.selectAll();
-        searchBar.searchInput.text = "";
         LauncherSearch.query = "";
-        if (!animate)
-            searchBar.animateWidth = true;
+        searchBar.animateWidth = true;
     }
 
     function setSearchingText(text) {
@@ -150,11 +144,9 @@ Item { // Wrapper
 
         Behavior on height {
             id: searchHeightBehavior
-            // In fluid mode the Blob panel is the visual transition. Feeding it
-            // an already-animated height makes the jelly chase a moving target.
-            enabled: GlobalStates.overviewOpen && !root.isFluid
+            enabled: GlobalStates.overviewOpen
             NumberAnimation {
-                duration: 90
+                duration: root.isFluid ? 80 : 160
                 easing.type: Easing.OutCubic
             }
         }
@@ -343,28 +335,9 @@ Item { // Wrapper
                     visible: root.showResults && !root.emojiMode && !clipboardEmpty.visible
                     Layout.fillWidth: true
                     readonly property real estimatedHeight: {
-                        const modelCount = resultModel.values ? resultModel.values.length : 0;
-                        if (!visible || modelCount === 0) return 0;
-
-                        const visibleCount = Math.min(root.typingResultLimit, modelCount);
-                        const immediateH = visibleCount * 48
-                            + Math.max(0, visibleCount - 1) * spacing
-                            + topMargin + bottomMargin;
-
-                        // For normal launcher results, avoid ListView.contentHeight:
-                        // it is updated only after delegates are laid out and may still
-                        // contain the previous model's height for a frame or two.
-                        // Counting rows gives the background its target height immediately.
-                        const isClipboard = root.searchingText.startsWith(Config.options.search.prefix.clipboard);
-                        if (!isClipboard)
-                            return Math.min(500, immediateH);
-
-                        // Clipboard delegates can contain image previews and therefore
-                        // have genuinely variable heights. Use the real height once it
-                        // is available, with the row estimate as the first-frame fallback.
-                        const naturalH = contentHeight > 0
-                            ? (contentHeight + topMargin + bottomMargin)
-                            : immediateH;
+                        if (!visible || count === 0) return 0;
+                        const naturalH = contentHeight > 0 ? (contentHeight + topMargin + bottomMargin)
+                                                           : (Math.min(root.typingResultLimit, count) * 48 + topMargin + bottomMargin);
                         return Math.min(500, naturalH);
                     }
                     implicitHeight: estimatedHeight
