@@ -90,26 +90,25 @@ BlobInvertedRect* BlobGroup::invertedRect() const {
 void BlobGroup::markDirty() {
     m_physicsUpdated = false;
 
-    QQuickWindow* dirtyWindow = nullptr;
+    QQuickWindow* forcedWindow = nullptr;
     for (auto* shape : std::as_const(m_shapes)) {
         shape->polish();
         shape->update();
-        if (!dirtyWindow)
-            dirtyWindow = shape->window();
+        if (!forcedWindow && shape->forceWindowUpdate())
+            forcedWindow = shape->window();
     }
     if (m_invertedRect) {
         auto* inverted = static_cast<BlobShape*>(m_invertedRect);
         inverted->polish();
         inverted->update();
-        if (!dirtyWindow)
-            dirtyWindow = inverted->window();
+        if (!forcedWindow && inverted->forceWindowUpdate())
+            forcedWindow = inverted->window();
     }
 
-    // QQuickItem::update() only schedules updatePaintNode() for the item.
-    // Force a window frame as well so layer-shell surfaces repaint even when
-    // there is no pointer/keyboard activity to wake the render loop.
-    if (dirtyWindow)
-        dirtyWindow->update();
+    // Most animated blobs already keep the scene graph alive. Only shapes
+    // opting in request an explicit window frame when the render loop is idle.
+    if (forcedWindow)
+        forcedWindow->update();
 }
 
 void BlobGroup::markShapeDirty(BlobShape* source) {
@@ -140,10 +139,12 @@ void BlobGroup::markShapeDirty(BlobShape* source) {
         static_cast<BlobShape*>(m_invertedRect)->update();
     }
 
-    // Keep the scene graph progressing without relying on incidental input
-    // events (pointer motion used to be the thing that visibly "unstuck" it).
-    if (auto* dirtyWindow = source->window())
-        dirtyWindow->update();
+    // Some content-driven shapes can change geometry while the window is
+    // otherwise idle. Let those shapes explicitly request a window frame.
+    if (source->forceWindowUpdate()) {
+        if (auto* dirtyWindow = source->window())
+            dirtyWindow->update();
+    }
 }
 
 void BlobGroup::ensurePhysicsUpdated() {
