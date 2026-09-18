@@ -27,6 +27,8 @@ Item { // Wrapper
     property bool emojiMode: searchingText.startsWith(Config.options.search.prefix.emojis)
     implicitWidth: searchWidgetContent.implicitWidth + (root.isFluid ? 0 : Appearance.sizes.elevationMargin * 2)
     implicitHeight: searchWidgetContent.implicitHeight + (root.isFluid ? 0 : (searchBar.verticalPadding * 2 + Appearance.sizes.elevationMargin * 2))
+    width: implicitWidth
+    height: searchWidgetContent.height + (root.isFluid ? 0 : (searchBar.verticalPadding * 2 + Appearance.sizes.elevationMargin * 2))
 
     function focusFirstItem() {
         if (appResults.count > 0) {
@@ -135,10 +137,12 @@ Item { // Wrapper
         clip: true
         implicitWidth: Math.max(searchBarWrapper.implicitWidth, resultsWrapper.implicitWidth)
         implicitHeight: searchBarWrapper.implicitHeight + (root.showResults ? (separator.height + resultsWrapper.implicitHeight) : 0)
+        width: implicitWidth
+        height: implicitHeight
         radius: 28
         color: root.isFluid ? "transparent" : Appearance.colors.colBackgroundSurfaceContainer
 
-        Behavior on implicitHeight {
+        Behavior on height {
             id: searchHeightBehavior
             enabled: GlobalStates.overviewOpen
             NumberAnimation {
@@ -205,7 +209,10 @@ Item { // Wrapper
 
             ColumnLayout {
                 id: resultsColumn
-                anchors.fill: parent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: root.isFluid ? undefined : parent.top
+                anchors.bottom: root.isFluid ? parent.bottom : undefined
                 spacing: 0
 
                 layer.enabled: !root.isFluid
@@ -328,6 +335,7 @@ Item { // Wrapper
                     visible: root.showResults && !root.emojiMode && !clipboardEmpty.visible
                     Layout.fillWidth: true
                     implicitHeight: Math.min(500, appResults.contentHeight + topMargin + bottomMargin)
+                    Layout.preferredHeight: implicitHeight
                     clip: true
                     topMargin: 8
                     bottomMargin: 8
