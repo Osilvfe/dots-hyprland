@@ -16,7 +16,7 @@ pause
 printf "${STY_CYAN}${STY_BOLD}Quick overview about what this script does:${STY_RST}\n"
 printf "${STY_CYAN}"
 printf "  1. Install dependencies.\n"
-printf "  2. Setup permissions/services etc.\n"
+printf "  2. Setup permissions/services and build native modules.\n"
 printf "  3. Copying config files.${STY_RST}\n"
 pause
 printf "${STY_CYAN}${STY_BOLD}Tips:${STY_RST}\n"
