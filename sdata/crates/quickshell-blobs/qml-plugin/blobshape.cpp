@@ -127,25 +127,6 @@ void BlobShape::geometryChange(const QRectF& newGeometry, const QRectF& oldGeome
             m_pendingDx = 0;
             m_pendingDy = 0;
             m_group->markShapeDirty(this);
-
-            // geometryChange() is often reached while Qt Quick is already in
-            // its polish/layout phase. A polish() requested from there can miss
-            // the current frame, leaving cached blob geometry stale until some
-            // unrelated input (for example pointer motion) causes another
-            // frame. Coalesce one refresh onto the next event-loop turn so
-            // geometry changes always get a follow-up frame without keeping a
-            // permanent render loop alive.
-            if (!m_deferredGeometryRefreshPending) {
-                m_deferredGeometryRefreshPending = true;
-                QMetaObject::invokeMethod(
-                    this,
-                    [this]() {
-                        m_deferredGeometryRefreshPending = false;
-                        if (m_group)
-                            m_group->markShapeDirty(this);
-                    },
-                    Qt::QueuedConnection);
-            }
         }
     }
 }
