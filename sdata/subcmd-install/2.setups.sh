@@ -14,6 +14,25 @@ function setup_user_group(){
 
   x sudo usermod -aG video,i2c,input "$(whoami)"
 }
+
+function build_blobs_plugin(){
+  local build_script="$REPO_ROOT/dots/.config/quickshell/ii/scripts/build-blobs.sh"
+
+  if [[ ! -f "$build_script" ]]; then
+    echo -e "${STY_RED}[$0]: Caelestia.Blobs build script not found: $build_script${STY_RST}"
+    return 1
+  fi
+
+  for cmd in cargo cmake; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo -e "${STY_RED}[$0]: Required command '$cmd' is missing; cannot build Caelestia.Blobs.${STY_RST}"
+      return 1
+    fi
+  done
+
+  echo "Building and installing Caelestia.Blobs QML plugin..."
+  v bash "$build_script"
+}
 #####################################################################################
 # These python packages are installed using uv into the venv (virtual environment). Once the folder of the venv gets deleted, they are all gone cleanly. So it's considered as setups, not dependencies.
 showfun install-python-packages
@@ -21,6 +40,9 @@ v install-python-packages
 
 showfun setup_user_group
 v setup_user_group
+
+showfun build_blobs_plugin
+v build_blobs_plugin
 
 if [[ ! -z $(systemctl --version) ]]; then
   v bash -c "echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf"
