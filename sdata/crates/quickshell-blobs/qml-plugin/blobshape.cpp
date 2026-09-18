@@ -138,6 +138,23 @@ void BlobShape::geometryChange(const QRectF& newGeometry, const QRectF& oldGeome
             m_pendingDx = 0;
             m_pendingDy = 0;
             m_group->markShapeDirty(this);
+
+            // A geometry change may arrive while Qt Quick is already in its
+            // polish/layout phase. For opted-in shapes, schedule one coalesced
+            // follow-up refresh on the next event-loop turn. Combined with
+            // QQuickWindow::update() in markShapeDirty(), this guarantees a
+            // fresh scene-graph frame even when there is no pointer activity.
+            if (m_forceWindowUpdate && !m_deferredForcedRefreshPending) {
+                m_deferredForcedRefreshPending = true;
+                QMetaObject::invokeMethod(
+                    this,
+                    [this]() {
+                        m_deferredForcedRefreshPending = false;
+                        if (m_group && m_forceWindowUpdate)
+                            m_group->markShapeDirty(this);
+                    },
+                    Qt::QueuedConnection);
+            }
         }
     }
 }
