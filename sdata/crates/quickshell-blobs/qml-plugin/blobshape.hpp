@@ -84,7 +84,6 @@ protected:
     int m_cachedMyIndex = -2;
     float m_pendingDx = 0;
     float m_pendingDy = 0;
-    bool m_deferredGeometryRefreshPending = false;
     bool m_cachedHasInverted = false;
     float m_cachedInvertedRadii[4] = {};
     float m_cachedInvertedOuter[4] = {};
