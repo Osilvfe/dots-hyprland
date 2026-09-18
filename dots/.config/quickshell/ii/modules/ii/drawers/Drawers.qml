@@ -105,6 +105,7 @@ Scope {
                     WlrLayershell.namespace: "quickshell:drawers"
                     WlrLayershell.layer: WlrLayer.Top
                     WlrLayershell.exclusionMode: ExclusionMode.Ignore
+                    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
                     exclusiveZone: 0
 
                 // 严谨对齐 Hyprland gaps 与顶栏高度
@@ -139,8 +140,11 @@ Scope {
                 readonly property bool mediaControlsOpen: GlobalStates.mediaControlsOpen && isCurrentScreenTarget
                 property real mediaOffsetScale: mediaControlsOpen ? 1.0 : 0.0
 
+                readonly property bool wallpaperSelectorOpen: GlobalStates.wallpaperSelectorOpen && isCurrentMonitorFocused
+                property real wallpaperOffsetScale: wallpaperSelectorOpen ? 1.0 : 0.0
+
                 // 动画运行状态指示器 (用于开启 GPU 纹理加速)
-                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running || mediaOffsetAnim.running
+                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running || mediaOffsetAnim.running || wallpaperOffsetAnim.running
 
                 Behavior on drawerOffsetScale {
                     NumberAnimation {
@@ -173,6 +177,15 @@ Scope {
                     NumberAnimation {
                         id: mediaOffsetAnim
                         duration: 320
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 0.5
+                    }
+                }
+
+                Behavior on wallpaperOffsetScale {
+                    NumberAnimation {
+                        id: wallpaperOffsetAnim
+                        duration: 350
                         easing.type: Easing.OutBack
                         easing.overshoot: 0.5
                     }
@@ -214,15 +227,23 @@ Scope {
                         height: rootWindow.mediaControlsOpen ? mediaPopoutPanel.targetHeight : 0
                     }
 
-                    // 5. 抽屉与浮层展开时，覆盖中央工作区遮罩用于点击收起
+                    // 5. 壁纸选择器流体画卷区域：展开状态下覆盖最终静止目标矩形
+                    Region {
+                        x: wallpaperSelectorPanel.targetX
+                        y: rootWindow.frameTop
+                        width: rootWindow.wallpaperSelectorOpen ? wallpaperSelectorPanel.targetWidth : 0
+                        height: rootWindow.wallpaperSelectorOpen ? wallpaperSelectorPanel.targetHeight : 0
+                    }
+
+                    // 6. 抽屉与浮层展开时，覆盖中央工作区遮罩用于点击收起
                     Region {
                         x: rootWindow.frameLeft + (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)
                         y: rootWindow.frameTop
-                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen) ?
+                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen || rootWindow.wallpaperSelectorOpen) ?
                                Math.max(0, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight 
                                            - (rootWindow.sidebarOpen ? drawerPanel.targetWidth : 0)
                                            - (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)) : 0
-                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen) ?
+                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen || rootWindow.wallpaperSelectorOpen) ?
                                 Math.max(0, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) : 0
                     }
                 }
@@ -232,12 +253,14 @@ Scope {
                     anchors.fill: parent
                     enabled: (rootWindow.sidebarOpen && rootWindow.drawerOffsetScale > 0.05) ||
                              (rootWindow.sidebarLeftOpen && rootWindow.drawerLeftOffsetScale > 0.05) ||
-                             (rootWindow.mediaControlsOpen && rootWindow.mediaOffsetScale > 0.05)
+                             (rootWindow.mediaControlsOpen && rootWindow.mediaOffsetScale > 0.05) ||
+                             (rootWindow.wallpaperSelectorOpen && rootWindow.wallpaperOffsetScale > 0.05)
                     z: 50
                     onClicked: {
                         GlobalStates.sidebarRightOpen = false;
                         GlobalStates.sidebarLeftOpen = false;
                         GlobalStates.mediaControlsOpen = false;
+                        GlobalStates.wallpaperSelectorOpen = false;
                     }
                 }
 
@@ -402,9 +425,65 @@ Scope {
                     damping: 15.0
                 }
 
+                // 6. 壁纸选择器流体大画卷抽屉 (Fluid Wallpaper Canvas Drawer)
+                // 自顶栏向下展开的大圆角画卷，与顶栏和四周内衬通过 GPU smin 产生双向波浪过渡
+                BlobRect {
+                    id: wallpaperSelectorPanel
+                    group: fluidBlobGroup
+                    z: 60
+
+                    readonly property real targetWidth: Math.min(1080, Math.max(800, Appearance.sizes.wallpaperSelectorWidth))
+                    readonly property real targetHeight: Math.min(740, Math.max(500, Appearance.sizes.wallpaperSelectorHeight))
+
+                    readonly property real targetX: (rootWindow.width - targetWidth) / 2
+                    readonly property real targetY: rootWindow.frameTop - 10
+                    readonly property real hiddenY: -targetHeight - rootWindow.smoothVal - 15
+
+                    width: targetWidth
+                    height: targetHeight
+
+                    x: targetX
+                    y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.wallpaperOffsetScale)
+
+                    // 四角圆角：底部保持大圆角胶囊，顶部双角在向下拔出过程中平滑过渡
+                    radius: 28
+                    bottomLeftRadius: 28
+                    bottomRightRadius: 28
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.wallpaperOffsetScale / 0.35)) * 28
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.wallpaperOffsetScale / 0.35)) * 28
+
+                    deformScale: 0.00001
+                    stiffness: 240.0
+                    damping: 15.0
+                }
+
                 // ==========================================
                 // 3. 独立上层侧边栏交互与内容层（后渲染/延后淡入，与底层流体浮岛联动）
                 // ==========================================
+                // 壁纸选择器内容层 (后渲染延后淡入，与底层流体画卷联动)
+                Item {
+                    id: wallpaperContentLayer
+                    z: 65
+                    x: wallpaperSelectorPanel.x
+                    y: wallpaperSelectorPanel.y + 10 // 抵消深入顶栏的 10px，使内容上边缘恰好对齐顶栏下边缘
+                    width: wallpaperSelectorPanel.width
+                    height: wallpaperSelectorPanel.height - 10
+
+                    // 视觉核心：后渲染/延后渐入感知
+                    opacity: Math.max(0, Math.min(1, (rootWindow.wallpaperOffsetScale - 0.35) / 0.65))
+                    visible: rootWindow.wallpaperOffsetScale > 0.001
+
+                    // 动画期间开启 GPU 纹理缓存加速
+                    layer.enabled: rootWindow.isAnimating
+
+                    Loader {
+                        id: wallpaperContentLoader
+                        anchors.fill: parent
+                        active: rootWindow.wallpaperOffsetScale > 0.001
+                        source: "../wallpaperSelector/WallpaperSelectorContent.qml"
+                    }
+                }
+
                 // 顶栏媒体控制内容层 (后渲染延后淡入，与底层流体气泡联动)
                 Item {
                     id: mediaContentLayer

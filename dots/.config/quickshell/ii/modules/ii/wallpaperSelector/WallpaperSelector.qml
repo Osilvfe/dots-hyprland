@@ -12,10 +12,12 @@ import Quickshell.Hyprland
 
 Scope {
     id: root
+    readonly property bool fluidEnabled: Config.options.appearance.fluidMorphing.enable ?? false
 
     Loader {
         id: wallpaperSelectorLoader
-        active: GlobalStates.wallpaperSelectorOpen
+        // 在流体形态模式开启时，禁用此独立 PanelWindow，由 Drawers.qml 统一流体接管
+        active: GlobalStates.wallpaperSelectorOpen && !root.fluidEnabled
 
         sourceComponent: PanelWindow {
             id: panelWindow
