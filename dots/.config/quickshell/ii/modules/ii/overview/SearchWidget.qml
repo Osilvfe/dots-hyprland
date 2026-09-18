@@ -45,10 +45,16 @@ Item { // Wrapper
         searchBar.animateWidth = false;
     }
 
-    function cancelSearch() {
+    function cancelSearch(animate = true) {
+        // Disable the width transition before clearing the query when an
+        // instant reset is requested. Re-enable it afterwards so normal typing
+        // still expands the search field smoothly.
+        searchBar.animateWidth = animate;
         searchBar.searchInput.selectAll();
+        searchBar.searchInput.text = "";
         LauncherSearch.query = "";
-        searchBar.animateWidth = true;
+        if (!animate)
+            searchBar.animateWidth = true;
     }
 
     function setSearchingText(text) {
