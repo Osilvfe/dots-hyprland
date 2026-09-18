@@ -350,11 +350,6 @@ Item { // Wrapper
                     KeyNavigation.down: root.isFluid ? searchBar : null
                     highlightMoveDuration: 100
 
-                    onFocusChanged: {
-                        if (focus)
-                            appResults.currentIndex = 1;
-                    }
-
                     Connections {
                         target: root
                         function onSearchingTextChanged() {
