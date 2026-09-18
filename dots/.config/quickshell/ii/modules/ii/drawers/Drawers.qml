@@ -905,6 +905,23 @@ Scope {
         }
     }
 
+    // 兼容托盘折叠菜单 IPC 控制
+    IpcHandler {
+        target: "tray"
+
+        function toggle(): void {
+            GlobalStates.trayOverflowOpen = !GlobalStates.trayOverflowOpen;
+        }
+
+        function open(): void {
+            GlobalStates.trayOverflowOpen = true;
+        }
+
+        function close(): void {
+            GlobalStates.trayOverflowOpen = false;
+        }
+    }
+
     Connections {
         target: GlobalStates
         function onMediaControlsOpenChanged() {

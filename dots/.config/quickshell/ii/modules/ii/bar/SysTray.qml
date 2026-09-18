@@ -1,3 +1,4 @@
+import qs
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -48,7 +49,12 @@ Item {
 
     function updateTrayPosition() {
         try {
-            let pos = trayOverflowButton.mapToItem(null, trayOverflowButton.width / 2, trayOverflowButton.height / 2);
+            let pos = null;
+            if (root.QsWindow && typeof root.QsWindow.mapFromItem === "function") {
+                pos = root.QsWindow.mapFromItem(trayOverflowButton, trayOverflowButton.width / 2, 0);
+            } else if (typeof trayOverflowButton.mapToItem === "function") {
+                pos = trayOverflowButton.mapToItem(null, trayOverflowButton.width / 2, 0);
+            }
             if (pos && typeof pos.x === "number" && !isNaN(pos.x)) {
                 GlobalStates.trayCenterX = pos.x;
                 GlobalStates.trayButtonScreen = root.QsWindow?.window?.screen ?? null;
@@ -68,7 +74,7 @@ Item {
     }
 
     onTrayOverflowOpenChanged: {
-        if (root.trayOverflowOpen) {
+        if (root.trayOverflowOpen && !(Config.options.appearance.fluidMorphing.enable ?? false)) {
             root.grabFocus();
         }
     }
