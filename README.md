@@ -146,7 +146,7 @@ Blob 模块会自动安装到：
 ./dots/.config/quickshell/ii/scripts/build-blobs.sh
 ```
 
-仅修改普通 QML 时通常无需重新编译；修改原生插件后，仅重启 Quickshell不会替换已安装的 `.so`。
+仅修改普通 QML 时通常无需重新编译；修改原生插件后，仅重启 Quickshell 不会替换已安装的 `.so`。
 
 ### 4. 安装与启用滚动概览插件
 若自动化安装未成功安装插件，可手动初始化 `hyprpm`：
