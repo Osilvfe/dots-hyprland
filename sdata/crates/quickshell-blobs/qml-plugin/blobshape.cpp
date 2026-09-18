@@ -100,6 +100,17 @@ void BlobShape::setRadius(qreal r) {
         m_group->markDirty();
 }
 
+bool BlobShape::forceWindowUpdate() const {
+    return m_forceWindowUpdate;
+}
+
+void BlobShape::setForceWindowUpdate(bool enabled) {
+    if (m_forceWindowUpdate == enabled)
+        return;
+    m_forceWindowUpdate = enabled;
+    emit forceWindowUpdateChanged();
+}
+
 QMatrix4x4 BlobShape::deformMatrix() const {
     return m_centeredDeformMatrix;
 }
