@@ -152,7 +152,7 @@ Item { // Wrapper
             id: searchHeightBehavior
             enabled: GlobalStates.overviewOpen
             NumberAnimation {
-                duration: root.isFluid ? 80 : 160
+                duration: root.isFluid ? 60 : 90
                 easing.type: Easing.OutCubic
             }
         }
@@ -342,8 +342,26 @@ Item { // Wrapper
                     Layout.fillWidth: true
                     readonly property real estimatedHeight: {
                         if (!visible || count === 0) return 0;
-                        const naturalH = contentHeight > 0 ? (contentHeight + topMargin + bottomMargin)
-                                                           : (Math.min(root.typingResultLimit, count) * 48 + topMargin + bottomMargin);
+
+                        const visibleCount = Math.min(root.typingResultLimit, count);
+                        const immediateH = visibleCount * 48
+                            + Math.max(0, visibleCount - 1) * spacing
+                            + topMargin + bottomMargin;
+
+                        // For normal launcher results, avoid ListView.contentHeight:
+                        // it is updated only after delegates are laid out and may still
+                        // contain the previous model's height for a frame or two.
+                        // Counting rows gives the background its target height immediately.
+                        const isClipboard = root.searchingText.startsWith(Config.options.search.prefix.clipboard);
+                        if (!isClipboard)
+                            return Math.min(500, immediateH);
+
+                        // Clipboard delegates can contain image previews and therefore
+                        // have genuinely variable heights. Use the real height once it
+                        // is available, with the row estimate as the first-frame fallback.
+                        const naturalH = contentHeight > 0
+                            ? (contentHeight + topMargin + bottomMargin)
+                            : immediateH;
                         return Math.min(500, naturalH);
                     }
                     implicitHeight: estimatedHeight
