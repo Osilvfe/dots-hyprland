@@ -178,9 +178,11 @@ Scope {
                 Behavior on overviewOffsetScale {
                     NumberAnimation {
                         id: overviewOffsetAnim
-                        duration: 320
+                        // Keep the jelly panel in lockstep with Overview.qml:
+                        // reveal 280 ms, dismiss 160 ms.
+                        duration: rootWindow.overviewOpen ? 280 : 160
                         easing.type: Easing.OutBack
-                        easing.overshoot: 0.5
+                        easing.overshoot: rootWindow.overviewOpen ? 0.5 : 0.0
                     }
                 }
 
