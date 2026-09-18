@@ -125,25 +125,28 @@ cd ~/dots-hyprland
 ```
 
 ### 2. 运行自动化安装
-安装脚本会自动安装必要的核心组件、依赖包、字体（Google Sans Flex / JetBrains Mono NF）以及配置部署：
+安装脚本会自动安装必要的核心组件、依赖包、字体（Google Sans Flex / JetBrains Mono NF）以及配置部署，并在 setup 阶段自动编译、安装仓库内的 **Caelestia.Blobs** Rust/C++ QML 原生插件：
+
 ```bash
 ./setup install
 ```
 
-### 3. 构建 Caelestia.Blobs 流体原生插件
-流体形态由仓库内的 Rust/C++ QML 原生模块提供。首次安装、更新 `sdata/crates/quickshell-blobs/` 或修改 `qml-plugin/*.cpp|hpp` 后，执行：
-
-```bash
-./dots/.config/quickshell/ii/scripts/build-blobs.sh
-```
-
-模块会安装到：
+Blob 模块会自动安装到：
 
 ```text
 ~/.local/lib/qt6/qml/Caelestia/Blobs
 ```
 
-仅修改 QML 时通常无需重新编译；修改原生插件后，仅重启 Quickshell 不会替换已安装的 `.so`。
+安装器会拉入 `rust`、`cmake`、`qt6-shadertools` 等构建依赖。日常安装无需再手动运行 Blob 构建脚本。
+
+### 3. 手动重建 Caelestia.Blobs（开发/调试）
+仅当你修改了 `sdata/crates/quickshell-blobs/`，尤其是 `qml-plugin/*.cpp|hpp`、Rust 核心或 shader 后，需要手动重建：
+
+```bash
+./dots/.config/quickshell/ii/scripts/build-blobs.sh
+```
+
+仅修改普通 QML 时通常无需重新编译；修改原生插件后，仅重启 Quickshell不会替换已安装的 `.so`。
 
 ### 4. 安装与启用滚动概览插件
 若自动化安装未成功安装插件，可手动初始化 `hyprpm`：
@@ -189,6 +192,7 @@ hyprpm enable scrolloverview
 - **上游基石**：[end-4/dots-hyprland](https://github.com/end-4/dots-hyprland) —— 优秀的 Quickshell / II 框架与精美的 Material You 桌面设计原点。
 - **窗口合成器**：[Hyprland](https://hyprland.org/) —— 性能强劲且高度可扩展的 Wayland 动态平铺合成器。
 - **Shell 引擎**：[Quickshell](https://quickshell.outfoxxed.me/) —— 基于 Qt/QML 构建的原生 Wayland 桌面组件系统。
+- **流体界面设计与 Blob 灵感**：[caelestia-dots/shell](https://github.com/caelestia-dots/shell) —— Caelestia 风格的流体界面、SDF/Blob 视觉与一体化面板设计的重要参考；本仓库的 `Caelestia.Blobs` 为独立维护的 Rust/C++ QML 原生实现与扩展。
 - **概览插件**：[hyprland-scroll-overview](https://github.com/yayuuu/hyprland-scroll-overview) —— 为滚动平铺量身定制的高性能视口概览。
 - **蓝牙耳机逆向研究**：[OppoPodsManager-linux](https://github.com/Osilvfe/OppoPodsManager-linux) —— OnePlus Buds 3 蓝牙 SPP 协议逆向与实现基础。
 - **媒体歌词支持**：[SPlayer-Next](https://github.com/SPlayer-Dev/SPlayer-Next) —— 提供优雅的外部歌词 API 与逐字时间轴。
