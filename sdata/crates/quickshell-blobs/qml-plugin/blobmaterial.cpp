@@ -71,13 +71,8 @@ bool BlobMaterialShader::updateUniformData(RenderState& state, QSGMaterial* newM
     };
     memcpy(buf->data() + 96, color, 16);
 
-    // Has inverted (offset 112)
-    memcpy(buf->data() + 112, &mat->m_hasInverted, 4);
-
-    // Inverted radius (offset 116)
-    memcpy(buf->data() + 116, &mat->m_invertedRadius, 4);
-
-    // Padding at 120-127 (skip)
+    // Inverted radii (offset 112, 16 bytes: tr, br, bl, tl)
+    memcpy(buf->data() + 112, mat->m_invertedRadii, 16);
 
     // Inverted outer (offset 128, 16 bytes)
     memcpy(buf->data() + 128, mat->m_invertedOuter, 16);

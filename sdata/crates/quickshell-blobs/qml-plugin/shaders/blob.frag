@@ -14,8 +14,7 @@ layout(std140, binding = 0) uniform buf {
     int rectCount;
     int myIndex;
     vec4 color;
-    int hasInverted;
-    float invertedRadius;
+    vec4 invertedRadii;
     vec4 invertedOuter;
     vec4 invertedInner;
     vec4 rectData[80];
@@ -102,7 +101,7 @@ void main() {
 
         // Scale SDF on the axis facing a nearby border to narrow the smin blend zone
         // in that direction only, without reducing k (which would cause sharp edges).
-        if (hasInverted != 0) {
+        if (invertedOuter.z > 0.0) {
             vec2 screenHalf = sh.xy;
 
             float distY0 = (center.y + screenHalf.y) - (invertedInner.y - invertedInner.w);
@@ -174,9 +173,9 @@ void main() {
         }
     }
 
-    if (hasInverted != 0) {
+    if (invertedOuter.z > 0.0) {
         float dOuter = sdBox(pixel, invertedOuter.xy, invertedOuter.zw) - 1.0;
-        float dInner = sdRoundedBox(pixel, invertedInner.xy, invertedInner.zw, invertedRadius);
+        float dInner = sdRoundedBox4(pixel, invertedInner.xy, invertedInner.zw, invertedRadii);
 
         // Border sinks: track the opposite rect edge, clamped to border thickness
         float innerTop = invertedInner.y - invertedInner.w;

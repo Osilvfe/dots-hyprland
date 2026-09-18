@@ -320,13 +320,18 @@ Scope {
                     smoothing: rootWindow.smoothVal
                 }
 
-                // 1. 全屏一体化环绕内框 (顶部包含顶栏实体底色)
+                // 1. 全屏一体化环绕内框 (顶部包含顶栏实体底色，顶端平直无内凹圆角)
                 BlobInvertedRect {
                     id: invertedFrame
                     group: fluidBlobGroup
                     anchors.fill: parent
 
                     radius: rootWindow.frameRadius
+                    topLeftRadius: 0
+                    topRightRadius: 0
+                    bottomLeftRadius: rootWindow.frameRadius
+                    bottomRightRadius: rootWindow.frameRadius
+
                     borderLeft: rootWindow.frameLeft
                     borderRight: rootWindow.frameRight
                     borderTop: rootWindow.frameTop

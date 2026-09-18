@@ -51,8 +51,7 @@ pub struct BlobUboState {
     pub rect_count: i32,
     pub my_index: i32,
     pub color: [f32; 4], // r, g, b, a
-    pub has_inverted: i32,
-    pub inverted_radius: f32,
+    pub inverted_radii: [f32; 4], // tr, br, bl, tl
     pub inverted_outer: [f32; 4],
     pub inverted_inner: [f32; 4],
     pub rects: [BlobRectData; MAX_RECTS],
@@ -73,8 +72,7 @@ impl Default for BlobUboState {
             rect_count: 0,
             my_index: -2,
             color: [0.267, 0.533, 1.0, 1.0],
-            has_inverted: 0,
-            inverted_radius: 0.0,
+            inverted_radii: [0.0; 4],
             inverted_outer: [0.0; 4],
             inverted_inner: [0.0; 4],
             rects: [BlobRectData::default(); MAX_RECTS],
@@ -118,14 +116,11 @@ impl BlobUboState {
             dest[offset..offset + 4].copy_from_slice(&self.color[i].to_ne_bytes());
         }
 
-        // 112..116: has inverted
-        dest[112..116].copy_from_slice(&self.has_inverted.to_ne_bytes());
-
-        // 116..120: inverted radius
-        dest[116..120].copy_from_slice(&self.inverted_radius.to_ne_bytes());
-
-        // 120..128: 8 bytes padding (zero out)
-        dest[120..128].fill(0);
+        // 112..128: inverted radii (tr, br, bl, tl)
+        for i in 0..4 {
+            let offset = 112 + i * 4;
+            dest[offset..offset + 4].copy_from_slice(&self.inverted_radii[i].to_ne_bytes());
+        }
 
         // 128..144: inverted outer vec4
         for i in 0..4 {

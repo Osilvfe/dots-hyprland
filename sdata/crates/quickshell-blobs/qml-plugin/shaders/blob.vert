@@ -16,8 +16,7 @@ layout(std140, binding = 0) uniform buf {
     int rectCount;
     int myIndex;
     vec4 color;
-    int hasInverted;
-    float invertedRadius;
+    vec4 invertedRadii;
     vec4 invertedOuter;
     vec4 invertedInner;
     vec4 rectData[80];

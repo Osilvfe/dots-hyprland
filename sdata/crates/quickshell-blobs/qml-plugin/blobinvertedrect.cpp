@@ -125,10 +125,9 @@ QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData
     material->m_smoothFactor = pad;
     material->m_myIndex = m_cachedMyIndex;
     material->m_color = m_group->color();
-    material->m_hasInverted = m_cachedHasInverted ? 1 : 0;
-    material->m_invertedRadius = m_cachedInvertedRadius;
-    memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(m_cachedInvertedOuter));
-    memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(m_cachedInvertedInner));
+    memcpy(material->m_invertedRadii, m_cachedInvertedRadii, sizeof(material->m_invertedRadii));
+    memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(material->m_invertedOuter));
+    memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(material->m_invertedInner));
 
     const int count = static_cast<int>(m_cachedRects.size());
     material->m_rectCount = count;
@@ -209,6 +208,67 @@ void BlobInvertedRect::registerWithGroup() {
 void BlobInvertedRect::unregisterFromGroup() {
     if (m_group)
         m_group->clearInvertedRect(this);
+}
+
+qreal BlobInvertedRect::topLeftRadius() const {
+    return m_topLeftRadius;
+}
+
+void BlobInvertedRect::setTopLeftRadius(qreal r) {
+    if (!qFuzzyCompare(m_topLeftRadius, r)) {
+        m_topLeftRadius = r;
+        emit topLeftRadiusChanged();
+        if (m_group)
+            m_group->markDirty();
+    }
+}
+
+qreal BlobInvertedRect::topRightRadius() const {
+    return m_topRightRadius;
+}
+
+void BlobInvertedRect::setTopRightRadius(qreal r) {
+    if (!qFuzzyCompare(m_topRightRadius, r)) {
+        m_topRightRadius = r;
+        emit topRightRadiusChanged();
+        if (m_group)
+            m_group->markDirty();
+    }
+}
+
+qreal BlobInvertedRect::bottomLeftRadius() const {
+    return m_bottomLeftRadius;
+}
+
+void BlobInvertedRect::setBottomLeftRadius(qreal r) {
+    if (!qFuzzyCompare(m_bottomLeftRadius, r)) {
+        m_bottomLeftRadius = r;
+        emit bottomLeftRadiusChanged();
+        if (m_group)
+            m_group->markDirty();
+    }
+}
+
+qreal BlobInvertedRect::bottomRightRadius() const {
+    return m_bottomRightRadius;
+}
+
+void BlobInvertedRect::setBottomRightRadius(qreal r) {
+    if (!qFuzzyCompare(m_bottomRightRadius, r)) {
+        m_bottomRightRadius = r;
+        emit bottomRightRadiusChanged();
+        if (m_group)
+            m_group->markDirty();
+    }
+}
+
+void BlobInvertedRect::cornerRadii(float out[4]) const {
+    const auto maxR = static_cast<float>(std::min(width(), height())) * 0.5f;
+    const auto base = std::min(static_cast<float>(m_radius), maxR);
+    out[0] = std::min(m_topRightRadius >= 0 ? static_cast<float>(m_topRightRadius) : base, maxR);
+    out[1] = std::min(m_bottomRightRadius >= 0 ? static_cast<float>(m_bottomRightRadius) : base, maxR);
+    out[2] = std::min(m_bottomLeftRadius >= 0 ? static_cast<float>(m_bottomLeftRadius) : base, maxR);
+    out[3] = std::min(m_topLeftRadius >= 0 ? static_cast<float>(m_topLeftRadius) : base, maxR);
 }
 
 } // namespace caelestia::blobs
