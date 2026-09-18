@@ -120,8 +120,13 @@ Scope {
                 readonly property real frameBottom: gapsOut
 
                 readonly property bool isCurrentMonitorFocused: (Hyprland.focusedMonitor?.name === drawerLoader.modelData.name)
+                readonly property bool isCurrentScreenTarget: {
+                    if (GlobalStates.mediaButtonScreen)
+                        return GlobalStates.mediaButtonScreen.name === drawerLoader.modelData.name;
+                    return isCurrentMonitorFocused;
+                }
 
-                // 抽屉展开状态联动 GlobalStates (仅在当前聚焦显示器展开)
+                // 抽屉与弹出气泡展开状态联动 GlobalStates (仅在当前聚焦/目标显示器展开)
                 readonly property bool sidebarOpen: GlobalStates.sidebarRightOpen && isCurrentMonitorFocused
                 property real drawerOffsetScale: sidebarOpen ? 1.0 : 0.0
 
@@ -131,8 +136,11 @@ Scope {
                 readonly property bool overviewOpen: GlobalStates.overviewOpen && isCurrentMonitorFocused
                 property real overviewOffsetScale: overviewOpen ? 1.0 : 0.0
 
+                readonly property bool mediaControlsOpen: GlobalStates.mediaControlsOpen && isCurrentScreenTarget
+                property real mediaOffsetScale: mediaControlsOpen ? 1.0 : 0.0
+
                 // 动画运行状态指示器 (用于开启 GPU 纹理加速)
-                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running
+                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running || mediaOffsetAnim.running
 
                 Behavior on drawerOffsetScale {
                     NumberAnimation {
@@ -155,6 +163,15 @@ Scope {
                 Behavior on overviewOffsetScale {
                     NumberAnimation {
                         id: overviewOffsetAnim
+                        duration: 320
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 0.5
+                    }
+                }
+
+                Behavior on mediaOffsetScale {
+                    NumberAnimation {
+                        id: mediaOffsetAnim
                         duration: 320
                         easing.type: Easing.OutBack
                         easing.overshoot: 0.5
@@ -189,28 +206,38 @@ Scope {
                         height: rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetHeight : 0
                     }
 
-                    // 4. 抽屉展开时，覆盖中央工作区遮罩用于点击收起
+                    // 4. 媒体控制流体气泡区域：展开状态下覆盖最终静止目标矩形
+                    Region {
+                        x: mediaPopoutPanel.targetX
+                        y: rootWindow.frameTop
+                        width: rootWindow.mediaControlsOpen ? mediaPopoutPanel.targetWidth : 0
+                        height: rootWindow.mediaControlsOpen ? mediaPopoutPanel.targetHeight : 0
+                    }
+
+                    // 5. 抽屉与浮层展开时，覆盖中央工作区遮罩用于点击收起
                     Region {
                         x: rootWindow.frameLeft + (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)
                         y: rootWindow.frameTop
-                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen) ?
+                        width: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen) ?
                                Math.max(0, rootWindow.width - rootWindow.frameLeft - rootWindow.frameRight 
                                            - (rootWindow.sidebarOpen ? drawerPanel.targetWidth : 0)
                                            - (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)) : 0
-                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen) ?
+                        height: (rootWindow.sidebarOpen || rootWindow.sidebarLeftOpen || rootWindow.mediaControlsOpen) ?
                                 Math.max(0, rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) : 0
                     }
                 }
 
-                // 点击抽屉外部空白区域自动收起抽屉
+                // 点击抽屉外部空白区域自动收起抽屉与弹出浮层
                 MouseArea {
                     anchors.fill: parent
                     enabled: (rootWindow.sidebarOpen && rootWindow.drawerOffsetScale > 0.05) ||
-                             (rootWindow.sidebarLeftOpen && rootWindow.drawerLeftOffsetScale > 0.05)
+                             (rootWindow.sidebarLeftOpen && rootWindow.drawerLeftOffsetScale > 0.05) ||
+                             (rootWindow.mediaControlsOpen && rootWindow.mediaOffsetScale > 0.05)
                     z: 50
                     onClicked: {
                         GlobalStates.sidebarRightOpen = false;
                         GlobalStates.sidebarLeftOpen = false;
+                        GlobalStates.mediaControlsOpen = false;
                     }
                 }
 
@@ -330,9 +357,84 @@ Scope {
                     damping: 15.0
                 }
 
+                // 5. 顶栏媒体控制流体气泡 (Media Fluid Popout)
+                // 沿顶栏下沿向下熔出展开，与顶栏及四周内衬拉出极其平滑的 GPU 双向波浪桥
+                BlobRect {
+                    id: mediaPopoutPanel
+                    group: fluidBlobGroup
+                    z: 60
+
+                    readonly property real targetWidth: Appearance.sizes.mediaControlsWidth
+                    readonly property real targetHeight: Math.min(600, Math.max(120, mediaContentLoader.item?.contentHeight ?? Appearance.sizes.mediaControlsHeight))
+
+                    // 水平位置：跟随顶栏点击处居中，或屏幕居中
+                    readonly property real targetX: {
+                        const isCurrentScreen = !GlobalStates.mediaButtonScreen || GlobalStates.mediaButtonScreen === rootWindow.screen;
+                        if (isCurrentScreen && GlobalStates.mediaCenterX > 0) {
+                            const minLeft = rootWindow.frameLeft + 10;
+                            const maxLeft = Math.max(minLeft, rootWindow.width - rootWindow.frameRight - targetWidth - 10);
+                            const targetLeft = GlobalStates.mediaCenterX - (targetWidth / 2);
+                            return Math.max(minLeft, Math.min(maxLeft, targetLeft));
+                        }
+                        return (rootWindow.width - targetWidth) / 2;
+                    }
+
+                    // 展开目标 Y：深入顶栏底座 10px，让着色器在顶栏下沿两端拉出极其丝滑圆润的液态向下垂悬波浪
+                    readonly property real targetY: rootWindow.frameTop - 10
+                    // 收起隐藏 Y：退至屏幕上方完全脱离 smin 场
+                    readonly property real hiddenY: -targetHeight - rootWindow.smoothVal - 15
+
+                    width: targetWidth
+                    height: targetHeight
+
+                    x: targetX
+                    y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.mediaOffsetScale)
+
+                    // 四角圆角：底部保持大圆角胶囊，顶部双角在向下拔出过程中平滑过渡
+                    radius: 28
+                    bottomLeftRadius: 28
+                    bottomRightRadius: 28
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.mediaOffsetScale / 0.35)) * 28
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.mediaOffsetScale / 0.35)) * 28
+
+                    deformScale: 0.00001
+                    stiffness: 240.0
+                    damping: 15.0
+                }
+
                 // ==========================================
                 // 3. 独立上层侧边栏交互与内容层（后渲染/延后淡入，与底层流体浮岛联动）
                 // ==========================================
+                // 顶栏媒体控制内容层 (后渲染延后淡入，与底层流体气泡联动)
+                Item {
+                    id: mediaContentLayer
+                    z: 65
+                    x: mediaPopoutPanel.x
+                    y: mediaPopoutPanel.y + 10 // 抵消深入顶栏的 10px，使内容上边缘恰好对齐顶栏下边缘
+                    width: mediaPopoutPanel.width
+                    height: mediaPopoutPanel.height - 10
+
+                    // 视觉核心：后渲染/延后渐入感知
+                    // 前半程 (0~0.35) 纯净展示流体向下熔出拔出，后半程 (0.35~1.0) 平滑淡入内容
+                    opacity: Math.max(0, Math.min(1, (rootWindow.mediaOffsetScale - 0.35) / 0.65))
+                    visible: rootWindow.mediaOffsetScale > 0.001
+
+                    // 动画期间开启 GPU 纹理缓存加速
+                    layer.enabled: rootWindow.isAnimating
+
+                    Loader {
+                        id: mediaContentLoader
+                        anchors.fill: parent
+                        active: rootWindow.mediaOffsetScale > 0.001
+                        source: "../mediaControls/MediaControlsContent.qml"
+                        onLoaded: {
+                            if (item) {
+                                item.active = Qt.binding(() => rootWindow.mediaControlsOpen);
+                            }
+                        }
+                    }
+                }
+
                 // 右侧抽屉内容
                 Item {
                     id: drawerContentLayer
@@ -554,6 +656,15 @@ Scope {
         description: "Closes bar on press"
         onPressed: {
             GlobalStates.barOpen = false;
+        }
+    }
+
+    Connections {
+        target: GlobalStates
+        function onMediaControlsOpenChanged() {
+            if (!GlobalStates.mediaControlsOpen) {
+                GlobalStates.mediaButtonScreen = null;
+            }
         }
     }
 }
