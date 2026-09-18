@@ -61,13 +61,13 @@ Scope {
             target: GlobalStates
             function onOverviewOpenChanged() {
                 if (!GlobalStates.overviewOpen) {
-                    // Reset while the overview is already closed so the result
-                    // panel collapses immediately instead of shrinking on the
-                    // next reveal.
-                    searchWidget.cancelSearch(false);
+                    searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;
                     GlobalFocusGrab.dismiss();
                 } else {
+                    if (!overviewScope.dontAutoCancelSearch) {
+                        searchWidget.cancelSearch();
+                    }
                     GlobalFocusGrab.addDismissable(panelWindow);
                     searchWidget.focusSearchInput();
                 }
