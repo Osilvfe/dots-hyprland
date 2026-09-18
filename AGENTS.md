@@ -62,7 +62,7 @@
 - 底层使用 Rust 原生重构（`sdata/crates/quickshell-blobs/`）：
   - `physics.rs`：半隐式阻尼弹簧积分（Underdamped Spring）与应变张量拉伸形变（Jelly Physics），零速度收敛保护，绝不发散或空转
   - `ubo.rs`：1440 字节连续内存的严格 std140 内存对齐打包，与 GPU 着色器零拷贝安全绑定
-- 构建与部署：通过 `dots/.config/quickshell/ii/scripts/build-blobs.sh` 编译并安装至 `~/.local/lib/qt6/qml/Caelestia/Blobs`，QML 中直接 `import Caelestia.Blobs`。修改 `qml-plugin/*.cpp|hpp` 后必须重新执行该脚本；仅重启 Quickshell 不会替换已安装的原生插件。
+- 构建与部署：`./setup install` 的 setup 阶段会自动调用 `dots/.config/quickshell/ii/scripts/build-blobs.sh`，编译并安装至 `~/.local/lib/qt6/qml/Caelestia/Blobs`，QML 中直接 `import Caelestia.Blobs`；安装器同时声明 `rust`、`cmake`、`qt6-shadertools` 构建依赖，并将插件目录写入 `INSTALLED_LISTFILE` 供卸载流程追踪。开发时修改 `qml-plugin/*.cpp|hpp`、Rust 核心或 shader 后必须重新执行该脚本；仅重启 Quickshell 不会替换已安装的原生插件。
 - `BlobShape.forceWindowUpdate`：可选的窗口级重绘开关，默认 `false`。启用后，当该 Blob 的几何变化触发 `BlobGroup::markShapeDirty()`（或组级 `markDirty()` 命中已启用的 shape）时，除常规 `QQuickItem::polish()/update()` 外还会调用所在 `QQuickWindow::update()`，显式请求下一帧。由于 `geometryChange()` 可能发生在 Qt Quick 当前的 polish/layout 阶段，单次窗口刷新仍可能过早，因此启用该特性时还会在下一事件循环合并补一次 `markShapeDirty()`；这两步是配套机制，不要只保留其中一半。用于处理 layer-shell/空闲 render loop 中“状态已经更新但画面停在旧帧，直到鼠标/键盘事件后才刷新”的场景。
 - `forceWindowUpdate` **按需使用，不要全局开启**：持续动画中的 Blob 本身已有帧驱动，额外窗口级刷新只会制造冗余提交。优先只给“内容驱动几何变化、变化频率不高、且窗口可能处于空闲状态”的 Blob 打开。当前仅 `Drawers.qml` 的 `overviewBottomPanel` 设置 `forceWindowUpdate: true`，因为搜索结果会动态改变面板高度，而此时可能没有其它输入/动画事件持续唤醒 scene graph。
 - 一体化画框与顶栏融合（`Drawers.qml`）：基于方案一「无损借壳复用」，100% 保留原有 `BarContent.qml` 业务；全屏 `BlobInvertedRect` 提供统一四周与顶栏内凹底座，工作区通过 `Intersection.Xor` 穿透遮罩直通桌面窗口；右侧抽屉展开时与顶栏下沿丝滑粘连；通过 `Config.options.appearance.fluidMorphing.enable` 实现渐进式开关，兼容原生 `sidebarRight` 与 `bar` 的 IPC/快捷键
