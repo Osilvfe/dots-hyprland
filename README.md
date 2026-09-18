@@ -46,7 +46,7 @@
 - **Caelestia.Blobs 流体一体化画框**：
   - 使用自维护的原生 QML 插件（`sdata/crates/quickshell-blobs/`），基于 SDF + `smin` 在 GPU 片元着色器中实时计算圆角 Blob / Metaball 粘连，并结合 Rust 弹簧动力学实现果冻形变。
   - `Drawers.qml` 将顶栏、四周内凹画框、左右抽屉、Overview 搜索、媒体控制、OSD 等统一到同一流体渲染组中，可在设置中通过 **Fluid morphing frame** 开关启用。
-  - 对少量会在窗口空闲时发生内容驱动尺寸变化的 Blob，可显式设置 `forceWindowUpdate: true` 请求窗口下一帧；默认关闭，避免给持续动画组件制造额外重绘。当前 Overview 搜索果冻使用该机制，解决无鼠标活动时动态高度可能停留在旧帧的问题。
+  - 对少量会在窗口空闲时发生内容驱动尺寸变化的 Blob，可显式设置 `forceWindowUpdate: true`。该模式会主动请求窗口新帧，并在几何变化发生于 Qt Quick polish/layout 阶段时，于下一事件循环合并补一次刷新；默认关闭，避免给持续动画组件制造额外重绘。当前 Overview 搜索果冻使用该机制，解决无鼠标活动时动态高度可能停留在旧帧的问题。
 - **侧边栏与日历**：
   - 中文日历公历农历双轨支持：节日当天精确对应，搭配中国法定节假日与调休补班彩色徽章（“休”/“班”），离线多轨缓存保障离线可用。
 
