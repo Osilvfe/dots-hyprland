@@ -39,51 +39,50 @@ Scope {
             component: Scope {
                 id: monitorScope
 
-                // 1. 四周画框固定排他避让 (对齐 Caelestia ExclusionZone 体系)
-                // 顶部：45px (顶栏 40px + 外边距 5px)
+                // 顶部：避让顶栏自身高度 (Hyprland 会在可用区内自动加上 gaps_out)
                 PanelWindow {
                     screen: drawerLoader.modelData
                     WlrLayershell.namespace: "quickshell:drawers_top_exclusion"
                     WlrLayershell.layer: WlrLayer.Top
                     anchors { top: true; left: true; right: true }
                     implicitHeight: 1
-                    exclusiveZone: Appearance.sizes.baseBarHeight + Appearance.sizes.hyprlandGapsOut
+                    exclusiveZone: Appearance.sizes.baseBarHeight
                     color: "transparent"
                     mask: Region {}
                 }
 
-                // 左侧：5px (画框左侧固定边距)
+                // 左侧：纯用于避让，设为 0 避免与 Hyprland gaps_out 叠加翻倍
                 PanelWindow {
                     screen: drawerLoader.modelData
                     WlrLayershell.namespace: "quickshell:drawers_left_exclusion"
                     WlrLayershell.layer: WlrLayer.Top
                     anchors { left: true; top: true; bottom: true }
                     implicitWidth: 1
-                    exclusiveZone: Appearance.sizes.hyprlandGapsOut
+                    exclusiveZone: 0
                     color: "transparent"
                     mask: Region {}
                 }
 
-                // 右侧：5px (画框右侧固定边距，无论抽屉是否展开均恒定为 5px，抽屉纯悬浮浮于窗口之上！)
+                // 右侧：纯用于避让，设为 0 避免与 Hyprland gaps_out 叠加翻倍
                 PanelWindow {
                     screen: drawerLoader.modelData
                     WlrLayershell.namespace: "quickshell:drawers_right_exclusion"
                     WlrLayershell.layer: WlrLayer.Top
                     anchors { right: true; top: true; bottom: true }
                     implicitWidth: 1
-                    exclusiveZone: Appearance.sizes.hyprlandGapsOut
+                    exclusiveZone: 0
                     color: "transparent"
                     mask: Region {}
                 }
 
-                // 底部：5px (画框底部固定边距)
+                // 底部：纯用于避让，设为 0 避免与 Hyprland gaps_out 叠加翻倍
                 PanelWindow {
                     screen: drawerLoader.modelData
                     WlrLayershell.namespace: "quickshell:drawers_bottom_exclusion"
                     WlrLayershell.layer: WlrLayer.Top
                     anchors { bottom: true; left: true; right: true }
                     implicitHeight: 1
-                    exclusiveZone: Appearance.sizes.hyprlandGapsOut
+                    exclusiveZone: 0
                     color: "transparent"
                     mask: Region {}
                 }
@@ -113,12 +112,17 @@ Scope {
                 readonly property real barHeight: Appearance.sizes.baseBarHeight
                 readonly property real frameRadius: Appearance.rounding.screenRounding
                 readonly property real smoothVal: Config.options.appearance.fluidMorphing.smoothing ?? 34.0
+                // 原卡片设计系统规范基准圆角 (MediaControls, Sidebar, WallpaperSelector 卡片背景均为 19px)
+                readonly property real cardRounding: Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 1
+                // 同心圆几何规范 (Concentric Circles Standard): R_blob = r_card + padding
+                readonly property real fluidPad: 8 // 果冻底座在原卡片四周的外凸留白间距 (19 + 8 = 27px 同心圆)
+                readonly property real notifPad: 6 // 通知卡片到果冻底座的留白间距 (17 + 6 = 23px 同心圆)
 
-                // 边框几何尺寸 (顶栏直接内嵌于 borderTop 中)
-                readonly property real frameLeft: gapsOut
-                readonly property real frameRight: gapsOut
-                readonly property real frameTop: barHeight + gapsOut
-                readonly property real frameBottom: gapsOut
+                // 边框几何尺寸 (顶栏直接内嵌于 borderTop 中；四周 0px 保证画框内凹角 23 与窗口外角 18 严格同心等距 5px)
+                readonly property real frameLeft: 0
+                readonly property real frameRight: 0
+                readonly property real frameTop: barHeight
+                readonly property real frameBottom: 0
 
                 readonly property bool isCurrentMonitorFocused: (Hyprland.focusedMonitor?.name === drawerLoader.modelData.name)
                 readonly property bool isCurrentScreenTarget: {
@@ -154,8 +158,16 @@ Scope {
                 readonly property bool osdOpen: GlobalStates.osdVolumeOpen && isCurrentMonitorFocused
                 property real osdOffsetScale: osdOpen ? 1.0 : 0.0
 
+                readonly property bool isCurrentNotifScreen: {
+                    if (Config.options.notifications.forceMonitor?.enable)
+                        return drawerLoader.modelData.name === Config.options.notifications.forceMonitor.name;
+                    return isCurrentMonitorFocused;
+                }
+                readonly property bool hasNotifications: Notifications.popupList.length > 0 && !GlobalStates.screenLocked && isCurrentNotifScreen
+                property real notificationOffsetScale: hasNotifications ? 1.0 : 0.0
+
                 // 动画运行状态指示器 (用于开启 GPU 纹理加速)
-                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running || mediaOffsetAnim.running || wallpaperOffsetAnim.running || trayOffsetAnim.running || osdOffsetAnim.running
+                readonly property bool isAnimating: drawerOffsetAnim.running || drawerLeftOffsetAnim.running || overviewOffsetAnim.running || mediaOffsetAnim.running || wallpaperOffsetAnim.running || trayOffsetAnim.running || osdOffsetAnim.running || notificationOffsetAnim.running
 
                 Behavior on drawerOffsetScale {
                     NumberAnimation {
@@ -220,6 +232,15 @@ Scope {
                     }
                 }
 
+                Behavior on notificationOffsetScale {
+                    NumberAnimation {
+                        id: notificationOffsetAnim
+                        duration: 280
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 0.4
+                    }
+                }
+
                 // 核心输入遮罩：静态解耦设计，运动全程 0 次 Wayland IPC 提交，彻底根除高频重绘掉帧
                 mask: Region {
                     id: screenMask
@@ -280,7 +301,15 @@ Scope {
                         height: rootWindow.osdOpen ? osdPopoutPanel.targetHeight : 0
                     }
 
-                    // 8. 抽屉与浮层展开时，覆盖中央工作区遮罩用于点击收起
+                    // 8. 桌面通知弹出流体气泡区域：展开状态下覆盖静止目标矩形，保证滑动划掉与点击可交互
+                    Region {
+                        x: notificationPopoutPanel.targetX
+                        y: rootWindow.frameTop
+                        width: rootWindow.hasNotifications ? notificationPopoutPanel.targetWidth : 0
+                        height: rootWindow.hasNotifications ? notificationPopoutPanel.targetHeight : 0
+                    }
+
+                    // 9. 抽屉与浮层展开时，覆盖中央工作区遮罩用于点击收起
                     Region {
                         x: rootWindow.frameLeft + (rootWindow.sidebarLeftOpen ? drawerLeftPanel.targetWidth : 0)
                         y: rootWindow.frameTop
@@ -340,7 +369,7 @@ Scope {
                     visible: rootWindow.isCurrentMonitorFocused && (rootWindow.sidebarOpen || rootWindow.drawerOffsetScale > 0.001)
                     z: 60
 
-                    readonly property real targetWidth: Appearance.sizes.sidebarWidth
+                    readonly property real targetWidth: Appearance.sizes.sidebarWidth + rootWindow.fluidPad
                     // 浮岛胶囊高度：上下留出开阔净空，让着色器在上下两端充分拉出圆滑波浪颈部！
                     readonly property real targetHeight: Math.min(840, Math.max(520, Math.round((rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) * 0.74)))
                     readonly property real targetX: rootWindow.width - rootWindow.frameRight - targetWidth
@@ -355,11 +384,11 @@ Scope {
                     // 垂直居中于顶栏下沿与底座之间，上下均拥有 100~200px 广阔流体场
                     y: rootWindow.frameTop + (rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom - targetHeight) / 2
 
-                    // 完整的四角大圆角胶囊
-                    radius: 28
+                    // 同心圆规范：外层底座圆角 (27) = 内层卡片圆角 (19) + 留白间距 (8)
+                    radius: rootWindow.cardRounding + rootWindow.fluidPad
                     // 动态左侧双圆角溶出渐变（刚展开时如液滴被拔出边框）
-                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * 28
-                    bottomLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * 28
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
+                    bottomLeftRadius: Math.max(0, Math.min(1, rootWindow.drawerOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
 
                     deformScale: 0.00001
                     stiffness: 220.0
@@ -373,7 +402,7 @@ Scope {
                     visible: rootWindow.isCurrentMonitorFocused && (rootWindow.sidebarLeftOpen || rootWindow.drawerLeftOffsetScale > 0.001)
                     z: 60
 
-                    readonly property real targetWidth: Appearance.sizes.sidebarWidth
+                    readonly property real targetWidth: Appearance.sizes.sidebarWidth + rootWindow.fluidPad
                     readonly property real targetHeight: Math.min(840, Math.max(520, Math.round((rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom) * 0.74)))
                     readonly property real targetX: rootWindow.frameLeft
                     // 收起时退到屏幕之外 smoothVal + 15 距离，彻底杜绝边框边缘的 smin 凸起鼓包
@@ -387,11 +416,11 @@ Scope {
                     // 垂直居中于顶栏下沿与底座之间，上下均拥有 100~200px 广阔流体场
                     y: rootWindow.frameTop + (rootWindow.height - rootWindow.frameTop - rootWindow.frameBottom - targetHeight) / 2
 
-                    // 完整的四角大圆角胶囊
-                    radius: 28
+                    // 同心圆规范：外层底座圆角 (27) = 内层卡片圆角 (19) + 留白间距 (8)
+                    radius: rootWindow.cardRounding + rootWindow.fluidPad
                     // 动态右侧双圆角溶出渐变（刚展开时如液滴被拔出边框）
-                    topRightRadius: Math.max(0, Math.min(1, rootWindow.drawerLeftOffsetScale / 0.35)) * 28
-                    bottomRightRadius: Math.max(0, Math.min(1, rootWindow.drawerLeftOffsetScale / 0.35)) * 28
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.drawerLeftOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
+                    bottomRightRadius: Math.max(0, Math.min(1, rootWindow.drawerLeftOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
 
                     deformScale: 0.00001
                     stiffness: 220.0
@@ -409,7 +438,7 @@ Scope {
                     readonly property real targetWidth: Math.min(680, rootWindow.width - 80)
                     readonly property real targetHeight: Math.min(640, Math.max(64, GlobalStates.overviewContentHeight))
                     readonly property real targetX: (rootWindow.width - targetWidth) / 2
-                    readonly property real targetY: rootWindow.height - rootWindow.frameBottom - targetHeight
+                    readonly property real targetY: rootWindow.height - rootWindow.gapsOut - targetHeight
                     readonly property real hiddenY: rootWindow.height + rootWindow.smoothVal + 15
 
                     width: targetWidth
@@ -439,8 +468,8 @@ Scope {
                     visible: rootWindow.isCurrentScreenTarget && (rootWindow.mediaControlsOpen || rootWindow.mediaOffsetScale > 0.001)
                     z: 60
 
-                    readonly property real targetWidth: Appearance.sizes.mediaControlsWidth
-                    readonly property real targetHeight: Math.min(600, Math.max(120, mediaContentLoader.item?.contentHeight ?? Appearance.sizes.mediaControlsHeight))
+                    readonly property real targetWidth: Appearance.sizes.mediaControlsWidth + rootWindow.fluidPad * 2
+                    readonly property real targetHeight: Math.min(600, Math.max(120, (mediaContentLoader.item?.contentHeight ?? Appearance.sizes.mediaControlsHeight) + rootWindow.fluidPad + 10))
 
                     // 水平位置：跟随顶栏点击处居中，或屏幕居中
                     readonly property real targetX: {
@@ -465,12 +494,12 @@ Scope {
                     x: targetX
                     y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.mediaOffsetScale)
 
-                    // 四角圆角：底部保持大圆角胶囊，顶部双角在向下拔出过程中平滑过渡
-                    radius: 28
-                    bottomLeftRadius: 28
-                    bottomRightRadius: 28
-                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.mediaOffsetScale / 0.35)) * 28
-                    topRightRadius: Math.max(0, Math.min(1, rootWindow.mediaOffsetScale / 0.35)) * 28
+                    // 同心圆规范：外层底座圆角 (27) = 内层卡片圆角 (19) + 留白间距 (8)
+                    radius: rootWindow.cardRounding + rootWindow.fluidPad
+                    bottomLeftRadius: rootWindow.cardRounding + rootWindow.fluidPad
+                    bottomRightRadius: rootWindow.cardRounding + rootWindow.fluidPad
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.mediaOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.mediaOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
 
                     deformScale: 0.00001
                     stiffness: 240.0
@@ -485,8 +514,8 @@ Scope {
                     visible: rootWindow.isCurrentMonitorFocused && (rootWindow.wallpaperSelectorOpen || rootWindow.wallpaperOffsetScale > 0.001)
                     z: 60
 
-                    readonly property real targetWidth: Math.min(1080, Math.max(800, Appearance.sizes.wallpaperSelectorWidth))
-                    readonly property real targetHeight: Math.min(740, Math.max(500, Appearance.sizes.wallpaperSelectorHeight))
+                    readonly property real targetWidth: Math.min(1080, Math.max(800, Appearance.sizes.wallpaperSelectorWidth + rootWindow.fluidPad * 2))
+                    readonly property real targetHeight: Math.min(740, Math.max(500, Appearance.sizes.wallpaperSelectorHeight + rootWindow.fluidPad + 10))
 
                     readonly property real targetX: (rootWindow.width - targetWidth) / 2
                     readonly property real targetY: rootWindow.frameTop - 10
@@ -498,12 +527,12 @@ Scope {
                     x: targetX
                     y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.wallpaperOffsetScale)
 
-                    // 四角圆角：底部保持大圆角胶囊，顶部双角在向下拔出过程中平滑过渡
-                    radius: 28
-                    bottomLeftRadius: 28
-                    bottomRightRadius: 28
-                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.wallpaperOffsetScale / 0.35)) * 28
-                    topRightRadius: Math.max(0, Math.min(1, rootWindow.wallpaperOffsetScale / 0.35)) * 28
+                    // 同心圆规范：外层底座圆角 (27) = 内层卡片圆角 (19) + 留白间距 (8)
+                    radius: rootWindow.cardRounding + rootWindow.fluidPad
+                    bottomLeftRadius: rootWindow.cardRounding + rootWindow.fluidPad
+                    bottomRightRadius: rootWindow.cardRounding + rootWindow.fluidPad
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.wallpaperOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.wallpaperOffsetScale / 0.35)) * (rootWindow.cardRounding + rootWindow.fluidPad)
 
                     deformScale: 0.00001
                     stiffness: 240.0
@@ -551,8 +580,8 @@ Scope {
                     visible: rootWindow.isCurrentTrayScreen && (rootWindow.trayOverflowOpen || rootWindow.trayOffsetScale > 0.001)
                     z: 60
 
-                    readonly property real targetWidth: Math.min(320, Math.max(120, trayContentLoader.item?.contentWidth ?? 160))
-                    readonly property real targetHeight: Math.min(300, Math.max(50, trayContentLoader.item?.contentHeight ?? 60))
+                    readonly property real targetWidth: Math.min(320, Math.max(120, (trayContentLoader.item?.contentWidth ?? 160) + rootWindow.fluidPad * 2))
+                    readonly property real targetHeight: Math.min(300, Math.max(50, (trayContentLoader.item?.contentHeight ?? 60) + rootWindow.fluidPad + 10))
 
                     // 水平位置：跟随托盘箭头点击中心（trayCenterX），且具备右侧与左侧边界保护
                     readonly property real targetX: {
@@ -574,12 +603,51 @@ Scope {
                     x: targetX
                     y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.trayOffsetScale)
 
-                    // 四角大圆角胶囊
-                    radius: 24
-                    bottomLeftRadius: 24
-                    bottomRightRadius: 24
-                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.trayOffsetScale / 0.35)) * 24
-                    topRightRadius: Math.max(0, Math.min(1, rootWindow.trayOffsetScale / 0.35)) * 24
+                    // 同心圆规范：外层底座圆角 (26) = 原菜单圆角 (18) + 留白间距 (8)
+                    radius: Appearance.rounding.windowRounding + rootWindow.fluidPad
+                    bottomLeftRadius: Appearance.rounding.windowRounding + rootWindow.fluidPad
+                    bottomRightRadius: Appearance.rounding.windowRounding + rootWindow.fluidPad
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.trayOffsetScale / 0.35)) * (Appearance.rounding.windowRounding + rootWindow.fluidPad)
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.trayOffsetScale / 0.35)) * (Appearance.rounding.windowRounding + rootWindow.fluidPad)
+
+                    deformScale: 0.00001
+                    stiffness: 240.0
+                    damping: 15.0
+                }
+
+                // 9. 桌面通知弹出流体气泡 (Notification Fluid Popout)
+                // 自右上角顶栏下沿向下熔出展开，与顶栏和右侧画框在 GPU 着色器中拉出丝滑双向波浪桥
+                BlobRect {
+                    id: notificationPopoutPanel
+                    group: fluidBlobGroup
+                    forceWindowUpdate: true
+                    visible: rootWindow.isCurrentNotifScreen && (rootWindow.hasNotifications || rootWindow.notificationOffsetScale > 0.001)
+                    z: 60
+
+                    readonly property real targetWidth: Appearance.sizes.notificationPopupWidth
+                    readonly property real notifContentHeight: {
+                        if (notifContentLoader.item && notifContentLoader.item.contentHeight > 0)
+                            return notifContentLoader.item.contentHeight;
+                        return Math.max(1, Notifications.popupAppNameList.length) * 85;
+                    }
+                    readonly property real targetHeight: Math.min(rootWindow.height * 0.75, Math.max(80, notifContentHeight + 20))
+
+                    readonly property real targetX: rootWindow.width - rootWindow.frameRight - targetWidth - 10
+                    readonly property real targetY: rootWindow.frameTop - 10
+                    readonly property real hiddenY: -targetHeight - rootWindow.smoothVal - 15
+
+                    width: targetWidth
+                    height: targetHeight
+
+                    x: targetX
+                    y: targetY - (targetY - hiddenY) * (1.0 - rootWindow.notificationOffsetScale)
+
+                    // 同心平行圆角：内部卡片 17px (normal) + 内边距 6px = 气泡圆角 23px (screenRounding)
+                    radius: Appearance.rounding.screenRounding
+                    bottomLeftRadius: Appearance.rounding.screenRounding
+                    bottomRightRadius: Appearance.rounding.screenRounding
+                    topLeftRadius: Math.max(0, Math.min(1, rootWindow.notificationOffsetScale / 0.35)) * Appearance.rounding.screenRounding
+                    topRightRadius: Math.max(0, Math.min(1, rootWindow.notificationOffsetScale / 0.35)) * Appearance.rounding.screenRounding
 
                     deformScale: 0.00001
                     stiffness: 240.0
@@ -589,6 +657,31 @@ Scope {
                 // ==========================================
                 // 3. 独立上层侧边栏交互与内容层（后渲染/延后淡入，与底层流体浮岛联动）
                 // ==========================================
+                // 桌面通知弹出内容层 (后渲染延后淡入，与底层流体气泡联动)
+                Item {
+                    id: notificationContentLayer
+                    z: 65
+                    x: notificationPopoutPanel.x + rootWindow.notifPad
+                    y: notificationPopoutPanel.y + 10 // 抵消深入顶栏的 10px
+                    width: notificationPopoutPanel.width - rootWindow.notifPad * 2
+                    height: notificationPopoutPanel.height - 10 - rootWindow.notifPad
+
+                    // 视觉核心：后渲染/延后渐入感知
+                    opacity: Math.max(0, Math.min(1, (rootWindow.notificationOffsetScale - 0.35) / 0.65))
+                    visible: rootWindow.notificationOffsetScale > 0.001
+
+                    layer.enabled: rootWindow.isAnimating
+
+                    Loader {
+                        id: notifContentLoader
+                        anchors.fill: parent
+                        active: rootWindow.notificationOffsetScale > 0.001
+                        sourceComponent: NotificationListView {
+                            id: notifListView
+                            popup: true
+                        }
+                    }
+                }
                 // 音量/亮度/Gamma OSD 内容层 (后渲染延后淡入，与底层流体药丸联动)
                 Item {
                     id: osdContentLayer
@@ -616,10 +709,10 @@ Scope {
                 Item {
                     id: trayContentLayer
                     z: 65
-                    x: trayPopoutPanel.x
+                    x: trayPopoutPanel.x + rootWindow.fluidPad
                     y: trayPopoutPanel.y + 10 // 抵消深入顶栏的 10px
-                    width: trayPopoutPanel.width
-                    height: trayPopoutPanel.height - 10
+                    width: trayPopoutPanel.width - rootWindow.fluidPad * 2
+                    height: trayPopoutPanel.height - 10 - rootWindow.fluidPad
 
                     // 视觉核心：后渲染/延后渐入感知
                     opacity: Math.max(0, Math.min(1, (rootWindow.trayOffsetScale - 0.35) / 0.65))
@@ -639,10 +732,10 @@ Scope {
                 Item {
                     id: wallpaperContentLayer
                     z: 65
-                    x: wallpaperSelectorPanel.x
+                    x: wallpaperSelectorPanel.x + rootWindow.fluidPad
                     y: wallpaperSelectorPanel.y + 10 // 抵消深入顶栏的 10px，使内容上边缘恰好对齐顶栏下边缘
-                    width: wallpaperSelectorPanel.width
-                    height: wallpaperSelectorPanel.height - 10
+                    width: wallpaperSelectorPanel.width - rootWindow.fluidPad * 2
+                    height: wallpaperSelectorPanel.height - 10 - rootWindow.fluidPad
 
                     // 视觉核心：后渲染/延后渐入感知
                     opacity: Math.max(0, Math.min(1, (rootWindow.wallpaperOffsetScale - 0.35) / 0.65))
@@ -663,10 +756,10 @@ Scope {
                 Item {
                     id: mediaContentLayer
                     z: 65
-                    x: mediaPopoutPanel.x
+                    x: mediaPopoutPanel.x + rootWindow.fluidPad
                     y: mediaPopoutPanel.y + 10 // 抵消深入顶栏的 10px，使内容上边缘恰好对齐顶栏下边缘
-                    width: mediaPopoutPanel.width
-                    height: mediaPopoutPanel.height - 10
+                    width: mediaPopoutPanel.width - rootWindow.fluidPad * 2
+                    height: mediaPopoutPanel.height - 10 - rootWindow.fluidPad
 
                     // 视觉核心：后渲染/延后渐入感知
                     // 前半程 (0~0.35) 纯净展示流体向下熔出拔出，后半程 (0.35~1.0) 平滑淡入内容
@@ -693,10 +786,12 @@ Scope {
                 Item {
                     id: drawerContentLayer
                     z: 65
-                    x: drawerPanel.x
-                    y: drawerPanel.y
-                    width: drawerPanel.width
-                    height: drawerPanel.height
+                    // 同心圆规范：内容层左边缘内缩 fluidPad，使内层卡片圆角 (cardRounding)
+                    // 与外层 Blob 圆角 (cardRounding + fluidPad) 圆心严格重合
+                    x: drawerPanel.x + rootWindow.fluidPad
+                    y: drawerPanel.y + rootWindow.fluidPad
+                    width: drawerPanel.width - rootWindow.fluidPad * 2
+                    height: drawerPanel.height - rootWindow.fluidPad * 2
 
                     // 视觉核心：后渲染/延后渐入感知
                     // 前半程 (0~0.35) 纯净展示流体双向波浪拔出与粘连，后半程 (0.35~1.0) 平滑浮现内容
@@ -710,7 +805,6 @@ Scope {
                     Loader {
                         id: sidebarLoader
                         anchors.fill: parent
-                        anchors.margins: 6
                         clip: true
                         active: true
                         source: "../sidebarRight/SidebarRightContent.qml"
@@ -721,10 +815,10 @@ Scope {
                 Item {
                     id: drawerLeftContentLayer
                     z: 65
-                    x: drawerLeftPanel.x
-                    y: drawerLeftPanel.y
-                    width: drawerLeftPanel.width
-                    height: drawerLeftPanel.height
+                    x: drawerLeftPanel.x + rootWindow.fluidPad
+                    y: drawerLeftPanel.y + rootWindow.fluidPad
+                    width: drawerLeftPanel.width - rootWindow.fluidPad
+                    height: drawerLeftPanel.height - rootWindow.fluidPad * 2
 
                     // 视觉核心：后渲染/延后渐入感知
                     opacity: Math.max(0, Math.min(1, (rootWindow.drawerLeftOffsetScale - 0.35) / 0.65))
@@ -737,7 +831,6 @@ Scope {
                     Loader {
                         id: sidebarLeftLoader
                         anchors.fill: parent
-                        anchors.margins: 6
                         clip: true
                         active: true
                         Component.onCompleted: {

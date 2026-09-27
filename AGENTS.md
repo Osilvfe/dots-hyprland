@@ -142,6 +142,7 @@
 - **剪贴板智能语义识别与本地快捷动作**：在 Overview 剪贴板历史（`SUPER+V` / `:clip`）中引入纯本地语义分析单例服务 `ClipboardInspector.qml`，零网络请求、零外部依赖。自动识别颜色代码（HEX/RGB/HSL，条目直观渲染动态色块，支持格式一键互转）、纯算术算式（安全数学求值与 `= 结果` 胶囊徽章）、Unix 时间戳（本地时区日期换算与相对时间）、URL 链接（默认浏览器打开）、本地文件路径（打开文件/定位目录）、JSON（格式化/单行压缩）及 Base64（本地解码），并在条目右侧动态注入最多 5 个专属动作快捷按钮。
 - **媒体控制弹窗与歌词居中对齐**：顶栏媒体控制器卡片（`MediaControls.qml`）在点击或快捷键呼出时与顶栏歌词/媒体文本区域（`SyncedLyricText`）保持水平居中对齐，支持多屏幕坐标映射与边界防溢出保护，取代原本基于屏幕中心偏置的死板偏移。
 - **Wi-Fi 与蓝牙设置页优先展示已保存项并去重扫描项**：在系统设置中，调整 Wi-Fi 设置（`WifiConfig.qml`）与蓝牙设置（`BluetoothConfig.qml`）的层级排布，将“已保存的设备/网络”（Saved devices / networks）置顶展示于“扫描/附近设备”（Nearby / Available）上方；蓝牙已保存设备列表按 MAC 地址去重，扫描发现列表严格排除已配对保存的设备并去重；Wi-Fi 已保存网络按当前已连接、信号范围内（按信号强弱排序）、超出范围（按首字母排序）三级动态优选排序，并呈现动态信号强度图标与范围状态（“在范围内 (X%)”/“已连接”），同时支持断开/重新连接切换；Wi-Fi 扫描可用列表过滤所有已保存 SSID，彻底杜绝重复列出。
+- **壁纸切换 GPU Shader 转场动效体系（复刻 quickshell-sample）**：在桌面背景渲染中整合基于 GPU 片元着色器的双缓冲视口无缝转场架构（`WallpaperTransitionSurface.qml` / `WallpaperImageViewport.qml`），完整移植并适配 `fade`（平滑淡入淡出）、`wipe`（四向扫光擦除）、`disc`（有机圆盘扩散）、`stripes`（旋转百叶窗条纹）、`iris_bloom`（光圈虹膜绽放）、`pixelate`（像素马赛克动态锐化融合）与 `portal`（时空扭曲漩涡传送门）等 7 种着色器特效；支持设置页（`BackgroundConfig.qml`）动效类型选择（含 `random` 随机模式）、过渡时长（300~3000ms）与开关；双缓冲机制在后台异步预解码新图，确保切壁纸时 0 掉帧、0 白屏；静止时自动卸载着色器与离屏缓冲，实现桌面日常 0 GPU/CPU 额外开销；支持 `switchwall.sh`、壁纸选择器与 IPC 联动，兼容平铺视差与锁屏高斯模糊。
 
 ### 本地修复（无对应 PR）
 - **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示

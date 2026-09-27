@@ -176,5 +176,9 @@ Singleton {
         function apply(path: string): void {
             root.apply(path);
         }
+
+        function setWallpaper(path: string): void {
+            Config.options.background.wallpaperPath = path;
+        }
     }
 }

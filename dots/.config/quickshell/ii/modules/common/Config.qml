@@ -227,6 +227,12 @@ Singleton {
                     property bool enableSidebar: false
                     property real widgetsFactor: 1.2
                 }
+                property JsonObject transition: JsonObject {
+                    property bool enable: true
+                    property string type: "random" // "random", "fade", "wipe", "disc", "stripes", "iris_bloom", "pixelate", "portal", "none"
+                    property int durationMs: 1000
+                    property string easingMode: "customBezier"
+                }
             }
 
             property JsonObject bar: JsonObject {

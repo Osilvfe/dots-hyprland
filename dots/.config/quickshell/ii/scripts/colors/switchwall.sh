@@ -146,6 +146,7 @@ set_wallpaper_path() {
     if [ -f "$SHELL_CONFIG_FILE" ]; then
         jq --arg path "$path" '.background.wallpaperPath = $path' "$SHELL_CONFIG_FILE" > "$SHELL_CONFIG_FILE.tmp" && mv "$SHELL_CONFIG_FILE.tmp" "$SHELL_CONFIG_FILE"
     fi
+    qs -c "$QUICKSHELL_CONFIG_NAME" ipc call wallpapers setWallpaper "$path" >/dev/null 2>&1 || true
 }
 
 set_thumbnail_path() {

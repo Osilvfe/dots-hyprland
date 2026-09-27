@@ -1013,7 +1013,19 @@
   "Enable fluid morphing frame": "启用流体形态画框",
   "Enables Caelestia-style fluid morphing inverted frame with embedded top bar and metaball drawers": "启用 Caelestia 风格的流体形态内凹画框，融合顶栏并支持抽屉液态粘连拉伸",
   "Fluid smoothing radius": "流体融合平滑度",
-  "Adjusts the blend distance between the frame, top bar and drawers": "调节全屏边框、顶栏和侧边抽屉之间的液态粘连距离"
+  "Adjusts the blend distance between the frame, top bar and drawers": "调节全屏边框、顶栏和侧边抽屉之间的液态粘连距离",
+  "Wallpaper transition": "壁纸切换动效",
+  "Enable transitions": "启用转场动效",
+  "Duration (ms)": "过渡时长 (ms)",
+  "Transition effect": "转场效果",
+  "Random": "随机",
+  "Fade": "渐变",
+  "Wipe": "擦除",
+  "Disc": "圆盘扩散",
+  "Stripes": "百叶窗",
+  "Iris": "光圈绽放",
+  "Pixelate": "像素化",
+  "Portal": "传送门"
 }
 
 

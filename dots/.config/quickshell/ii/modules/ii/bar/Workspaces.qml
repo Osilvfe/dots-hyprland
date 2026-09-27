@@ -49,7 +49,9 @@ ButtonMouseArea {
     property real workspaceIconMarginShrinked: -4
     property int workspaceIndexInGroup: {
         const shownCount = Math.max(1, wsModel.shownCount);
-        const activeWorkspace = monitor?.activeWorkspace?.id ?? 1;
+        const rawId = monitor?.activeWorkspace?.id ?? 1;
+        // Same guard as WorkspaceModel: clamp near-INT_MAX sentinel IDs back to 1
+        const activeWorkspace = (rawId < 1 || rawId > 2000000) ? 1 : rawId;
         return ((activeWorkspace - 1) % shownCount + shownCount) % shownCount;
     }
     property real specialTextSize: workspaceButtonWidth * 0.5

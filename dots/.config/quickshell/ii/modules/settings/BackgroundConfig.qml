@@ -8,6 +8,86 @@ ContentPage {
     forceWidth: true
 
     ContentSection {
+        icon: "transition_push"
+        title: Translation.tr("Wallpaper transition")
+
+        ConfigRow {
+            uniform: true
+            ConfigSwitch {
+                buttonIcon: "animation"
+                text: Translation.tr("Enable transitions")
+                checked: Config.options.background.transition.enable
+                onCheckedChanged: {
+                    Config.options.background.transition.enable = checked;
+                }
+            }
+            ConfigSpinBox {
+                icon: "timer"
+                text: Translation.tr("Duration (ms)")
+                value: Config.options.background.transition.durationMs
+                from: 300
+                to: 3000
+                stepSize: 100
+                onValueChanged: {
+                    Config.options.background.transition.durationMs = value;
+                }
+            }
+        }
+
+        ContentSubsection {
+            title: Translation.tr("Transition effect")
+            ConfigSelectionArray {
+                currentValue: Config.options.background.transition.type
+                onSelected: newValue => {
+                    Config.options.background.transition.type = newValue;
+                }
+                options: [
+                    {
+                        displayName: Translation.tr("Random"),
+                        icon: "shuffle",
+                        value: "random"
+                    },
+                    {
+                        displayName: Translation.tr("Fade"),
+                        icon: "gradient",
+                        value: "fade"
+                    },
+                    {
+                        displayName: Translation.tr("Wipe"),
+                        icon: "swipe",
+                        value: "wipe"
+                    },
+                    {
+                        displayName: Translation.tr("Disc"),
+                        icon: "radio_button_checked",
+                        value: "disc"
+                    },
+                    {
+                        displayName: Translation.tr("Stripes"),
+                        icon: "view_stream",
+                        value: "stripes"
+                    },
+                    {
+                        displayName: Translation.tr("Iris"),
+                        icon: "camera",
+                        value: "iris_bloom"
+                    },
+                    {
+                        displayName: Translation.tr("Pixelate"),
+                        icon: "grid_view",
+                        value: "pixelate"
+                    },
+                    {
+                        displayName: Translation.tr("Portal"),
+                        icon: "vortex",
+                        value: "portal"
+                    }
+                ]
+            }
+        }
+    }
+
+    ContentSection {
         icon: "sync_alt"
         title: Translation.tr("Parallax")
 

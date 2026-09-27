@@ -8,7 +8,13 @@ NestableObject {
 
     required property HyprlandMonitor monitor
     readonly property var liveMonitorData: HyprlandData.monitors.find(m => m?.id === monitor?.id)
-    readonly property int activeWorkspace: monitor?.activeWorkspace?.id ?? 1
+    readonly property int activeWorkspace: {
+        const id = monitor?.activeWorkspace?.id ?? 1;
+        // Guard: Hyprland may briefly report near-INT_MAX sentinel IDs (e.g. 2147483636 = INT_MAX-11)
+        // after suspend/resume or monitor reconnect. Valid regular workspace IDs are small positives.
+        if (id < 1 || id > 2000000) return 1;
+        return id;
+    }
     readonly property var activeWorkspaceData: HyprlandData.workspaceById[activeWorkspace]
     readonly property bool currentWorkspaceNotFake: (activeWorkspaceData?.windows ?? 0) > 0
     readonly property int fakeWorkspace: currentWorkspaceNotFake ? -9999 : activeWorkspace

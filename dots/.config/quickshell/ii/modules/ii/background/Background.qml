@@ -193,13 +193,10 @@ Variants {
         Item {
             anchors.fill: parent
 
-            // Wallpaper
-            StyledImage {
-                id: wallpaper
-                visible: opacity > 0 && !blurLoader.active
-                opacity: (status === Image.Ready && !bgRoot.wallpaperIsVideo) ? 1 : 0
-                cache: false
-                smooth: false
+            // Wallpaper with GPU shader transitions
+            Item {
+                id: wallpaperContainer
+                anchors.fill: parent
 
                 property int workspaceIndex: {
                     const workspaceId = bgRoot.monitor.activeWorkspace?.id ?? 1;
@@ -234,43 +231,60 @@ Variants {
                     return Math.max(0, Math.min(1, usedFraction));
                 }
 
-                x: {
-                    if (bgRoot.screen.width > width) {
+                property real wallpaperX: {
+                    if (bgRoot.screen.width > bgRoot.scaledWallpaperWidth) {
                         // Center the picture
-                        return (bgRoot.screen.width - width) / 2;
+                        return (bgRoot.screen.width - bgRoot.scaledWallpaperWidth) / 2;
                     }
                     return - bgRoot.parallaxTotalPixelsX * usedFractionX;
                 }
-                y: {
-                    if (bgRoot.screen.height > height) {
+                property real wallpaperY: {
+                    if (bgRoot.screen.height > bgRoot.scaledWallpaperHeight) {
                         // Center the picture
-                        return (bgRoot.screen.height - height) / 2;
+                        return (bgRoot.screen.height - bgRoot.scaledWallpaperHeight) / 2;
                     }
                     return - bgRoot.parallaxTotalPixelsY * usedFractionY;
                 }
 
-                source: bgRoot.wallpaperSafetyTriggered ? "" : bgRoot.wallpaperPath
-                fillMode: Image.PreserveAspectCrop
-                Behavior on x {
+                Behavior on wallpaperX {
                     NumberAnimation {
                         duration: 600
                         easing.type: Easing.OutCubic
                     }
                 }
-                Behavior on y {
+                Behavior on wallpaperY {
                     NumberAnimation {
                         duration: 600
                         easing.type: Easing.OutCubic
                     }
                 }
-                width: bgRoot.scaledWallpaperWidth
-                height: bgRoot.scaledWallpaperHeight
+
+                WallpaperTransitionSurface {
+                    id: wallpaper
+                    anchors.fill: parent
+                    visible: !blurLoader.active && !bgRoot.wallpaperIsVideo
+                    sourcePath: bgRoot.wallpaperSafetyTriggered ? "" : bgRoot.wallpaperPath
+                    imageX: wallpaperContainer.wallpaperX
+                    imageY: wallpaperContainer.wallpaperY
+                    imageWidth: bgRoot.scaledWallpaperWidth
+                    imageHeight: bgRoot.scaledWallpaperHeight
+                    textureWidth: bgRoot.screen.width
+                    textureHeight: bgRoot.screen.height
+
+                    onNaturalImageDimensionsChanged: (w, h) => {
+                        if (w > 0 && h > 0) {
+                            bgRoot.wallpaperWidth = w;
+                            bgRoot.wallpaperHeight = h;
+                            bgRoot.minSuitableScale = Math.max(bgRoot.screen.width / w, bgRoot.screen.height / h);
+                        }
+                    }
+                }
             }
 
             Loader {
                 id: blurLoader
                 active: Config.options.lock.blur.enable && (GlobalStates.screenLocked || scaleAnim.running)
-                anchors.fill: wallpaper
+                anchors.fill: parent
                 scale: GlobalStates.screenLocked ? Config.options.lock.blur.extraZoom : 1
                 Behavior on scale {
                     NumberAnimation {
@@ -301,10 +315,10 @@ Variants {
                     var f = Config.options.background.parallax.widgetsFactor;
                     return f / bgRoot.parallaxRatio;
                 }
-                readonly property real baseWallpaperOffsetX: (bgRoot.screen.width - wallpaper.width) / 2
-                readonly property real baseWallpaperOffsetY: (bgRoot.screen.height - wallpaper.height) / 2
-                readonly property real wallpaperTotalOffsetX: wallpaper.x - baseWallpaperOffsetX
-                readonly property real wallpaperTotalOffsetY: wallpaper.y - baseWallpaperOffsetY
+                readonly property real baseWallpaperOffsetX: (bgRoot.screen.width - bgRoot.scaledWallpaperWidth) / 2
+                readonly property real baseWallpaperOffsetY: (bgRoot.screen.height - bgRoot.scaledWallpaperHeight) / 2
+                readonly property real wallpaperTotalOffsetX: wallpaperContainer.wallpaperX - baseWallpaperOffsetX
+                readonly property real wallpaperTotalOffsetY: wallpaperContainer.wallpaperY - baseWallpaperOffsetY
                 readonly property bool locked: GlobalStates.screenLocked
                 x: wallpaperTotalOffsetX * parallaxFactor * !locked
                 y: wallpaperTotalOffsetY * parallaxFactor * !locked
