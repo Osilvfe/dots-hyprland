@@ -40,7 +40,8 @@ end, { description = "Shell: Toggle overview" })
 hl.bind("SUPER + V", hl.dsp.global("quickshell:overviewClipboardToggle"))
 hl.bind("SUPER + Period", hl.dsp.global("quickshell:overviewEmojiToggle"))
 hl.bind("SUPER + A", hl.dsp.global("quickshell:sidebarLeftToggle"), { description = "Shell: Toggle left sidebar" })
-hl.bind("SUPER + ALT + A", hl.dsp.global("quickshell:sidebarLeftToggleDetach"))
+hl.bind("SUPER + ALT + A", hl.dsp.global("quickshell:sidebarLeftToggleDetach"),
+    { description = "Shell: Toggle left sidebar (detached)" })
 hl.bind("SUPER + N", hl.dsp.global("quickshell:sidebarRightToggle"), { description = "Shell: Toggle right sidebar" })
 hl.bind("SUPER + Slash", hl.dsp.global("quickshell:cheatsheetToggle"), { description = "Shell: Toggle cheatsheet" })
 hl.bind("SUPER + K", hl.dsp.global("quickshell:oskToggle"), { description = "Shell: Toggle on-screen keyboard" })
@@ -49,16 +50,17 @@ hl.bind("SUPER + G", hl.dsp.global("quickshell:overlayToggle"), { description = 
 hl.bind("CTRL + ALT + Delete", hl.dsp.global("quickshell:sessionToggle"), { description = "Shell: Toggle session menu" })
 hl.bind("SUPER + J", hl.dsp.global("quickshell:barToggle"), { description = "Shell: Toggle bar" })
 hl.bind("CTRL + ALT + Delete", hl.dsp.exec_cmd(qsIsAlive .. " || pkill wlogout || wlogout -p layer-shell"))
-hl.bind("SHIFT + SUPER + ALT + Slash", hl.dsp.exec_cmd("$HOME/.config/quickshell/$qsConfig/scripts/launch-detached-qs.sh $HOME/.config/quickshell/$qsConfig/welcome.qml"))
+hl.bind("SHIFT + SUPER + ALT + Slash", hl.dsp.exec_cmd("$HOME/.config/quickshell/$qsConfig/scripts/launch-detached-qs.sh $HOME/.config/quickshell/$qsConfig/welcome.qml"),
+    { description = "Shell: Welcome screen" })
 
 hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd(qsIpcCall .. " brightness increment || brightnessctl s 5%+"),
-    { locked = true, repeating = true })
+    { locked = true, repeating = true, description = "Screen: Brightness up" })
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(qsIpcCall .. " brightness decrement || brightnessctl s 5%-"),
-    { locked = true, repeating = true })
+    { locked = true, repeating = true, description = "Screen: Brightness down" })
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%+ -l 1.5"),
-    { locked = true, repeating = true })
+    { locked = true, repeating = true, description = "Media: Volume up" })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"),
-    { locked = true, repeating = true })
+    { locked = true, repeating = true, description = "Media: Volume down" })
 
 hl.bind("CTRL + SUPER + T", hl.dsp.global("quickshell:wallpaperSelectorToggle"),
     { description = "Shell: Change wallpaper" })
@@ -315,7 +317,9 @@ end
 for i = 1, 2 do
     local keys = { "Left", "Right" }
     local prefix = { "m-", "m+" }
-    hl.bind("CTRL + SUPER + ALT + " .. keys[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }))
+    local descdir = { "left", "right" }
+    hl.bind("CTRL + SUPER + ALT + " .. keys[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }),
+        { description = "Workspace: Focus non-empty " .. descdir[i] })
 end
 --#/# bind = SUPER, Page_↑/↓,, -- Focus left/right
 for i = 1, 4 do
@@ -353,7 +357,7 @@ hl.define_submap("virtual-machine", function()
                 "notify-send 'Entered Virtual Machine submap' 'Keybinds disabled. hit SUPER+ALT+F1 to escape' -a 'Hyprland'"))
             hl.dispatch(hl.dsp.submap("virtual-machine"))
         end
-    end, { submap_universal = true })
+    end, { submap_universal = true, description = "Session: Toggle VM passthrough" })
 end)
 
 
@@ -395,4 +399,5 @@ hl.bind("CTRL + SHIFT + Escape", hl.dsp.exec_cmd(taskManager), { description = "
 
 --# Cursed stuff
 --## Make window not amogus large
-hl.bind("CTRL + SUPER + Backslash", hl.dsp.window.resize({ x = 640, y = 480, "exact" }))
+hl.bind("CTRL + SUPER + Backslash", hl.dsp.window.resize({ x = 640, y = 480, "exact" }),
+    { description = "Window: Reset size (640x480)" })
