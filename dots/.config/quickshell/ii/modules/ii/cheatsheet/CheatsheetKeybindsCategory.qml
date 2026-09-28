@@ -71,8 +71,19 @@ Column {
         "mouse:273": "RMB",
         "mouse:275": "MouseBack",
         "Slash": "/",
+        "Backslash": "\\",
+        "Equal": "=",
+        "Minus": "-",
+        "Semicolon": ";",
+        "Apostrophe": "'",
         "Hash": "#",
         "Return": "Enter",
+        "XF86MonBrightnessUp": "Brightness ↑",
+        "XF86MonBrightnessDown": "Brightness ↓",
+        "XF86AudioRaiseVolume": "Volume ↑",
+        "XF86AudioLowerVolume": "Volume ↓",
+        "XF86AudioMute": "Mute",
+        "XF86AudioMicMute": "Mic Mute",
         // "Shift": "",
       },
       !!Config.options.cheatsheet.superKey ? {
@@ -101,7 +112,7 @@ Column {
     spacing: titleSpacing
 
     StyledText {
-        text: root.isCategorized ? root.categoryName : "Uncategorized"
+        text: root.isCategorized ? Translation.tr(root.categoryName) : Translation.tr("Uncategorized")
         font.pixelSize: Appearance.font.pixelSize.title
     }
 
@@ -119,23 +130,25 @@ Column {
 
     function containsNonFirstRepetitive(bind) {
         const key = bind.key;
-        if (key.includes("mouse") || key.includes("page")) return false;
+        if (key.includes("mouse") || key.includes("page") || key.startsWith("XF86") || /^F\d+$/i.test(key)) return false;
         // Contains non-1 number
         if (/\d/.test(key) && !key.includes("1")) return true;
-        // Contains non-left direction
-        if (/^(right|up|down)\b/i.test(key)) return true;
+        // Contains non-first direction (Right or Down)
+        if (/^(right|down)\b/i.test(key)) return true;
         return false;
     }
 
     function containsFirstRepetitive(bind) {
         const key = bind.key;
-        return key.includes("1") || /left/i.test(key);
+        if (key.startsWith("XF86") || /^F\d+$/i.test(key)) return false;
+        return key.includes("1") || /left|up/i.test(key);
     }
 
     function transformKey(key) {
         const replaced = root.keySubstitutions[key] || key;
+        if (key.startsWith("XF86") || /^F\d+$/i.test(key)) return replaced;
         const denumbered = replaced.replace("1", "<Number>");
-        const dedirectioned = denumbered.replace("Left", "<Direction>");
+        const dedirectioned = denumbered.replace(/Left|Up/i, "<Direction>");
         return dedirectioned;
     }
 
@@ -147,6 +160,21 @@ Column {
         const denumbered = decategorized.replace("1", "<Number>");
         const dedirectioned = denumbered.replace(/ \b(left|right|up|down)\b/i, " <Direction>");
         return dedirectioned;
+    }
+
+    function getTranslatedDescription(bind, categoryName) {
+        const transformed = transformDescription(bind, categoryName);
+        if (!transformed) return "";
+        if (categoryName) {
+            const qualifiedTransformed = categoryName + ": " + transformed;
+            const trQualified = Translation.tr(qualifiedTransformed);
+            if (trQualified !== qualifiedTransformed) return trQualified;
+        }
+        if (bind.description) {
+            const trRaw = Translation.tr(bind.description);
+            if (trRaw !== bind.description) return trRaw;
+        }
+        return Translation.tr(transformed);
     }
 
     Column {
@@ -162,8 +190,15 @@ Column {
                 }
                 if (root.searchQuery.trim().length === 0) return binds;
                 const category = root.isCategorized ? root.categoryName : "";
+                const translatedCategory = root.isCategorized ? Translation.tr(root.categoryName) : Translation.tr("Uncategorized");
                 return binds.filter(bind => CheatsheetSearch.matchesQuery(
-                    CheatsheetSearch.keybindHaystack(bind, root.keySubstitutions, category),
+                    CheatsheetSearch.keybindHaystack(
+                        bind,
+                        root.keySubstitutions,
+                        category,
+                        translatedCategory,
+                        root.getTranslatedDescription(bind, category)
+                    ),
                     root.searchQuery,
                 ));
             }
@@ -224,7 +259,7 @@ Column {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.left
                     font.pixelSize: Config.options.cheatsheet.fontSize.comment || Appearance.font.pixelSize.smaller
-                    text: root.transformDescription(bindLine.keyData, bindLine.categoryName)
+                    text: root.getTranslatedDescription(bindLine.keyData, bindLine.categoryName)
                 }
             }
         }

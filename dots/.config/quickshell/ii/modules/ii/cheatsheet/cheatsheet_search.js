@@ -35,12 +35,14 @@ function modMaskToStringList(modMask) {
 }
 
 function containsFirstRepetitive(key) {
-    return key.includes("1") || /left/i.test(key);
+    if (key.startsWith("XF86") || /^F\d+$/i.test(key)) return false;
+    return key.includes("1") || /left|up/i.test(key);
 }
 
 function transformKey(key, substitutions) {
     const replaced = lookupSubstitution(substitutions, key);
-    return replaced.replace("1", "<Number>").replace("Left", "<Direction>");
+    if (key.startsWith("XF86") || /^F\d+$/i.test(key)) return replaced;
+    return replaced.replace("1", "<Number>").replace(/Left|Up/i, "<Direction>");
 }
 
 function transformDescription(bind, categoryName) {
@@ -65,7 +67,7 @@ function mouseKeySearchTerms(rawKey) {
     }
 }
 
-function keybindHaystack(bind, substitutions, categoryName) {
+function keybindHaystack(bind, substitutions, categoryName, translatedCategory, translatedDescription) {
     const modParts = [];
     for (const mod of modMaskToStringList(bind.modmask)) {
         modParts.push(mod);
@@ -77,8 +79,17 @@ function keybindHaystack(bind, substitutions, categoryName) {
     const displayDescription = transformDescription(bind, categoryName);
     const categoryPrefix = categoryName || description.substring(0, description.indexOf(":"));
     const keyTerms = [rawKey, displayKey, mouseKeySearchTerms(rawKey)].join(" ");
-    return [modParts.join(" "), keyTerms, description, displayDescription, categoryPrefix].join(" ");
+    return [
+        modParts.join(" "),
+        keyTerms,
+        description,
+        displayDescription,
+        categoryPrefix,
+        translatedCategory || "",
+        translatedDescription || ""
+    ].join(" ");
 }
+
 
 function matchesElement(element, query) {
     if (!element || element.type === "empty") return false;

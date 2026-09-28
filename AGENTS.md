@@ -143,6 +143,12 @@
 - **媒体控制弹窗与歌词居中对齐**：顶栏媒体控制器卡片（`MediaControls.qml`）在点击或快捷键呼出时与顶栏歌词/媒体文本区域（`SyncedLyricText`）保持水平居中对齐，支持多屏幕坐标映射与边界防溢出保护，取代原本基于屏幕中心偏置的死板偏移。
 - **Wi-Fi 与蓝牙设置页优先展示已保存项并去重扫描项**：在系统设置中，调整 Wi-Fi 设置（`WifiConfig.qml`）与蓝牙设置（`BluetoothConfig.qml`）的层级排布，将“已保存的设备/网络”（Saved devices / networks）置顶展示于“扫描/附近设备”（Nearby / Available）上方；蓝牙已保存设备列表按 MAC 地址去重，扫描发现列表严格排除已配对保存的设备并去重；Wi-Fi 已保存网络按当前已连接、信号范围内（按信号强弱排序）、超出范围（按首字母排序）三级动态优选排序，并呈现动态信号强度图标与范围状态（“在范围内 (X%)”/“已连接”），同时支持断开/重新连接切换；Wi-Fi 扫描可用列表过滤所有已保存 SSID，彻底杜绝重复列出。
 - **壁纸切换 GPU Shader 转场动效体系（复刻 quickshell-sample）**：在桌面背景渲染中整合基于 GPU 片元着色器的双缓冲视口无缝转场架构（`WallpaperTransitionSurface.qml` / `WallpaperImageViewport.qml`），完整移植并适配 `fade`（平滑淡入淡出）、`wipe`（四向扫光擦除）、`disc`（有机圆盘扩散）、`stripes`（旋转百叶窗条纹）、`iris_bloom`（光圈虹膜绽放）、`pixelate`（像素马赛克动态锐化融合）与 `portal`（时空扭曲漩涡传送门）等 7 种着色器特效；支持设置页（`BackgroundConfig.qml`）动效类型选择（含 `random` 随机模式）、过渡时长（300~3000ms）与开关；双缓冲机制在后台异步预解码新图，确保切壁纸时 0 掉帧、0 白屏；静止时自动卸载着色器与离屏缓冲，实现桌面日常 0 GPU/CPU 额外开销；支持 `switchwall.sh`、壁纸选择器与 IPC 联动，兼容平铺视差与锁屏高斯模糊。
+- **快捷键速查表（Cheatsheet）完整中文本地化、按键枚举完善与中英双语检索**：
+  - **翻译与双语检索**：在 `CheatsheetKeybindsCategory.qml` 中引入分类标题与按键描述本地化机制 `getTranslatedDescription()`，支持分类修饰前缀（如 `Workspace: Focus <Number>`、`Monitor: Focus <Direction>`）优先匹配并优雅回退，彻底消除常见多义词（如 `Focus` 在番茄钟中译为“专注”而在工作区/窗口中为“切换/聚焦”）的语境冲突；在 `cheatsheet_search.js` 中将翻译文本动态注入搜索 `keybindHaystack`，实现支持输入中文与英文双向即时过滤；
+  - **枚举完善与按键识别修复**：在 `keybinds.lua` 中全面补齐亮度调节（`XF86MonBrightnessUp/Down`）、音量调节（`XF86AudioRaise/LowerVolume`）、独立左侧栏（`SUPER+ALT+A`）、欢迎页（`SHIFT+SUPER+ALT+/`）、非空工作区漫游（`CTRL+SUPER+ALT+Left/Right`）、虚拟机透传模式（`SUPER+ALT+F1`）及防异常窗口重置（`CTRL+SUPER+\`）的 `description`；
+  - **按键去重与符号折叠算法优化**：修复 `containsNonFirstRepetitive` 将无水平配对的垂直方向键（如窗口聚焦与列内移动 `Up/Down`）以及含数字的硬件键（`XF86` 系列含 `86`、`F1~F12`）误当成工作区重复按键过滤掉的缺陷；并在 `keySubstitutions` 中补齐反斜杠、分号、单引号与 `Brightness ↑`、`Volume ↑` 等友好的键帽视觉符号。
+
+
 
 ### 本地修复（无对应 PR）
 - **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示
