@@ -152,6 +152,14 @@
 - **截图与选区冻结帧防崩溃**：NVIDIA 新版驱动配合 10-bit 色深（`XBGR2101010`）时，`ScreencopyView` 在 `dmabuf.cpp` 中将 dmabuf 导入为 EGL 图像失败报 `EGL_BAD_MATCH` 触发 `qFatal` 导致 Quickshell 瞬间硬崩（`SIGABRT`）。在 `RegionSelection.qml` 与 `ScreenTranslatorPanel.qml` 中，将原 `ScreencopyView` 替换为 Qt 原生 `Image` 渲染已由 `grim` 提前写入的 8-bit PNG 缓存文件，规避 EGL dmabuf 缺陷；并在 `RegionSelector.qml` 与 `ScreenTranslator.qml` 中补齐 IPC `dismiss()` 方法支持。
 - **Polkit 权限认证代理注册防丢与动态重试**：Quickshell 内置 `PolkitAgent` 向 PolicyKit 注册时，若遇到旧进程尚未解绑或重启竞态（`An authentication agent already exists for the given subject`），C++ 层默认直接报错且不再重试，导致整个桌面环境失去 GUI 提权代理（表现为 `systemctl` 回退 TTY 认证、Code OSS 等无控制台应用直接报错找不到认证服务）。在 `PolkitService.qml` 中将 `PolkitAgent` 封装为 `Loader` 动态重试机制，未就绪时自动退避重试直至注册成功；在 `GlobalStates.qml` 常驻启动项显式调用 `PolkitService.init()` 避免懒加载滞后；并在 `keybinds.lua` 中将重载快捷键改为 `killall -w -q` 确保旧进程彻底退出后再启动新实例。
 - **SUPER 组合键松开防误唤出搜索栏**：修复单按 SUPER 开关搜索栏（Overview）在执行组合键（如 `SUPER+V`、`SUPER+Tab`、`SUPER+Return`、窗口移动缩放等）后松开 SUPER 依然误触发搜索栏弹出的问题。彻底移除 `keybinds.lua` 中无条件触发 `searchToggle` 的错误释放绑定（`SUPER_L/SUPER_R` 的 `release=true, ignore_mods=true`），恢复纯净原生绑定以避免二次触发；并在 `GlobalStates.qml` 与 `Overview.qml` 各面板切换与剪贴板/Emoji 呼出时同步重置 `superReleaseMightTrigger = false`。
+- **挂起恢复与锁屏工作区超大哨兵值（`2147483636` = INT_MAX - 11）彻底根治与自愈看门狗**：
+  - 根因：`Lock.qml` 曾使用上游 hack，试图通过在锁屏时将各显示器切至 `2147483647 - ws` 产生窗口下推滑出的视觉动效。在多显示器环境或系统挂起休眠唤醒（suspend/resume）时，因 DPMS 唤醒延迟导致 150ms 单次恢复丢失，或未锁屏前重复触发将超大值存入 `savedWorkspaces`，使工作区永久卡在 `2147483636`。
+  - 治理：在 `Config.qml` 中新增 `lock.slideWorkspaces: false`（默认完全关闭破坏性工作区切换，依靠 `WlSessionLock` 纯净遮罩与高斯模糊）；若开启则增加反向解码还原、有效性校验与多阶重试；在 `HyprlandData.qml` 中加入常驻看门狗，非锁屏状态下只要监视器出现 `> 2000000` 异常值立即自动反算拉回正常工作区；并在 `WorkspaceModel.qml`、`Workspaces.qml`、`ActiveWindow.qml`、`Bar.qml`、`VerticalBar.qml` 及 `MonitorConfig.qml` 全线做解码与保护。
+- **安装与配置脚本体系全量维护与致命缺陷修复**：
+  - **自维护 Hyprland 包漏装修复**：`sdata/dist-arch/install-deps.sh` 此前引入 `hyprland-hidpi-xprop-moetayuko` 后未将其加入 `metapkgs` 数组，因其不在 AUR 上导致全新安装时在 `illogical-impulse-hyprland` 解析依赖直接报找不到包崩溃；现已加入 `metapkgs` 并在 `install-local-pkgbuild()` 中将 `makedepends` 一并传给 `paru -S --asdeps`，杜绝缺少构建依赖。
+  - **`hyprpm` 插件安装与状态机修复**：修复 `2.setups.sh` 中 `grep -q "scrolloverview.*enabled"` 无法跨行匹配的缺陷，当插件先前构建失败时不再误判跳过，自动带上 `--hl-url https://github.com/moetayuko/Hyprland` 并以 `try` 容错避免中断主安装。
+  - **SNI 屏蔽与文件映射对齐**：将 `mask_kded6.sh` 提升至 `3.files.sh` 主流程（旧版仅在实验性 yaml 模式运行，传统模式漏跑）；在 `3.files-exp.yaml` 中补齐遗漏的 `pipewire`、`xsettingsd` 目录与 `kded5rc`。
+  - **Python venv 优雅降级与 CLI 参数修复**：`install-python-packages` 消除 `eval` 语法并在系统 Python > 3.12 且无 3.12 预拉取时优雅降级至默认环境；修复 `sdata/subcmd-resetfirstrun/options.sh` 中 `getopt -o c` 漏写 `h` 导致 `-h` 报无效选项的 bug；抑制 `options.sh` 中缺失 `dots-extra/fontsets` 目录的 stderr 杂音。
 
 ## 踩坑记录
 

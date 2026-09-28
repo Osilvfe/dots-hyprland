@@ -27,7 +27,7 @@ Options for install:
                             Quickshell, Fish and Hyprland
       --core                Alias of --skip-{plasmaintg,fish,miscconf,fontconfig}
       --fontset <set>       Use a set of pre-defined font and config (currently only fontconfig).
-                            Possible values of <set>: $(ls -A ${REPO_ROOT}/dots-extra/fontsets)
+                            Possible values of <set>: $(ls -A "${REPO_ROOT}/dots-extra/fontsets" 2>/dev/null)
 ${STY_CYAN}
 New features (experimental):
       --exp-files             Use yaml-based config for the third step copying files.
@@ -42,6 +42,8 @@ ${STY_RST}"
 
 cleancache(){
   rm -rf "${REPO_ROOT}/cache"
+  find "${REPO_ROOT}/sdata/dist-arch" -maxdepth 2 -type d \( -name "src" -o -name "pkg" \) -exec rm -rf {} + 2>/dev/null || true
+  find "${REPO_ROOT}/sdata/dist-arch" -maxdepth 2 -type f -name "*.pkg.tar.*" -exec rm -f {} + 2>/dev/null || true
 }
 
 # `man getopt` to see more

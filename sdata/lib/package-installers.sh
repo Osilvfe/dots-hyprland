@@ -68,15 +68,18 @@ install-uv(){
 
 install-python-packages(){
   UV_NO_MODIFY_PATH=1
-  ILLOGICAL_IMPULSE_VIRTUAL_ENV=$XDG_STATE_HOME/quickshell/.venv
-  x mkdir -p $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)
-  # we need python 3.12 https://github.com/python-pillow/Pillow/issues/8089
-  try uv venv --prompt .venv $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV) -p 3.12
-  x source $(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate
+  local venv_path="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/.venv"
+  x mkdir -p "$venv_path"
+  # Prefer python 3.12 if available (https://github.com/python-pillow/Pillow/issues/8089), fallback to default python
+  if ! uv venv --prompt .venv "$venv_path" -p 3.12 2>/dev/null; then
+    echo "Creating venv with default python..."
+    x uv venv --prompt .venv "$venv_path"
+  fi
+  x source "$venv_path/bin/activate"
   if [[ "$INSTALL_VIA_NIX" = true ]]; then
-    x nix-shell ${REPO_ROOT}/sdata/uv/shell.nix --run "uv pip install -r ${REPO_ROOT}/sdata/uv/requirements.txt"
+    x nix-shell "${REPO_ROOT}/sdata/uv/shell.nix" --run "uv pip install -r ${REPO_ROOT}/sdata/uv/requirements.txt"
   else
-    x uv pip install -r ${REPO_ROOT}/sdata/uv/requirements.txt
+    x uv pip install -r "${REPO_ROOT}/sdata/uv/requirements.txt"
   fi
   x deactivate
 }

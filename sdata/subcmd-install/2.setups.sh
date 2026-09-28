@@ -81,7 +81,7 @@ function setup_hyprpm_plugin(){
     return 0
   fi
 
-  if hyprpm list 2>/dev/null | grep -q "scrolloverview.*enabled"; then
+  if hyprpm list 2>/dev/null | grep -A2 "Plugin scrolloverview" | grep -q "enabled: true"; then
     echo "scrolloverview plugin already installed and enabled, skipping."
     return 0
   fi
@@ -92,14 +92,20 @@ function setup_hyprpm_plugin(){
 
   if ! hyprpm list 2>/dev/null | grep -q "scrolloverview"; then
     echo "Adding scrolloverview plugin repository (git build branch)..."
-    x hyprpm add https://github.com/yayuuu/hyprland-scroll-overview origin/new-release
-    echo "Building plugin (this may take a while)..."
-    x hyprpm update
+    try hyprpm add https://github.com/yayuuu/hyprland-scroll-overview origin/new-release
   fi
 
+  local hl_url_arg=()
+  if pacman -Qq hyprland-hidpi-xprop-moetayuko >/dev/null 2>&1; then
+    hl_url_arg+=(--hl-url https://github.com/moetayuko/Hyprland)
+  fi
+
+  echo "Building plugin (this may take a while)..."
+  try hyprpm update -f "${hl_url_arg[@]}"
+
   echo "Enabling scrolloverview plugin..."
-  x hyprpm enable scrolloverview
-  echo "scrolloverview plugin installed successfully."
+  try hyprpm enable scrolloverview
+  echo "scrolloverview plugin configuration completed."
 }
 
 showfun setup_hyprpm_plugin

@@ -78,19 +78,24 @@ install-local-pkgbuild() {
   x pushd $location
 
   source ./PKGBUILD
-  x paru -S --sudoloop $installflags --asdeps "${depends[@]}"
+  local build_deps=("${depends[@]}")
+  if [[ -n "${makedepends[*]:-}" ]]; then
+    build_deps+=("${makedepends[@]}")
+  fi
+  x paru -S --sudoloop $installflags --asdeps "${build_deps[@]}"
   # man makepkg:
   # -A, --ignorearch: Ignore a missing or incomplete arch field in the build script.
   # -s, --syncdeps: Install missing dependencies using pacman. When build-time or run-time dependencies are not found, pacman will try to resolve them.
   # -f, --force: build a package even if it already exists in the PKGDEST
   # -i, --install: Install or upgrade the package after a successful build using pacman(8).
   # In https://github.com/end-4/dots-hyprland/issues/823#issuecomment-3394774645 it's suggested to use `sudo pacman -U --noconfirm *.pkg.tar.zst` instead of `makepkg -i`, however it's possible that multiple *.pkg.tar.zst exist, which makes this command not reliable.
-  x makepkg -Afsi --noconfirm
+  x makepkg -CAfsi --noconfirm
   x popd
 }
 
 # Install core dependencies from the meta-packages
 metapkgs=(./sdata/dist-arch/illogical-impulse-{audio,backlight,basic,fonts-themes,kde,portal,python,screencapture,toolkit,widgets})
+metapkgs+=(./sdata/dist-arch/hyprland-hidpi-xprop-moetayuko)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-hyprland)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-microtex-git)
 metapkgs+=(./sdata/dist-arch/illogical-impulse-quickshell-git)
