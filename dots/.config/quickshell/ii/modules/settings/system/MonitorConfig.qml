@@ -273,7 +273,11 @@ ContentPage {
 
                             StyledText {
                                 Layout.fillWidth: true
-                                text: `${itemRoot.monitorData.width}x${itemRoot.monitorData.height} @ ${Math.round(itemRoot.monitorData.refreshRate)}Hz - ${root.pendingX(itemRoot.monitorData)}, ${root.pendingY(itemRoot.monitorData)} - Workspace ${itemRoot.monitorData.activeWorkspace?.id ?? "?"}`
+                                text: {
+                                    const rawWs = itemRoot.monitorData.activeWorkspace?.id;
+                                    const safeWs = (rawWs > 2000000 && rawWs < 2147483647) ? (2147483647 - rawWs) : ((rawWs < 1 || rawWs > 100) ? 1 : rawWs);
+                                    return `${itemRoot.monitorData.width}x${itemRoot.monitorData.height} @ ${Math.round(itemRoot.monitorData.refreshRate)}Hz - ${root.pendingX(itemRoot.monitorData)}, ${root.pendingY(itemRoot.monitorData)} - Workspace ${safeWs ?? "?"}`;
+                                }
                                 color: Appearance.colors.colSubtext
                                 font.pixelSize: Appearance.font.pixelSize.smallie
                                 elide: Text.ElideRight

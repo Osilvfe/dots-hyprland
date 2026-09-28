@@ -10,9 +10,13 @@ NestableObject {
     readonly property var liveMonitorData: HyprlandData.monitors.find(m => m?.id === monitor?.id)
     readonly property int activeWorkspace: {
         const id = monitor?.activeWorkspace?.id ?? 1;
-        // Guard: Hyprland may briefly report near-INT_MAX sentinel IDs (e.g. 2147483636 = INT_MAX-11)
-        // after suspend/resume or monitor reconnect. Valid regular workspace IDs are small positives.
-        if (id < 1 || id > 2000000) return 1;
+        // Guard: Hyprland may report near-INT_MAX sentinel IDs (e.g. 2147483636 = 2147483647 - 11)
+        // after suspend/resume or lock screen transition. Decode it back or fallback to monitor default.
+        if (id > 2000000 && id < 2147483647) {
+            const restored = 2147483647 - id;
+            if (restored >= 1 && restored <= 100) return restored;
+        }
+        if (id < 1 || id > 100) return (monitor?.name === "eDP-1" ? 11 : 1);
         return id;
     }
     readonly property var activeWorkspaceData: HyprlandData.workspaceById[activeWorkspace]

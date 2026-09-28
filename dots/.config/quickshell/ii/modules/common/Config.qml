@@ -392,6 +392,7 @@ Singleton {
             property JsonObject lock: JsonObject {
                 property bool useHyprlock: false
                 property bool launchOnStartup: false
+                property bool slideWorkspaces: false
                 property JsonObject blur: JsonObject {
                     property bool enable: true
                     property real radius: 100

@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import qs
 
 /**
  * Provides access to some Hyprland data not available in Quickshell.Hyprland.
@@ -142,7 +143,23 @@ Singleton {
         stdout: StdioCollector {
             id: monitorsCollector
             onStreamFinished: {
-                root.monitors = JSON.parse(monitorsCollector.text);
+                let parsed = JSON.parse(monitorsCollector.text);
+                // Watchdog: 挂起恢复/解锁异常时，自动纠正未锁屏状态下的超大工作区
+                if (!GlobalStates.screenLocked && Array.isArray(parsed)) {
+                    for (let i = 0; i < parsed.length; ++i) {
+                        let m = parsed[i];
+                        let wsId = m?.activeWorkspace?.id ?? 1;
+                        if (wsId > 2000000) {
+                            let safeWs = (wsId < 2147483647) ? (2147483647 - wsId) : (m.name === "eDP-1" ? 11 : 1);
+                            if (safeWs < 1 || safeWs > 100) safeWs = (m.name === "eDP-1" ? 11 : 1);
+                            console.warn(`[HyprlandData] Watchdog: healing sentinel workspace ${wsId} on ${m.name} -> ${safeWs}`);
+                            m.activeWorkspace.id = safeWs;
+                            m.activeWorkspace.name = String(safeWs);
+                            Quickshell.execDetached(["bash", "-c", `hyprctl dispatch 'hl.dsp.focus({monitor="${m.name}"})'; hyprctl dispatch 'hl.dsp.focus({workspace=${safeWs}})';`]);
+                        }
+                    }
+                }
+                root.monitors = parsed;
             }
         }
     }
@@ -184,7 +201,14 @@ Singleton {
         stdout: StdioCollector {
             id: activeWorkspaceCollector
             onStreamFinished: {
-                root.activeWorkspace = JSON.parse(activeWorkspaceCollector.text);
+                let raw = JSON.parse(activeWorkspaceCollector.text);
+                if (raw?.id > 2000000) {
+                    let safe = (raw.id < 2147483647) ? (2147483647 - raw.id) : 1;
+                    if (safe < 1 || safe > 100) safe = 1;
+                    raw.id = safe;
+                    raw.name = String(safe);
+                }
+                root.activeWorkspace = raw;
             }
         }
     }

@@ -42,9 +42,17 @@ Item {
             font.pixelSize: Appearance.font.pixelSize.small
             color: Appearance.colors.colOnLayer0
             elide: Text.ElideRight
-            text: root.focusingThisMonitor && root.activeWindow?.activated && root.biggestWindow ? 
-                root.activeWindow?.title :
-                (root.biggestWindow?.title) ?? `${Translation.tr("Workspace")} ${monitor?.activeWorkspace?.id ?? 1}`
+            text: {
+                if (root.focusingThisMonitor && root.activeWindow?.activated && root.biggestWindow) {
+                    return root.activeWindow.title;
+                }
+                if (root.biggestWindow?.title) {
+                    return root.biggestWindow.title;
+                }
+                const rawWs = monitor?.activeWorkspace?.id ?? 1;
+                const safeWs = (rawWs > 2000000 && rawWs < 2147483647) ? (2147483647 - rawWs) : ((rawWs < 1 || rawWs > 100) ? 1 : rawWs);
+                return `${Translation.tr("Workspace")} ${safeWs}`;
+            }
         }
 
     }

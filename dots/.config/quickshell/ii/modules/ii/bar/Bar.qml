@@ -52,7 +52,11 @@ Scope {
                 }
                 property bool superShow: false
                 readonly property var currentMonitor: HyprlandData.monitors.find(monitor => monitor.name === barRoot.screen.name)
-                readonly property int currentWorkspaceId: currentMonitor?.activeWorkspace?.id ?? -1
+                readonly property int currentWorkspaceId: {
+                    const raw = currentMonitor?.activeWorkspace?.id ?? -1;
+                    if (raw > 2000000 && raw < 2147483647) return 2147483647 - raw;
+                    return (raw > 2000000) ? 1 : raw;
+                }
                 readonly property bool workspaceEmpty: currentWorkspaceId >= 0
                     && !HyprlandData.windowList.some(window => window.workspace?.id === currentWorkspaceId)
                 readonly property bool forceVisibleOnEmptyWorkspace: Config.options.bar.autoHide.enable
