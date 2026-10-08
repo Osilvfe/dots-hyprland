@@ -539,7 +539,7 @@ PanelWindow {
             id: optionsToolbarBlob
             group: toolbarBlobGroup
             z: 9
-            visible: root.isFluid && regionSelectionControls.visible
+            visible: mouseArea.isFluid && regionSelectionControls.visible
             opacity: regionSelectionControls.opacity
             x: regionSelectionControls.x + optionsToolbar.x
             y: regionSelectionControls.y + optionsToolbar.y
@@ -555,7 +555,7 @@ PanelWindow {
             id: closeFabBlob
             group: toolbarBlobGroup
             z: 9
-            visible: root.isFluid && regionSelectionControls.visible
+            visible: mouseArea.isFluid && regionSelectionControls.visible
             opacity: regionSelectionControls.opacity
             x: regionSelectionControls.x + closeFab.x
             y: regionSelectionControls.y + closeFab.y
@@ -596,8 +596,8 @@ PanelWindow {
 
             OptionsToolbar {
                 id: optionsToolbar
-                enableShadow: !root.isFluid
-                colBackground: root.isFluid ? "transparent" : Appearance.m3colors.m3surfaceContainer
+                enableShadow: !mouseArea.isFluid
+                colBackground: mouseArea.isFluid ? "transparent" : Appearance.m3colors.m3surfaceContainer
                 Synchronizer on action {
                     property alias source: root.action
                 }
@@ -608,7 +608,7 @@ PanelWindow {
             }
             ToolbarPairedFab {
                 id: closeFab
-                enableShadow: !root.isFluid
+                enableShadow: !mouseArea.isFluid
                 anchors.verticalCenter: parent.verticalCenter
                 iconText: "close"
                 onClicked: root.dismiss();
