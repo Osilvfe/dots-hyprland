@@ -25,10 +25,26 @@ Item {
             id: "gamma",
             sourceUrl: "indicators/GammaIndicator.qml"
         },
+        {
+            id: "layout",
+            sourceUrl: "indicators/LayoutIndicator.qml"
+        },
     ]
 
     implicitWidth: contentColumnLayout.implicitWidth
     implicitHeight: contentColumnLayout.implicitHeight
+
+    property bool animateResize: false
+    onImplicitWidthChanged: if (implicitWidth > 0) animateResize = true
+
+    Behavior on implicitWidth {
+        enabled: root.animateResize
+        animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+    }
+    Behavior on implicitHeight {
+        enabled: root.animateResize
+        animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
+    }
 
     MouseArea {
         anchors.fill: parent

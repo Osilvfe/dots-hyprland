@@ -119,6 +119,16 @@
 - **#3642** Booru 图源请求失败与解析错误细分提示（区分 HTTP 状态码与无搜索结果）
 - **#3643** Booru 屏蔽当前失效图源（Danbooru 403 / Gelbooru 401），安全回退并在 `/mode` 中过滤
 - **#3639** 启动器搜索重构与性能优化（选择性合并）：`AppSearch.qml` 引入 `_iconCache` 缓存已解析应用图标哈希，避免任务栏/概览窗口重复执行正则与模糊匹配；`LauncherSearch.qml` 根治 `results` 属性绑定导致每次击键泄漏大量未释放 QML 对象的问题，重构为防抖管道 `rebuildResults()`、对象生命周期追踪与安全 `.destroy()` 销毁，支持剪贴板智能语义动作对象销毁联动，修复计算器异步结果显示刷新，保持对动态用户动作脚本的兼容
+- **#3672** 背景层禁模糊性能优化（`quickshell:background` 设置 `blur = false` 避免底层壁纸无效模糊开销）
+- **#3671** 全局忽略应用主动最大化请求（`suppress_event = "maximize"` 防范终端或会话恢复破坏平铺布局）
+- **#3666** 系统发行版名称解析兼容单/双引号（`SystemInfo.qml` 支持 `['"]` 字段匹配）
+- **`d24a66dd0`** 鼠标滚轮切换工作区方向一致性修复（统一为向下滚动前进 `r+`，向上滚动后退 `r-`；增加 Gale 模组导入窗口浮动居中规则）
+- **`e29f9dcd8`** PKGBUILD 跟进 Quickshell git 提交锁定（`4f508be500dea6e5732cc3d50382a0048b17e7b1`）
+- **#3653** 壁纸选择器分形缩放（1.6x 等）缩略图空白修复（`WallpaperSelectorContent.qml` 以 `devicePixelRatio` 计算 `thumbnailSizeName` 并防抖生成，`WallpaperDirectoryItem.qml` 下发尺寸桶，确保生成与查找的桶一致）
+- **#3683** `Print` 截图键规范化（`Print`=选区截屏 `quickshell:regionScreenshot`；`CTRL+Print` 全屏存文件+剪贴板+通知；`SUPER+Print` 全屏仅剪贴板；`ALT+Print` 窗口截屏）
+- **#3674** 蓝牙多适配器状态一致性（核查确认：本地 #3634 已用 `Bluetooth.devices.values` 全局聚合，天然免疫，未改动）
+- **#3664** `CustomIcon.qml` 内置资源探测修复（隐藏 `bundledProbe` Image 检测捆绑图标是否可加载，失败时回退 `Quickshell.iconPath` 系统主题图标）
+- **#3675** 选区目标区域 HiDPI 坐标对齐与标签可读性（净合并未合并前置 `45d000126` + PR 本体：`detectionScale` 修正 `find_regions` 原生像素→逻辑像素换算并加 `--min-width/--min-height` 下限；`TargetRegion` 拆分 `opacity`（整体显隐）与 `regionAlpha`（仅填充/边框），标签胶囊用 `labelAlpha` 保持可读；新增 `showIcon/showTitle/showCoordinates` 配置与设置页开关，移除窗口 delegate 硬编码 `showIcon: true`；本地 NVIDIA 冻结帧 `Image` 替换 `ScreencopyView` 的修复完整保留）
 
 ### 本地补丁 · 功能
 - **#3533** OSD/顶栏滚轮音量上限（`audio.osdMaxPercent`，默认 150；不影响键盘 `wpctl -l 1.5`）
@@ -147,6 +157,10 @@
   - **翻译与双语检索**：在 `CheatsheetKeybindsCategory.qml` 中引入分类标题与按键描述本地化机制 `getTranslatedDescription()`，支持分类修饰前缀（如 `Workspace: Focus <Number>`、`Monitor: Focus <Direction>`）优先匹配并优雅回退，彻底消除常见多义词（如 `Focus` 在番茄钟中译为“专注”而在工作区/窗口中为“切换/聚焦”）的语境冲突；在 `cheatsheet_search.js` 中将翻译文本动态注入搜索 `keybindHaystack`，实现支持输入中文与英文双向即时过滤；
   - **枚举完善与按键识别修复**：在 `keybinds.lua` 中全面补齐亮度调节（`XF86MonBrightnessUp/Down`）、音量调节（`XF86AudioRaise/LowerVolume`）、独立左侧栏（`SUPER+ALT+A`）、欢迎页（`SHIFT+SUPER+ALT+/`）、非空工作区漫游（`CTRL+SUPER+ALT+Left/Right`）、虚拟机透传模式（`SUPER+ALT+F1`）及防异常窗口重置（`CTRL+SUPER+\`）的 `description`；
   - **按键去重与符号折叠算法优化**：修复 `containsNonFirstRepetitive` 将无水平配对的垂直方向键（如窗口聚焦与列内移动 `Up/Down`）以及含数字的硬件键（`XF86` 系列含 `86`、`F1~F12`）误当成工作区重复按键过滤掉的缺陷；并在 `keySubstitutions` 中补齐反斜杠、分号、单引号与 `Brightness ↑`、`Volume ↑` 等友好的键帽视觉符号。
+- **#3654** 开机自动咖啡因防休眠（`Config.options.idle.inhibitOnStartup`，默认关；`Idle.qml` 新 Hyprland 实例时读取；本地补 `GeneralConfig.qml` "Keep awake" 设置分区开关）
+- **#3656** OSD 键盘布局指示器（`HyprlandXkb.currentLayoutNameChanged` 触发 `layout` OSD；`OsdValueIndicator` 增加 `valueText/showProgressBar/stackNameValue` 文本型支持与自适应宽度；**上游 PR 遗漏 `indicators/LayoutIndicator.qml`，本地按 GammaIndicator 模式补全**；本地适配：`OnScreenDisplay.qml` 带参 `triggerOsd("layout")`、`OsdContent.qml` 同步注册与尺寸切换动画，Drawers 流体路径共用 `OsdContent` 自动生效）
+- **#3658** Kitty 终端标签页动态主题色（`kitty-theme.conf` 增加 active/inactive tab 前景背景色模板占位符）
+- **#3668** Gemini AI 模型升级（默认 `gemini-2.5-flash` → `gemini-flash-latest`；`Ai.qml` 模型列表新增 `gemini-flash-latest`/`gemini-3.8-flash`/`gemini-3.5-flash-lite`，`gemini-2.5-flash` 降级为 Legacy 保留；本地自增 `gemini-3-flash` 条目原位保留；`Persistent.qml`、`gemini-categorize-wallpaper.sh`、`gemini-translate.sh` 同步换名；zh_CN 补模型描述翻译）
 
 
 

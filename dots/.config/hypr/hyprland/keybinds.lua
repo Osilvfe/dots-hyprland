@@ -98,15 +98,21 @@ hl.bind("SUPER + SHIFT + X", hl.dsp.exec_cmd(
 --# Color picker
 hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"),
     { description = "Utilities: Pick color #RRGGBB >> clipboard" })
---# Fullscreen screenshot
-local grimhyprctl = "grim -o \"$(hyprctl activeworkspace -j | jq -r '.monitor')\""
-hl.bind("Print", hl.dsp.exec_cmd(grimhyprctl .. " - | wl-copy"),
-    { locked = true, description = "Utilities: Screenshot >> clipboard" })
-hl.bind("CTRL + Print", hl.dsp.exec_cmd(
-    "mkdir -p $(xdg-user-dir PICTURES)/Screenshots && " ..
-    grimhyprctl .. " $(xdg-user-dir PICTURES)/Screenshots/Screenshot_\"$(date '+%Y-%m-%d_%H.%M.%S')\".png"
-), { locked = true, non_consuming = true, description = "Utilities: Screenshot >> clipboard & file" })
-hl.bind("CTRL + Print", hl.dsp.exec_cmd(grimhyprctl .. " - | wl-copy"), { locked = true, non_consuming = true })
+--# Screenshot & Screen Snip
+hl.bind("Print", hl.dsp.global("quickshell:regionScreenshot"), { description = "Utilities: Screen snip" })
+hl.bind("Print",
+    hl.dsp.exec_cmd(qsIsAlive .. " || pidof slurp || hyprshot --freeze --clipboard-only --mode region --silent"))
+
+--# Fullscreen & Window screenshot
+local screenshotFullscreen = "f=\"$(xdg-user-dir PICTURES)/Screenshots/Screenshot_$(date '+%Y-%m-%d_%H.%M.%S').png\" && mkdir -p \"$(dirname \"$f\")\" && grim -o \"$(hyprctl activeworkspace -j | jq -r '.monitor')\" \"$f\" && wl-copy --type image/png < \"$f\" && notify-send 'Screenshot Saved' \"Saved to $(basename \"$f\") & copied to clipboard\" -i \"$f\" -a Hyprshot"
+local screenshotClipboard = "grim -o \"$(hyprctl activeworkspace -j | jq -r '.monitor')\" - | wl-copy --type image/png && notify-send 'Screenshot Copied' 'Active screen copied to clipboard' -a Hyprshot"
+
+hl.bind("CTRL + Print", hl.dsp.exec_cmd(screenshotFullscreen),
+    { locked = true, description = "Utilities: Fullscreen screenshot >> clipboard & file" })
+hl.bind("SUPER + Print", hl.dsp.exec_cmd(screenshotClipboard),
+    { locked = true, description = "Utilities: Fullscreen screenshot >> clipboard" })
+hl.bind("ALT + Print", hl.dsp.exec_cmd("hyprshot -m window --clipboard-only"),
+    { locked = true, description = "Utilities: Window screenshot >> clipboard" })
 --# AI
 hl.bind("SUPER + SHIFT + ALT + mouse:273", hl.dsp.exec_cmd(hyprScripts .. "/ai/primary-buffer-query.sh"),
     { description = "Utilities: Generate AI summary for selected text" })
@@ -260,7 +266,7 @@ end
 --# #/# bind = SUPER+SHIFT, Scroll ↑/↓,, -- Send to workspace left/right
 for i = 1, 4 do
     local key = { "SUPER + SHIFT + mouse_", "SUPER + ALT + mouse_" }
-    local keycombos = { key[1] .. "down", key[1] .. "up", key[2] .. "down", key[2] .. "up" }
+    local keycombos = { key[1] .. "up", key[1] .. "down", key[2] .. "up", key[2] .. "down" }
     local prefix = { "r-", "r+", "r-", "r+" }
     hl.bind(keycombos[i], hl.dsp.window.move({ workspace = prefix[i] .. "1" }))
 end
@@ -330,7 +336,7 @@ for i = 1, 4 do
 end
 --#/# bind = SUPER, Scroll ↑/↓,, -- Focus left/right
 for i = 1, 4 do
-    local key = { "SUPER + mouse_up", "SUPER + mouse_down" }
+    local key = { "SUPER + mouse_down", "SUPER + mouse_up" }
     local keycombos = { key[1], key[2], "CTRL + " .. key[1], "CTRL + " .. key[2] }
     local prefix = { "+", "-", "r+", "r-" }
     hl.bind(keycombos[i], hl.dsp.focus({ workspace = prefix[i] .. "1" }))

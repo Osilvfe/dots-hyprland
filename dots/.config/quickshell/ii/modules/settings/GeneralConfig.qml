@@ -375,4 +375,21 @@ ContentPage {
             }
         }
     }
+
+    ContentSection {
+        icon: "coffee"
+        title: Translation.tr("Keep awake")
+
+        ConfigSwitch {
+            buttonIcon: "power_settings_new"
+            text: Translation.tr("Keep awake on startup")
+            checked: Config.options.idle.inhibitOnStartup
+            onCheckedChanged: {
+                Config.options.idle.inhibitOnStartup = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Automatically enable Keep awake when a Hyprland session starts")
+            }
+        }
+    }
 }

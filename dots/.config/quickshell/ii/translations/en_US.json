@@ -334,6 +334,7 @@
   "Reload Hyprland & Quickshell": "Reload Hyprland & Quickshell",
   "Resources": "Resources",
   "Brightness": "Brightness",
+  "Keyboard Layout": "Keyboard Layout",
   "Unknown": "Unknown",
   "Polling interval (ms)": "Polling interval (ms)",
   "Lock": "Lock",
@@ -609,5 +610,14 @@
   "Use varying shapes for password characters": "Use varying shapes for password characters",
   "Battery full": "Battery full",
   "Pin": "Pin",
-  "Unpin": "Unpin"
+  "Unpin": "Unpin",
+  "Target region opacity": "Target region opacity",
+  "Sets how visible the hinted regions are. Labels and icons stay readable at any value.": "Sets how visible the hinted regions are. Labels and icons stay readable at any value.",
+  "Target region labels": "Target region labels",
+  "Show label": "Show label",
+  "Show app icon": "Show app icon",
+  "Show window title": "Show window title",
+  "Show region size and position": "Show region size and position",
+  "Keep awake on startup": "Keep awake on startup",
+  "Automatically enable Keep awake when a Hyprland session starts": "Automatically enable Keep awake when a Hyprland session starts"
 }

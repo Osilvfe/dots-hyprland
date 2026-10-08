@@ -29,6 +29,10 @@ Scope {
             id: "gamma",
             sourceUrl: "indicators/GammaIndicator.qml"
         },
+        {
+            id: "layout",
+            sourceUrl: "indicators/LayoutIndicator.qml"
+        },
     ]
 
     readonly property bool fluidEnabled: Config.options.appearance.fluidMorphing.enable ?? false
@@ -67,6 +71,18 @@ Scope {
         target: Hyprsunset
         function onGammaChangeAttempt() {
             root.triggerOsd("gamma", "");
+        }
+    }
+
+    Connections {
+        target: HyprlandXkb
+        property bool seenInitialLayout: false
+        function onCurrentLayoutNameChanged() {
+            if (!seenInitialLayout) {
+                seenInitialLayout = true;
+                return;
+            }
+            root.triggerOsd("layout", "");
         }
     }
 
