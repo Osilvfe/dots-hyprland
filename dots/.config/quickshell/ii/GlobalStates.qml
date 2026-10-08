@@ -73,6 +73,8 @@ Singleton {
     property bool wallpaperSelectorOpen: false
     property bool workspaceShowNumbers: false
 
+    property real privacyPopupHeight: 0
+
     onSidebarLeftOpenChanged: {
         if (root.sidebarLeftOpen) root.superReleaseMightTrigger = false;
     }

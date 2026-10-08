@@ -23,6 +23,18 @@ getactivemonitor() {
 mkdir -p "$RECORDING_DIR"
 cd "$RECORDING_DIR" || exit
 
+notify_shell() {
+    command -v qs >/dev/null 2>&1 || return 0
+    qs -c ii ipc call privacy "$1" >/dev/null 2>&1
+}
+
+track_recording() {
+    notify_shell screenRecordStarted
+    trap 'notify_shell screenRecordStopped' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+}
+
 # parse args
 ARGS=("$@")
 MANUAL_REGION=""
@@ -60,6 +72,7 @@ done
 if pgrep wf-recorder > /dev/null; then
     qs -c ii ipc call recording status none 2>/dev/null &
     notify-send "Recording Stopped" "Stopped" -a 'Recorder' &
+    notify_shell screenRecordStopped
     pkill -INT wf-recorder &
 else
     # Resolve region (window -> active window geometry)
@@ -82,6 +95,7 @@ else
     if [[ $GIF_FLAG -eq 1 ]]; then
         notify-send "Starting recording" 'recording_'"$(getdate)"'.gif' -a 'Recorder' & disown
         qs -c ii ipc call recording status gif 2>/dev/null &
+        track_recording
         tmp_file="./.tmp_recording_$(getdate).mp4"
         if [[ $FULLSCREEN_FLAG -eq 1 ]]; then
             wf-recorder -o "$(getactivemonitor)" --pixel-format yuvj420p -f "$tmp_file" "${AUDIO_ARGS[@]}"
@@ -94,6 +108,7 @@ else
     else
         notify-send "Starting recording" 'recording_'"$(getdate)"'.mp4' -a 'Recorder' & disown
         qs -c ii ipc call recording status screen 2>/dev/null &
+        track_recording
         if [[ $FULLSCREEN_FLAG -eq 1 ]]; then
             wf-recorder -o "$(getactivemonitor)" --pixel-format yuvj420p -f './recording_'"$(getdate)"'.mp4' "${AUDIO_ARGS[@]}"
         else

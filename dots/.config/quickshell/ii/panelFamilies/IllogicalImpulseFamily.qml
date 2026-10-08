@@ -40,6 +40,7 @@ Scope {
     PanelLoader { extraCondition: Config.options.dock.enable; component: Dock {} }
     PanelLoader { component: Lock {} }
     PanelLoader { component: MediaControls {} }
+    PanelLoader { component: PrivacyCapturePopup {} }
     PanelLoader {
         extraCondition: !(Config.options.appearance.fluidMorphing.enable ?? false)
         component: NotificationPopup {}

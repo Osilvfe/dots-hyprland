@@ -23,6 +23,8 @@ Singleton {
     property var monitors: []
     property var layers: ({})
 
+    signal screencast(bool active, string owner)
+
     // Convenient stuff
 
     function toplevelsForWorkspace(workspace) {
@@ -106,6 +108,12 @@ Singleton {
             const name = event.name;
             if (["windowtitle", "windowtitlev2"].includes(name)) {
                 windowTitleUpdateDebounce.restart();
+                return;
+            }
+            if (name === "screencastv2") {
+                const data = String(event.data);
+                const ownerEnd = data.indexOf(",", 2);
+                root.screencast(data[0] === "1", ownerEnd < 0 ? data.slice(2) : data.slice(2, ownerEnd));
                 return;
             }
             if (["openlayer", "closelayer", "screencast", "activelayout", "submap"].includes(name))

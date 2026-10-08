@@ -1141,5 +1141,14 @@
   "Show window title": "显示窗口标题",
   "Show region size and position": "显示区域尺寸与位置",
   "Keep awake on startup": "启动时保持唤醒",
-  "Automatically enable Keep awake when a Hyprland session starts": "Hyprland 会话启动时自动开启保持唤醒（咖啡因模式）"
+  "Automatically enable Keep awake when a Hyprland session starts": "Hyprland 会话启动时自动开启保持唤醒（咖啡因模式）",
+  "Privacy": "隐私",
+  "Show a notification and an icon in the bar when an app starts using:": "当应用开始使用以下功能时，显示通知并在顶栏显示图标：",
+  "Camera": "摄像头",
+  "Screen capture": "屏幕捕获",
+  "Captures audio from the microphone": "正在从麦克风采集音频",
+  "Captures video from the camera": "正在从摄像头采集视频",
+  "Captures picture of the screen": "正在捕获屏幕画面",
+  "Unknown application": "未知应用",
+  "Also detect apps that open the camera directly": "同时检测直接打开摄像头设备的应用"
 }
