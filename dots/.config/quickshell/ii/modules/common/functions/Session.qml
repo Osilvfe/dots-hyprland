@@ -24,9 +24,16 @@ Singleton {
         Quickshell.execDetached(["bash", "-c", "systemctl suspend || loginctl suspend"]);
     }
 
+    function handleSessionExit(systemCmd) {
+        const shouldSave = Config.options.session?.restoreWindowsOnLogin ?? true;
+        const script = Directories.sessionRestoreScriptPath;
+        const saveArg = shouldSave ? "save" : "clear";
+        const fullCmd = `python3 "${script}" ${saveArg}; ${systemCmd}`;
+        Quickshell.execDetached(["bash", "-c", fullCmd]);
+    }
+
     function logout() {
-        closeAllWindows();
-        Quickshell.execDetached(["pkill", "-i", "Hyprland"]);
+        handleSessionExit("pkill -i Hyprland");
     }
 
     function launchTaskManager() {
@@ -38,17 +45,14 @@ Singleton {
     }
 
     function poweroff() {
-        closeAllWindows();
-        Quickshell.execDetached(["bash", "-c", `systemctl poweroff || loginctl poweroff`]);
+        handleSessionExit("systemctl poweroff || loginctl poweroff");
     }
 
     function reboot() {
-        closeAllWindows();
-        Quickshell.execDetached(["bash", "-c", `reboot || loginctl reboot`]);
+        handleSessionExit("reboot || loginctl reboot");
     }
 
     function rebootToFirmware() {
-        closeAllWindows();
-        Quickshell.execDetached(["bash", "-c", `systemctl reboot --firmware-setup || loginctl reboot --firmware-setup`]);
+        handleSessionExit("systemctl reboot --firmware-setup || loginctl reboot --firmware-setup");
     }
 }

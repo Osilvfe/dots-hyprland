@@ -237,6 +237,65 @@ Scope {
                     Layout.alignment: Qt.AlignHCenter
                     text: sessionRoot.subtitle
                 }
+
+                Rectangle {
+                    id: restoreOptionRow
+                    Layout.alignment: Qt.AlignHCenter
+                    implicitHeight: 34
+                    implicitWidth: restoreRowLayout.implicitWidth + 24
+                    radius: Appearance.rounding.full
+                    color: restoreMouseArea.containsMouse ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.88) : "transparent"
+
+                    Behavior on color {
+                        animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                    }
+
+                    RowLayout {
+                        id: restoreRowLayout
+                        anchors.centerIn: parent
+                        spacing: 10
+
+                        Rectangle {
+                            implicitWidth: 18
+                            implicitHeight: 18
+                            radius: 4
+                            color: (Config.options.session?.restoreWindowsOnLogin ?? true) ? Appearance.colors.colPrimary : "transparent"
+                            border.width: 1.5
+                            border.color: (Config.options.session?.restoreWindowsOnLogin ?? true) ? Appearance.colors.colPrimary : Appearance.m3colors.m3outline
+
+                            Behavior on color {
+                                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                            }
+                            Behavior on border.color {
+                                animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                            }
+
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "check"
+                                iconSize: 14
+                                color: Appearance.m3colors.m3onPrimary
+                                visible: Config.options.session?.restoreWindowsOnLogin ?? true
+                            }
+                        }
+
+                        StyledText {
+                            text: Translation.tr("Reopen windows when logging back in")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnBackground
+                        }
+                    }
+
+                    MouseArea {
+                        id: restoreMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            Config.options.session.restoreWindowsOnLogin = !(Config.options.session?.restoreWindowsOnLogin ?? true);
+                        }
+                    }
+                }
             }
 
             ColumnLayout {

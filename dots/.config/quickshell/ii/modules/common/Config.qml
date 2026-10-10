@@ -645,6 +645,10 @@ Singleton {
                 }
             }
 
+            property JsonObject session: JsonObject {
+                property bool restoreWindowsOnLogin: true
+            }
+
             property JsonObject waffles: JsonObject {
                 // Some spots are kinda janky/awkward. Setting the following to
                 // false will make (some) stuff also be like that for accuracy. 
