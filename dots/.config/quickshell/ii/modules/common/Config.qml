@@ -108,12 +108,12 @@ Singleton {
                 property bool extraBackgroundTint: true
                 property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
                 property JsonObject fonts: JsonObject {
-                    property string main: "PingFang SC"
-                    property string numbers: "PingFang SC"
-                    property string title: "PingFang SC"
+                    property string main: "SF Pro"
+                    property string numbers: "SF Pro"
+                    property string title: "SF Pro"
                     property string iconNerd: "JetBrains Mono NF"
                     property string monospace: "JetBrains Mono NF"
-                    property string reading: "PingFang SC"
+                    property string reading: "SF Pro"
                     property string expressive: "Space Grotesk"
                 }
                 property JsonObject transparency: JsonObject {

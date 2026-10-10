@@ -129,6 +129,8 @@
 - **#3674** 蓝牙多适配器状态一致性（核查确认：本地 #3634 已用 `Bluetooth.devices.values` 全局聚合，天然免疫，未改动）
 - **#3664** `CustomIcon.qml` 内置资源探测修复（隐藏 `bundledProbe` Image 检测捆绑图标是否可加载，失败时回退 `Quickshell.iconPath` 系统主题图标）
 - **#3675** 选区目标区域 HiDPI 坐标对齐与标签可读性（净合并未合并前置 `45d000126` + PR 本体：`detectionScale` 修正 `find_regions` 原生像素→逻辑像素换算并加 `--min-width/--min-height` 下限；`TargetRegion` 拆分 `opacity`（整体显隐）与 `regionAlpha`（仅填充/边框），标签胶囊用 `labelAlpha` 保持可读；新增 `showIcon/showTitle/showCoordinates` 配置与设置页开关，移除窗口 delegate 硬编码 `showIcon: true`；本地 NVIDIA 冻结帧 `Image` 替换 `ScreencopyView` 的修复完整保留）
+- **锁屏壁纸透明与图层提升时序修复**（`Background.qml`：移除 `visible: !blurLoader.active`，解决锁屏时底层壁纸被隐藏导致 `GaussianBlur` 无法获取采样源而输出全透明的严重缺陷；修正 `WlrLayershell.layer` 为 `(GlobalStates.screenLocked || scaleAnim.running)`，确保缩放动画期间始终处于 `Overlay` 层遮挡桌面窗口）
+- **中西文高级混排排版**（`fonts.conf`、`Config.qml`、`hyprlock`：全局首选西文 `SF Pro`（San Francisco 原生可变字体）+ 中文 `PingFang SC`（苹方-简）+ 生僻字 `Noto Sans CJK SC` 回退链，等宽为 `JetBrainsMono Nerd Font`，GTK/Qt/锁屏全链路同步对齐）
 
 ### 本地补丁 · 功能
 - **#3533** OSD/顶栏滚轮音量上限（`audio.osdMaxPercent`，默认 150；不影响键盘 `wpctl -l 1.5`）

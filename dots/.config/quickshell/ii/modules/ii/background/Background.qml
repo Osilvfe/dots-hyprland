@@ -140,7 +140,7 @@ Variants {
         // Layer props
         screen: modelData
         exclusionMode: ExclusionMode.Ignore
-        WlrLayershell.layer: (GlobalStates.screenLocked && !scaleAnim.running) ? WlrLayer.Overlay : WlrLayer.Bottom
+        WlrLayershell.layer: (GlobalStates.screenLocked || scaleAnim.running) ? WlrLayer.Overlay : WlrLayer.Bottom
         // WlrLayershell.layer: WlrLayer.Bottom
         WlrLayershell.namespace: "quickshell:background"
         anchors {
@@ -262,7 +262,7 @@ Variants {
                 WallpaperTransitionSurface {
                     id: wallpaper
                     anchors.fill: parent
-                    visible: !blurLoader.active && !bgRoot.wallpaperIsVideo
+                    visible: !bgRoot.wallpaperIsVideo
                     sourcePath: bgRoot.wallpaperSafetyTriggered ? "" : bgRoot.wallpaperPath
                     imageX: wallpaperContainer.wallpaperX
                     imageY: wallpaperContainer.wallpaperY
