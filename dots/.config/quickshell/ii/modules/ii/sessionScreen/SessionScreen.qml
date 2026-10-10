@@ -282,7 +282,6 @@ Scope {
                         StyledText {
                             text: Translation.tr("Reopen windows when logging back in")
                             font.pixelSize: Appearance.font.pixelSize.normal
-                            color: Appearance.colors.colOnBackground
                         }
                     }
 
