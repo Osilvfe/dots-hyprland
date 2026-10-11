@@ -83,12 +83,24 @@ publish_state() {
     fi
 
     local rotate_script="${SCRIPT_PATH%/*}/rotate_screen.sh"
+    local auto_osk_script="${SCRIPT_PATH%/*}/auto_osk.sh"
     if [[ -x "$rotate_script" ]]; then
         if [[ "$mode" == "1" ]]; then
             "$rotate_script" auto-start >/dev/null 2>&1 &
         elif [[ "$old_mode" != "$mode" ]]; then
             "$rotate_script" auto-stop >/dev/null 2>&1 &
             "$rotate_script" 0 false >/dev/null 2>&1 &
+        fi
+    fi
+    if [[ -x "$auto_osk_script" ]]; then
+        if [[ "$mode" == "1" ]]; then
+            "$auto_osk_script" start >/dev/null 2>&1 &
+        elif [[ "$old_mode" != "$mode" ]]; then
+            "$auto_osk_script" stop >/dev/null 2>&1 &
+            if command -v qs >/dev/null 2>&1; then
+                env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
+                    qs -c ii ipc --any-display call osk close >/dev/null 2>&1 || true
+            fi
         fi
     fi
 

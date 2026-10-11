@@ -64,12 +64,18 @@ Scope {
                     searchWidget.disableExpandAnimation();
                     overviewScope.dontAutoCancelSearch = false;
                     GlobalFocusGrab.dismiss();
+                    if (TabletMode.isTabletMode) {
+                        GlobalStates.oskOpen = false;
+                    }
                 } else {
                     if (!overviewScope.dontAutoCancelSearch) {
                         searchWidget.cancelSearch();
                     }
                     GlobalFocusGrab.addDismissable(panelWindow);
                     searchWidget.focusSearchInput();
+                    if (TabletMode.isTabletMode) {
+                        GlobalStates.oskOpen = true;
+                    }
                 }
             }
         }

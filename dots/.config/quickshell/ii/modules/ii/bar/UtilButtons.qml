@@ -110,7 +110,7 @@ Item {
         }
 
         Loader {
-            active: (Config.options.bar.utilButtons.showOrientationToggle ?? false) || TabletMode.isTabletMode
+            active: Config.options.bar.utilButtons.showOrientationToggle ?? false
             visible: active
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
