@@ -8,6 +8,18 @@ AUTO_PID_FILE="${RUNTIME_DIR}/hypr_autorotate.pid"
 AUTO_SESSION_FILE="${RUNTIME_DIR}/hypr_autorotate.session"
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
 
+if [[ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+    HYPRLAND_INSTANCE_SIGNATURE=$(find "${RUNTIME_DIR}/hypr" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' 2>/dev/null | head -n 1 || true)
+    export HYPRLAND_INSTANCE_SIGNATURE
+fi
+if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
+    WAYLAND_DISPLAY=$(find "${RUNTIME_DIR}" -maxdepth 1 -name "wayland-*" -printf '%P\n' 2>/dev/null | head -n 1 || true)
+    export WAYLAND_DISPLAY
+fi
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" && -S "${RUNTIME_DIR}/bus" ]]; then
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=${RUNTIME_DIR}/bus"
+fi
+
 atomic_write() {
     local path="$1"
     local value="$2"
