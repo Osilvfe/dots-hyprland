@@ -167,6 +167,11 @@
   - **硬件电源键会话级拦截**：普通用户直接运行 `systemd-inhibit --what=handle-power-key` 申请会话级抑制锁（`dots/.config/hypr/hyprland/scripts/inhibit_power_button.sh`），在 `execs.lua` 的 `hyprland.start` 钩子拉起；退出 Hyprland 桌面时自动随子进程解绑释放，绝不改动 `/etc/systemd/logind.conf` 等全局文件；在 `keybinds.lua` 中将 `XF86PowerOff` 单键绑定到 `quickshell:sessionToggle`，按下电源键优雅弹出 Quickshell 全屏电源菜单。
   - **macOS 风格会话恢复（应用与工作区记忆）**：后台引擎 `scripts/session/session-restore.py`，在系统关机/重启/注销前通过 `hyprctl clients -j` 抓取活跃窗口、所属工作区、`.desktop` 启动命令及终端（kitty/foot 等）当前目录（`/proc/<pid>/cwd`），写入 `~/.local/state/hyprland/session-restore.json`；下次开机登录时在 `execs.lua` 中自动调用 `session-restore.py restore`，利用 Hyprland 原生 `hyprctl dispatch exec [workspace N silent] <cmd>` 语法将应用静默批量恢复至各自工作区并备份标记，杜绝重复弹出。
   - **电源菜单交互与配置持久化**：在全屏电源菜单（`SessionScreen.qml`）动作按钮下方集成 macOS 质感复选框“再次登录时重新打开所有窗口”（`Reopen windows when logging back in`），绑定 `Config.options.session.restoreWindowsOnLogin`（默认开启）；在 `Session.qml` 的 `logout/poweroff/reboot/rebootToFirmware` 中串行自动执行 `save` 或 `clear`。
+- **Arch Linux ARM / aarch64 全平台全流程适配（本项目定制）**：
+  - **发行版与架构识别放行**：在 `sdata/lib/dist-determine.sh` 中将 Arch Linux ARM 发行版 ID `archarm` 纳入原生 `arch` 组别，避免伪“alike”警告；将 `MACHINE_ARCH` 架构支持拓宽至 `x86_64` 与 `aarch64`，解除原先对非 x86_64 的阻断提示。
+  - **双 AUR 辅助工具自动适配（paru & yay）**：在 `sdata/dist-arch/install-deps.sh` 中彻底解绑对 `paru` 的硬编码依赖，自动探测并优先复用系统已安装的 `paru` 或 `yay`；在两者皆无时，`aarch64` 自动拉取原生跨架构预构建的 `yay-bin`（内置 aarch64），避免在 ARM 移动/平板端因下载仅限 x86_64 的 `paru-bin` 发生死锁。
+  - **PKGBUILD 架构放行与 ignorearch 构建容错**：在 `illogical-impulse-microtex-git/PKGBUILD` 中补齐 `aarch64` 声明；在 `install-local-pkgbuild()` 中为 aarch64 构建自动注入 `--mflags="--ignorearch"`，无缝支持 AUR 中纯源码但未显式标注 aarch64 的底层依赖（如 `udis86`、`xorg-xwayland-hidpi-xprop`）；将旧依赖隐式化转换统一改用原生 `sudo pacman -D --asdeps`。
+  - **屏幕显示通用兜底**：在 `general.lua` 中补充通配 monitor 规则 `hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })`，完美适配高通骁龙 8 Gen 2 / Gen 3 等 ARM 平板设备内屏（`DSI-1`）与多功能外接屏。
 
 ### 本地修复（无对应 PR）
 - **`StyledToolTip`** 引入 `HoverHandler` 聚合 `parent?.hovered`、`parent?.containsMouse` 与 `hoverHandler.hovered`，修复父级容器（如 `ConfigSpinBox`/`MouseArea`）无 `hovered` 属性时 ToolTip 默认常驻显示

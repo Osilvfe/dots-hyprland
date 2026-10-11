@@ -17,6 +17,14 @@ hl.monitor({
     
 })
 
+-- 通配兜底：适配其他屏幕（DSI-1、DP-1、虚拟显示器等）
+hl.monitor({
+    output   = "",
+    mode     = "preferred",
+    position = "auto",
+    scale    = "auto",
+})
+
 hl.gesture({
     fingers = 3,
     direction = "swipe",

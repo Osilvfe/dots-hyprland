@@ -2,14 +2,21 @@
 # It's not for directly running.
 
 install-paru(){
-  x sudo pacman -S --needed --noconfirm base-devel
+  x sudo pacman -S --needed --noconfirm base-devel git
   x git clone https://aur.archlinux.org/paru-bin.git /tmp/buildparu
   x cd /tmp/buildparu
-  x makepkg -o
-  x makepkg -se
-  x makepkg -i --noconfirm
+  x makepkg -si --noconfirm
   x cd ${REPO_ROOT}
   rm -rf /tmp/buildparu
+}
+
+install-yay(){
+  x sudo pacman -S --needed --noconfirm base-devel git
+  x git clone https://aur.archlinux.org/yay-bin.git /tmp/buildyay
+  x cd /tmp/buildyay
+  x makepkg -si --noconfirm
+  x cd ${REPO_ROOT}
+  rm -rf /tmp/buildyay
 }
 
 remove_deprecated_dependencies(){
@@ -33,7 +40,7 @@ implicitize_old_dependencies(){
 
   echo "Attempting to set previously explicitly installed deps as implicit..."
   for i in "${explicitly_installed[@]}"; do for j in "${old_deps_list[@]}"; do
-    [ "$i" = "$j" ] &&   paru -D --asdeps "$i"
+    [ "$i" = "$j" ] &&   sudo pacman -D --asdeps "$i"
   done; done
 
   return 0
@@ -59,18 +66,30 @@ case $SKIP_SYSUPDATE in
   *) v sudo pacman -Syu;;
 esac
 
-# Use paru
-if ! command -v paru >/dev/null 2>&1;then
-  echo -e "${STY_YELLOW}[$0]: \"paru\" not found.${STY_RST}"
-  showfun install-paru
-  v install-paru
+# Detect or install AUR helper (paru or yay)
+if command -v paru >/dev/null 2>&1; then
+  AUR_HELPER="paru"
+elif command -v yay >/dev/null 2>&1; then
+  AUR_HELPER="yay"
+else
+  echo -e "${STY_YELLOW}[$0]: Neither \"paru\" nor \"yay\" was found.${STY_RST}"
+  if [[ "${MACHINE_ARCH}" == "aarch64" ]]; then
+    showfun install-yay
+    v install-yay
+    AUR_HELPER="yay"
+  else
+    showfun install-paru
+    v install-paru
+    AUR_HELPER="paru"
+  fi
 fi
+echo -e "${STY_GREEN}[$0]: Using \"${AUR_HELPER}\" as AUR helper.${STY_RST}"
 
 showfun implicitize_old_dependencies
 v implicitize_old_dependencies
 
 # https://github.com/end-4/dots-hyprland/issues/581
-# paru -Bi is kinda hit or miss, instead cd into the relevant directory and manually source and install deps
+# paru/yay -Bi is kinda hit or miss, instead cd into the relevant directory and manually source and install deps
 install-local-pkgbuild() {
   local location=$1
   local installflags=$2
@@ -82,7 +101,11 @@ install-local-pkgbuild() {
   if [[ -n "${makedepends[*]:-}" ]]; then
     build_deps+=("${makedepends[@]}")
   fi
-  x paru -S --sudoloop $installflags --asdeps "${build_deps[@]}"
+  local extra_aur_flags=()
+  if [[ "${MACHINE_ARCH}" == "aarch64" ]]; then
+    extra_aur_flags+=(--mflags="--ignorearch")
+  fi
+  x $AUR_HELPER -S --sudoloop $installflags "${extra_aur_flags[@]}" --asdeps "${build_deps[@]}"
   # man makepkg:
   # -A, --ignorearch: Ignore a missing or incomplete arch field in the build script.
   # -s, --syncdeps: Install missing dependencies using pacman. When build-time or run-time dependencies are not found, pacman will try to resolve them.

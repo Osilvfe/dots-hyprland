@@ -30,7 +30,7 @@ function print_os_group_id_architecture(){
     printf "${STY_RED}"
     printf "===CAUTION===\n"
     printf "Detected machine architecture: ${MACHINE_ARCH}\n"
-    printf "This script only supports x86_64.\n"
+    printf "This script only supports x86_64 and aarch64.\n"
     printf "=============\n\n"
     printf "${STY_RST}"
 }
@@ -54,7 +54,7 @@ export OS_DISTRO_ID_LIKE=$(awk -F'=' '/^ID_LIKE=/ { gsub(/["\x27]/,"",$2); print
 ####################
 # Determine distro ID
 
-if [[ "$OS_DISTRO_ID" =~ ^(arch|endeavouros|cachyos)$ ]]; then
+if [[ "$OS_DISTRO_ID" =~ ^(arch|archarm|endeavouros|cachyos)$ ]]; then
   OS_GROUP_ID="arch"
   print_os_group_id_functions=(print_os_group_id)
 elif [[ "$OS_DISTRO_ID_LIKE" == "arch" ]]; then
@@ -70,6 +70,6 @@ fi
 # Detect architecture
 export MACHINE_ARCH=$(uname -m)
 case "${MACHINE_ARCH}" in
-  "x86_64") true;;
+  "x86_64"|"aarch64") true;;
   *) print_os_group_id_functions+=(print_os_group_id_architecture);;
 esac
