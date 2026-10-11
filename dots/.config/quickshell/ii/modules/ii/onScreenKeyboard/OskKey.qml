@@ -18,7 +18,7 @@ RippleButton {
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
     property bool modifierWasActive: false
     property real baseWidth: 45
-    property real baseHeight: 45
+    property real baseHeight: Orientation.isPortrait ? 52 : 45
     property var widthMultiplier: ({
         "normal": 1,
         "fn": 1,

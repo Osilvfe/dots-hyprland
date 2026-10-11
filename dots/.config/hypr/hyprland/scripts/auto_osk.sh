@@ -32,6 +32,40 @@ is_tablet_mode() {
     return 1
 }
 
+is_auto_show_enabled() {
+    local config_file="${XDG_CONFIG_HOME:-${HOME:-/home/$(id -un)}/.config}/illogical-impulse/config.json"
+    if [[ -f "$config_file" ]] && command -v jq >/dev/null 2>&1; then
+        local enabled
+        enabled=$(jq -r '.options.osk.autoShowOnFocus // true' "$config_file" 2>/dev/null || true)
+        [[ "$enabled" == "false" ]] && return 1
+    fi
+    return 0
+}
+
+get_active_window_class() {
+    if command -v hyprctl >/dev/null 2>&1; then
+        hyprctl activewindow -j 2>/dev/null | awk -F'"' '/"class":/{print $4; exit}'
+    fi
+}
+
+is_window_ignored_for_focusin() {
+    local win_class
+    win_class=$(get_active_window_class)
+    [[ -z "$win_class" ]] && return 1
+
+    case "${win_class,,}" in
+        org.kde.dolphin|dolphin|*dolphin*|\
+        org.gnome.nautilus|nautilus|nemo|thunar|pcmanfm*|\
+        org.kde.gwenview|gwenview|org.gnome.loupe|loupe|imv|feh|eog|\
+        mpv|vlc|clapper|haruna|*celluloid*|\
+        *systemmonitor*|*missioncenter*|mission-center|*kcalc*|*calculator*|\
+        pavucontrol*|quickshell*|waybar*|rofi*|fuzzel*|gamescope*|steam*)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
 pid_is_worker() {
     local pid="$1"
     local args
@@ -70,6 +104,32 @@ worker() {
 
     export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${RUNTIME_DIR}/bus}"
 
+    open_osk() {
+        if [[ -n "$close_pid" ]]; then
+            kill "$close_pid" 2>/dev/null || true
+            close_pid=""
+        fi
+        if is_tablet_mode && is_auto_show_enabled && command -v qs >/dev/null 2>&1; then
+            env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
+                qs -c ii ipc --any-display call osk open >/dev/null 2>&1 || true
+        fi
+    }
+
+    close_osk_debounced() {
+        if [[ -n "$close_pid" ]]; then
+            kill "$close_pid" 2>/dev/null || true
+        fi
+        # Debounce by 250ms to allow smooth focus transfer between input fields
+        (
+            sleep 0.25
+            if is_tablet_mode && command -v qs >/dev/null 2>&1; then
+                env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
+                    qs -c ii ipc --any-display call osk close >/dev/null 2>&1 || true
+            fi
+        ) &
+        close_pid=$!
+    }
+
     while true; do
         rm -f "$fifo"
         mkfifo -m 600 "$fifo" || { sleep 1; continue; }
@@ -82,29 +142,16 @@ worker() {
         monitor_pid=$!
 
         while IFS= read -r line; do
-            if [[ "$line" == *"Member=FocusIn"* ]]; then
-                # Cancel any pending debounce close
-                if [[ -n "$close_pid" ]]; then
-                    kill "$close_pid" 2>/dev/null || true
-                    close_pid=""
+            if [[ "$line" == *"Member=ShowVirtualKeyboard"* ]]; then
+                open_osk
+            elif [[ "$line" == *"Member=FocusIn"* ]]; then
+                if ! is_window_ignored_for_focusin; then
+                    open_osk
                 fi
-                if is_tablet_mode && command -v qs >/dev/null 2>&1; then
-                    env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
-                        qs -c ii ipc --any-display call osk open >/dev/null 2>&1 || true
-                fi
-            elif [[ "$line" == *"Member=FocusOut"* ]]; then
-                if [[ -n "$close_pid" ]]; then
-                    kill "$close_pid" 2>/dev/null || true
-                fi
-                # Debounce by 250ms to allow smooth focus transfer between input fields
-                (
-                    sleep 0.25
-                    if is_tablet_mode && command -v qs >/dev/null 2>&1; then
-                        env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
-                            qs -c ii ipc --any-display call osk close >/dev/null 2>&1 || true
-                    fi
-                ) &
-                close_pid=$!
+            elif [[ "$line" == *"Member=SetSurroundingText"* ]]; then
+                open_osk
+            elif [[ "$line" == *"Member=FocusOut"* || "$line" == *"Member=HideVirtualKeyboard"* ]]; then
+                close_osk_debounced
             fi
         done < "$fifo"
 

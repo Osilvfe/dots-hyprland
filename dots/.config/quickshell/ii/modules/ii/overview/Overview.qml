@@ -73,7 +73,7 @@ Scope {
                     }
                     GlobalFocusGrab.addDismissable(panelWindow);
                     searchWidget.focusSearchInput();
-                    if (TabletMode.isTabletMode) {
+                    if (TabletMode.isTabletMode && (Config.options?.osk?.autoShowOnFocus ?? true)) {
                         GlobalStates.oskOpen = true;
                     }
                 }
