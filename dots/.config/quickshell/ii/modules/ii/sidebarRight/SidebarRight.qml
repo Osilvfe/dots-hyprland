@@ -68,6 +68,48 @@ Scope {
         }
     }
 
+    Loader {
+        id: edgeTriggerLoader
+        active: !GlobalStates.sidebarRightOpen && !GlobalStates.screenLocked && (TabletMode.isTabletMode || (Config.options?.sidebar?.rightEdgeSwipe ?? false))
+        sourceComponent: PanelWindow {
+            id: edgeTriggerWindow
+            screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
+            WlrLayershell.namespace: "quickshell:sidebar_right_edge_trigger"
+            WlrLayershell.layer: WlrLayer.Overlay
+            exclusiveZone: 0
+            color: "transparent"
+
+            anchors {
+                right: true
+                top: true
+                bottom: true
+            }
+            implicitWidth: 14
+
+            MouseArea {
+                id: edgeMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                property real startX: 0
+                property bool swiping: false
+
+                onPressed: mouse => {
+                    startX = mouse.x;
+                    swiping = true;
+                }
+                onPositionChanged: mouse => {
+                    if (swiping && (startX - mouse.x > 12 || mouse.x < -5)) {
+                        swiping = false;
+                        GlobalStates.sidebarRightOpen = true;
+                    }
+                }
+                onReleased: {
+                    swiping = false;
+                }
+            }
+        }
+    }
+
     IpcHandler {
         target: "sidebarRight"
 

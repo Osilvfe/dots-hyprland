@@ -1166,5 +1166,9 @@
   "PIN": "数字密码",
   "Space": "空格",
   "Bottom-edge shortcut in desktop mode": "桌面模式下启用底边快捷手势",
-  "Tablet mode always enables the bottom-edge keyboard shortcut": "平板模式会始终启用底边屏幕键盘快捷手势"
+  "Tablet mode always enables the bottom-edge keyboard shortcut": "平板模式会始终启用底边屏幕键盘快捷手势",
+  "Right-edge shortcut in desktop mode": "桌面模式下启用右边缘划入手势",
+  "Left-edge shortcut in desktop mode": "桌面模式下启用左边缘划入手势",
+  "Tablet mode always enables edge swipe shortcuts": "平板模式会始终启用边缘划入手势",
+  "Swipe from screen edges to open sidebars in tablet or desktop mode": "在平板或桌面模式下从屏幕边缘划入以打开侧边栏"
 }

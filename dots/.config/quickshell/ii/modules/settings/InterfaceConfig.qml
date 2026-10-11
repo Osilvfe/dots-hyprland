@@ -809,6 +809,36 @@ ContentPage {
                 }
             }
         }
+
+        ContentSubsection {
+            title: Translation.tr("Edge swipe")
+            tooltip: Translation.tr("Swipe from screen edges to open sidebars in tablet or desktop mode")
+            ConfigRow {
+                uniform: true
+                ConfigSwitch {
+                    buttonIcon: "swipe_left"
+                    text: Translation.tr("Right-edge shortcut in desktop mode")
+                    checked: Config.options.sidebar.rightEdgeSwipe
+                    onCheckedChanged: {
+                        Config.options.sidebar.rightEdgeSwipe = checked;
+                    }
+                    StyledToolTip {
+                        text: Translation.tr("Tablet mode always enables edge swipe shortcuts")
+                    }
+                }
+                ConfigSwitch {
+                    buttonIcon: "swipe_right"
+                    text: Translation.tr("Left-edge shortcut in desktop mode")
+                    checked: Config.options.sidebar.leftEdgeSwipe
+                    onCheckedChanged: {
+                        Config.options.sidebar.leftEdgeSwipe = checked;
+                    }
+                    StyledToolTip {
+                        text: Translation.tr("Tablet mode always enables edge swipe shortcuts")
+                    }
+                }
+            }
+        }
     }
 
     ContentSection {
