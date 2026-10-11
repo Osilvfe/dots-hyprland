@@ -82,11 +82,21 @@ publish_state() {
         env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" qs -c ii ipc call tabletMode set "$qs_value" >/dev/null 2>&1 || true
     fi
 
+    local rotate_script="${SCRIPT_PATH%/*}/rotate_screen.sh"
+    if [[ -x "$rotate_script" ]]; then
+        if [[ "$mode" == "1" ]]; then
+            "$rotate_script" auto-start >/dev/null 2>&1 &
+        elif [[ "$old_mode" != "$mode" ]]; then
+            "$rotate_script" auto-stop >/dev/null 2>&1 &
+            "$rotate_script" 0 false >/dev/null 2>&1 &
+        fi
+    fi
+
     if [[ "$notify_change" == "true" && "$old_mode" != "unknown" && "$old_mode" != "$mode" ]] \
         && command -v notify-send >/dev/null 2>&1; then
         if [[ "$mode" == "1" ]]; then
             notify-send -a "系统模式" -i tablet -u low \
-                "平板模式已激活" "Pogo 键盘已拆卸，已启用全触控交互"
+                "平板模式已激活" "Pogo 键盘已拆卸，已启用全触控交互与重力旋转"
         else
             notify-send -a "系统模式" -i keyboard -u low \
                 "桌面模式已恢复" "Pogo 键盘已吸附连接"

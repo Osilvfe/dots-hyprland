@@ -110,9 +110,9 @@ apply_rotation() {
 
     description="横屏 (0°)"
     case "$transform" in
-        1) description="竖屏 (90°)" ;;
+        1) description="反向竖屏 (90°)" ;;
         2) description="倒置横屏 (180°)" ;;
-        3) description="反向竖屏 (270°)" ;;
+        3) description="竖屏 (270°)" ;;
     esac
     notify-send -a "系统显示" -i screen_rotation -u low \
         "屏幕方向已旋转" "当前方向：${description}"
@@ -156,7 +156,7 @@ auto_worker() {
     local fifo="${RUNTIME_DIR}/hypr_autorotate.sensor.${BASHPID}"
     local sensor_pid=""
     local cleaned="0"
-    local line transform
+    local line transform init_orient
 
     cleanup() {
         [[ "$cleaned" == "1" ]] && return 0
@@ -182,13 +182,22 @@ auto_worker() {
     sensor_pid=$!
     publish_auto_state 1
 
+    # Apply initial orientation immediately if already exposed on D-Bus
+    init_orient=$(busctl get-property net.hadess.SensorProxy /net/hadess/SensorProxy net.hadess.SensorProxy AccelerometerOrientation 2>/dev/null | tr -d '"' | awk '{print $2}')
+    case "$init_orient" in
+        normal) apply_rotation 0 false ;;
+        bottom-up) apply_rotation 2 false ;;
+        right-up) apply_rotation 3 false ;;
+        left-up) apply_rotation 1 false ;;
+    esac
+
     while IFS= read -r line; do
         transform=""
         case "$line" in
             *"orientation: normal"*|*"orientation changed: normal"*) transform=0 ;;
             *"orientation: bottom-up"*|*"orientation changed: bottom-up"*) transform=2 ;;
-            *"orientation: right-up"*|*"orientation changed: right-up"*) transform=1 ;;
-            *"orientation: left-up"*|*"orientation changed: left-up"*) transform=3 ;;
+            *"orientation: right-up"*|*"orientation changed: right-up"*) transform=3 ;;
+            *"orientation: left-up"*|*"orientation changed: left-up"*) transform=1 ;;
         esac
         [[ -n "$transform" ]] && apply_rotation "$transform" false
     done < "$fifo"
@@ -211,6 +220,7 @@ start_autorotate() {
 
     [[ -f "$AUTO_PID_FILE" ]] && read -r pid < "$AUTO_PID_FILE"
     [[ -n "$pid" ]] && stop_pid_tree "$pid"
+    pkill -f "${SCRIPT_PATH} auto-worker" 2>/dev/null || true
     rm -f "$AUTO_PID_FILE" "$AUTO_SESSION_FILE"
 
     setsid "$SCRIPT_PATH" auto-worker >/dev/null 2>&1 &
@@ -225,6 +235,7 @@ stop_autorotate() {
 
     [[ -f "$AUTO_PID_FILE" ]] && read -r pid < "$AUTO_PID_FILE"
     [[ -n "$pid" ]] && stop_pid_tree "$pid"
+    pkill -f "${SCRIPT_PATH} auto-worker" 2>/dev/null || true
     rm -f "$AUTO_PID_FILE" "$AUTO_SESSION_FILE"
     publish_auto_state 0
     printf 'Auto-rotate stopped.\n'
@@ -253,7 +264,7 @@ case "$ACTION" in
         if [[ "$CURRENT" == "1" || "$CURRENT" == "3" ]]; then
             apply_rotation 0
         else
-            apply_rotation 1
+            apply_rotation 3
         fi
         ;;
     next)
