@@ -100,19 +100,61 @@ install-local-pkgbuild() {
   x pushd $location
 
   source ./PKGBUILD
+
+  # If --needed is specified and the package is already installed, skip building and reinstalling
+  local pkgs=("${pkgname[@]}")
+  local all_installed=true
+  for p in "${pkgs[@]}"; do
+    if ! pacman -Q "$p" >/dev/null 2>&1; then
+      all_installed=false
+      break
+    fi
+  done
+  if [[ "$installflags" =~ "--needed" && "$all_installed" == true ]]; then
+    echo -e "${STY_GREEN}[$0]: Package \"${pkgs[*]}\" is already installed, skipping building...${STY_RST}"
+    x popd
+    return 0
+  fi
+
   local build_deps=("${depends[@]}")
   if [[ -n "${makedepends[*]:-}" ]]; then
     build_deps+=("${makedepends[@]}")
   fi
-  local extra_aur_flags=()
-  if [[ "${AUR_HELPER}" == "yay" || "${AUR_HELPER}" == "paru" ]]; then
-    extra_aur_flags+=(--useask)
+
+  local root_dir="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+  local external_deps=()
+
+  for dep in "${build_deps[@]}"; do
+    local dep_name="${dep%%[<>=]*}"
+
+    # 1. Skip if already satisfied by an installed package
+    if pacman -T "$dep" >/dev/null 2>&1; then
+      continue
+    fi
+
+    # 2. Check if dependency is a local package in our repository
+    local local_dir="${root_dir}/sdata/dist-arch/${dep_name}"
+    if [[ -d "$local_dir" && -f "$local_dir/PKGBUILD" ]]; then
+      echo -e "${STY_CYAN}[$0]: Dependency \"${dep_name}\" is a local package. Building locally...${STY_RST}"
+      install-local-pkgbuild "$local_dir" "$installflags"
+    else
+      # 3. Otherwise, it is an external dependency from repo/AUR
+      external_deps+=("$dep")
+    fi
+  done
+
+  # Only call AUR helper if there are missing external dependencies
+  if [[ ${#external_deps[@]} -gt 0 ]]; then
+    local extra_aur_flags=()
+    if [[ "${AUR_HELPER}" == "yay" || "${AUR_HELPER}" == "paru" ]]; then
+      extra_aur_flags+=(--useask)
+    fi
+    extra_aur_flags+=(--ask 4)
+    if [[ "${MACHINE_ARCH}" == "aarch64" ]]; then
+      extra_aur_flags+=(--mflags="--ignorearch")
+    fi
+    x $AUR_HELPER -S --sudoloop $installflags "${extra_aur_flags[@]}" --asdeps "${external_deps[@]}"
   fi
-  extra_aur_flags+=(--ask 4)
-  if [[ "${MACHINE_ARCH}" == "aarch64" ]]; then
-    extra_aur_flags+=(--mflags="--ignorearch")
-  fi
-  x $AUR_HELPER -S --sudoloop $installflags "${extra_aur_flags[@]}" --asdeps "${build_deps[@]}"
 
   # Build the package locally using makepkg (without -i to avoid default conflict rejection)
   x makepkg -CAfs --noconfirm
