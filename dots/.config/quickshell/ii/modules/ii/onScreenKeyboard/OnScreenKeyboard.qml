@@ -28,7 +28,7 @@ Scope { // Scope
         active: GlobalStates.oskOpen
         onActiveChanged: {
             if (!oskLoader.active) {
-                Ydotool.releaseAllKeys();
+                VirtualKeyboard.releaseAllKeys();
             }
         }
         

@@ -812,6 +812,23 @@ ContentPage {
     }
 
     ContentSection {
+        icon: "keyboard"
+        title: Translation.tr("On-screen keyboard")
+
+        ConfigSwitch {
+            buttonIcon: "swipe_up"
+            text: Translation.tr("Bottom-edge shortcut in desktop mode")
+            checked: Config.options.osk.bottomEdgeSwipe
+            onCheckedChanged: {
+                Config.options.osk.bottomEdgeSwipe = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Tablet mode always enables the bottom-edge keyboard shortcut")
+            }
+        }
+    }
+
+    ContentSection {
         icon: "voting_chip"
         title: Translation.tr("On-screen display")
 

@@ -1,4 +1,4 @@
-// We're going to use ydotool
+// Linux input keycodes are retained for layout identity and shortcut mapping.
 // See /usr/include/linux/input-event-codes.h for keycodes
 
 const defaultLayout = "English (US)";

@@ -447,7 +447,7 @@ Singleton {
             property JsonObject osk: JsonObject {
                 property string layout: "qwerty_full"
                 property bool pinnedOnStartup: false
-                property bool bottomEdgeSwipe: true
+                property bool bottomEdgeSwipe: false
             }
 
             property JsonObject overlay: JsonObject {

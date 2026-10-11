@@ -1164,5 +1164,7 @@
   "Tablet mode toggle": "平板模式切换",
   "QWERTY": "全键盘",
   "PIN": "数字密码",
-  "Space": "空格"
+  "Space": "空格",
+  "Bottom-edge shortcut in desktop mode": "桌面模式下启用底边快捷手势",
+  "Tablet mode always enables the bottom-edge keyboard shortcut": "平板模式会始终启用底边屏幕键盘快捷手势"
 }

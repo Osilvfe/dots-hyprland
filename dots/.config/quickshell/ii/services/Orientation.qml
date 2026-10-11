@@ -16,7 +16,7 @@ Singleton {
     property bool autoRotate: false
 
     readonly property string stateFilePath: `${StandardPaths.standardLocations(StandardPaths.RuntimeLocation)[0]}/hypr_rotation`
-    readonly property string autoPidFilePath: `${StandardPaths.standardLocations(StandardPaths.RuntimeLocation)[0]}/hypr_autorotate.pid`
+    readonly property string autoStateFilePath: `${StandardPaths.standardLocations(StandardPaths.RuntimeLocation)[0]}/hypr_autorotate`
 
     FileView {
         id: stateFile
@@ -28,6 +28,17 @@ Singleton {
             if (!isNaN(val) && val >= 0 && val <= 3) {
                 root.transform = val;
             }
+        }
+    }
+
+    FileView {
+        id: autoStateFile
+        path: FileUtils.trimFileProtocol(root.autoStateFilePath)
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            const val = autoStateFile.text().trim();
+            root.autoRotate = (val === "1" || val === "true");
         }
     }
 
@@ -49,16 +60,22 @@ Singleton {
     function toggleAutoRotate(): void {
         const script = `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/scripts/rotate_screen.sh`;
         Quickshell.execDetached(["bash", script, "auto-toggle"]);
-        root.autoRotate = !root.autoRotate;
     }
 
-    function init(): void {}
+    function init(): void {
+        const script = `${FileUtils.trimFileProtocol(Directories.config)}/hypr/hyprland/scripts/rotate_screen.sh`;
+        Quickshell.execDetached(["bash", script, "check"]);
+    }
 
     IpcHandler {
         target: "orientation"
 
         function set(val: int): void {
             root.transform = val;
+        }
+
+        function setAuto(val: bool): void {
+            root.autoRotate = val;
         }
 
         function toggle(): void {

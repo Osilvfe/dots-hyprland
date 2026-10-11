@@ -12,9 +12,11 @@ RippleButton {
     property string type: keyData.keytype
     property var keycode: keyData.keycode
     property string shape: keyData.shape
-    property bool isShift: Ydotool.shiftKeys.includes(keycode)
+    property bool isShift: VirtualKeyboard.shiftKeys.includes(keycode)
+    property bool isModifier: root.type == "modkey"
     property bool isBackspace: (key.toLowerCase() == "backspace")
     property bool isEnter: (key.toLowerCase() == "enter" || key.toLowerCase() == "return")
+    property bool modifierWasActive: false
     property real baseWidth: 45
     property real baseHeight: 45
     property var widthMultiplier: ({
@@ -33,7 +35,7 @@ RippleButton {
         "shift": 1,
         "control": 1
     })
-    toggled: isShift ? Ydotool.shiftMode : false
+    toggled: isModifier ? VirtualKeyboard.isModifierActive(keycode) : false
 
     enabled: shape != "empty"
     colBackground: shape == "empty" ? ColorUtils.transparentize(Appearance.colors.colLayer1) : Appearance.colors.colLayer1
@@ -43,10 +45,10 @@ RippleButton {
     Layout.fillWidth: shape == "space" || shape == "expand"
 
     Connections {
-        target: Ydotool
+        target: VirtualKeyboard
         enabled: isShift
         function onShiftModeChanged() {
-            if (Ydotool.shiftMode == 0) {
+            if (VirtualKeyboard.shiftMode == 0) {
                 capsLockTimer.hasStarted = false;
             }
         }
@@ -67,41 +69,69 @@ RippleButton {
         }
     }
 
+    Timer {
+        id: repeatDelay
+        interval: 450
+        onTriggered: repeatTimer.start()
+    }
+
+    Timer {
+        id: repeatTimer
+        interval: 55
+        repeat: true
+        onTriggered: root.sendKey()
+    }
+
+    function outputText(): string {
+        if (VirtualKeyboard.altGrActive && root.keyData.labelAlt !== undefined && root.keyData.labelAlt !== "") {
+            return root.keyData.labelAlt;
+        }
+        if (VirtualKeyboard.shiftMode !== 0) {
+            return root.keyData.labelCaps || root.keyData.labelShift || root.keyData.label;
+        }
+        return root.keyData.label || "";
+    }
+
+    function sendKey(): void {
+        VirtualKeyboard.press(root.keycode, root.outputText());
+    }
+
     downAction: () => {
-        Ydotool.press(root.keycode);
-        if (isShift && Ydotool.shiftMode == 0) Ydotool.shiftMode = 1;
+        if (root.isModifier && !root.isShift) {
+            root.modifierWasActive = VirtualKeyboard.isModifierActive(root.keycode);
+            if (root.modifierWasActive) {
+                VirtualKeyboard.release(root.keycode);
+            } else {
+                VirtualKeyboard.press(root.keycode, "");
+            }
+        } else {
+            root.sendKey();
+        }
+        if (isShift && VirtualKeyboard.shiftMode == 0) VirtualKeyboard.shiftMode = 1;
+        if (root.type == "normal") repeatDelay.start();
     }
     releaseAction: () => {
+        repeatDelay.stop();
+        repeatTimer.stop();
         if (root.type == "normal") {
-            Ydotool.release(root.keycode);
-            if (Ydotool.shiftMode == 1) {
-                Ydotool.releaseShiftKeys()
+            if (VirtualKeyboard.shiftMode == 1) {
+                VirtualKeyboard.releaseShiftKeys()
             }
         } else if (isShift) {
-            if (Ydotool.shiftMode == 1) {
+            if (VirtualKeyboard.shiftMode == 1) {
                 if (!capsLockTimer.hasStarted) {
                     capsLockTimer.startWaiting();
                 } else {
                     if (capsLockTimer.canCaps) {
-                        Ydotool.shiftMode = 2; // Caps lock mode
+                        VirtualKeyboard.shiftMode = 2; // Caps lock mode
                     } else {
-                        Ydotool.releaseShiftKeys()
+                        VirtualKeyboard.releaseShiftKeys()
                     }
                 }
-            } else if (Ydotool.shiftMode == 2) {
-                Ydotool.releaseShiftKeys();
-            }
-        } else if (root.type == "modkey") {
-            root.toggled = !root.toggled;
-            if (!root.toggled) {
-                if (isShift) {
-                    Ydotool.releaseShiftKeys();
-                } else { 
-                    Ydotool.release(root.keycode);
-                }
+            } else if (VirtualKeyboard.shiftMode == 2) {
+                VirtualKeyboard.releaseShiftKeys();
             }
         }
-
     }
 
     contentItem: StyledText {
@@ -114,8 +144,9 @@ RippleButton {
         horizontalAlignment: Text.AlignHCenter
         color: root.toggled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer1
         text: root.isBackspace ? "backspace" : root.isEnter ? "subdirectory_arrow_left" :
-            Ydotool.shiftMode == 2 ? (root.keyData.labelCaps || root.keyData.labelShift || root.keyData.label) :
-            Ydotool.shiftMode == 1 ? (root.keyData.labelShift || root.keyData.label) : 
+            VirtualKeyboard.altGrActive && root.keyData.labelAlt ? root.keyData.labelAlt :
+            VirtualKeyboard.shiftMode == 2 ? (root.keyData.labelCaps || root.keyData.labelShift || root.keyData.label) :
+            VirtualKeyboard.shiftMode == 1 ? (root.keyData.labelShift || root.keyData.label) :
             root.keyData.label
     }
 }

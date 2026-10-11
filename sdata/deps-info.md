@@ -167,12 +167,12 @@ Tips:
 
 
 ## illogical-impulse-toolkit
+- `evtest`
+  - Reads the OnePlus Pogo keyboard's kernel tablet-mode switch.
 - `upower`
   - Used in Quickshell config.
 - `wtype`
-  - Used in Hyprland `scripts/fuzzel-emoji.sh`
-- `ydotool`
-  - Used in Quickshell config.
+  - Used in Hyprland `scripts/fuzzel-emoji.sh` and the Quickshell on-screen keyboard.
 
 ## illogical-impulse-widgets
 - `fuzzel`
