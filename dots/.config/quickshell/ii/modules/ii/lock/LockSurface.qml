@@ -19,6 +19,7 @@ MouseArea {
     required property LockContext context
     property bool active: false
     property bool showInputField: active || context.currentText.length > 0
+    property bool oskVisible: TabletMode.isTabletMode
     readonly property bool requirePasswordToPower: Config.options.lock.security.requirePasswordToPower
 
     // Whether a player with a title is currently active
@@ -226,7 +227,7 @@ MouseArea {
         anchors {
             horizontalCenter: parent.horizontalCenter
             bottom: parent.bottom
-            bottomMargin: 20
+            bottomMargin: root.oskVisible ? (lockOskContainer.implicitHeight + 36) : 20
         }
         Behavior on anchors.bottomMargin {
             animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
@@ -348,6 +349,51 @@ MouseArea {
                     }
                 }
                 color: confirmButton.enabled ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+            }
+        }
+
+        ToolbarButton {
+            id: oskToggleButton
+            implicitWidth: height
+            toggled: root.oskVisible
+            colBackgroundToggled: Appearance.colors.colSecondaryContainer
+            onClicked: {
+                root.oskVisible = !root.oskVisible;
+            }
+            contentItem: MaterialSymbol {
+                anchors.centerIn: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                iconSize: 22
+                text: root.oskVisible ? "keyboard_hide" : "keyboard"
+                color: root.oskVisible ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnSurfaceVariant
+            }
+        }
+    }
+
+    // Touch Screen Keyboard for Lock Screen
+    Item {
+        id: lockOskContainer
+        anchors {
+            horizontalCenter: parent.horizontalCenter
+            bottom: parent.bottom
+            bottomMargin: 16
+        }
+        visible: root.oskVisible
+        opacity: root.oskVisible ? 1 : 0
+        implicitWidth: lockKeyboardLoader.implicitWidth
+        implicitHeight: lockKeyboardLoader.implicitHeight
+        Behavior on opacity {
+            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+        }
+
+        Loader {
+            id: lockKeyboardLoader
+            active: root.oskVisible
+            sourceComponent: LockScreenKeyboard {
+                context: root.context
+                ctrlHeld: root.ctrlHeld
+                onCloseRequested: root.oskVisible = false
             }
         }
     }

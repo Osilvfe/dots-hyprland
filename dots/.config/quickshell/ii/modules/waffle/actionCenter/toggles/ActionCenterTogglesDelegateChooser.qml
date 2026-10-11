@@ -159,4 +159,18 @@ DelegateChooser {
             icon: "cut"
         }
     }
+    DelegateChoice {
+        roleValue: "orientation"
+        ActionCenterToggleButton {
+            toggleModel: OrientationToggle {}
+            icon: Orientation.autoRotate ? "screen-rotation" : "rotate-right"
+        }
+    }
+    DelegateChoice {
+        roleValue: "tabletMode"
+        ActionCenterToggleButton {
+            toggleModel: TabletModeToggle {}
+            icon: TabletMode.isTabletMode ? "tablet" : "laptop"
+        }
+    }
 }

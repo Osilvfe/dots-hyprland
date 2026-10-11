@@ -94,15 +94,31 @@ Item {
         }
 
         Loader {
-            active: Config.options.bar.utilButtons.showKeyboardToggle
-            visible: Config.options.bar.utilButtons.showKeyboardToggle
+            active: (Config.options.bar.utilButtons.showKeyboardToggle ?? false) || TabletMode.isTabletMode
+            visible: active
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
                 onClicked: GlobalStates.oskOpen = !GlobalStates.oskOpen
                 MaterialSymbol {
                     horizontalAlignment: Qt.AlignHCenter
                     fill: 0
-                    text: "keyboard"
+                    text: GlobalStates.oskOpen ? "keyboard_hide" : "keyboard"
+                    iconSize: Appearance.font.pixelSize.large
+                    color: Appearance.colors.colOnLayer2
+                }
+            }
+        }
+
+        Loader {
+            active: (Config.options.bar.utilButtons.showOrientationToggle ?? false) || TabletMode.isTabletMode
+            visible: active
+            sourceComponent: CircleUtilButton {
+                Layout.alignment: Qt.AlignVCenter
+                onClicked: Orientation.toggleLandscapePortrait()
+                MaterialSymbol {
+                    horizontalAlignment: Qt.AlignHCenter
+                    fill: 0
+                    text: Orientation.isPortrait ? "stay_current_portrait" : "stay_current_landscape"
                     iconSize: Appearance.font.pixelSize.large
                     color: Appearance.colors.colOnLayer2
                 }

@@ -504,6 +504,14 @@ ContentPage {
                 }
             }
             ConfigSwitch {
+                buttonIcon: "screen_rotation"
+                text: Translation.tr("Rotation toggle")
+                checked: Config.options.bar.utilButtons.showOrientationToggle
+                onCheckedChanged: {
+                    Config.options.bar.utilButtons.showOrientationToggle = checked;
+                }
+            }
+            ConfigSwitch {
                 buttonIcon: "mic"
                 text: Translation.tr("Mic toggle")
                 checked: Config.options.bar.utilButtons.showMicToggle

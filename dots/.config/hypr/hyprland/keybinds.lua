@@ -61,6 +61,8 @@ hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO
     { locked = true, repeating = true, description = "Media: Volume up" })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"),
     { locked = true, repeating = true, description = "Media: Volume down" })
+hl.bind("XF86RotateWindows", hl.dsp.exec_cmd(hyprScripts .. "/rotate_screen.sh toggle"),
+    { locked = true, description = "Screen: Rotate display" })
 
 hl.bind("CTRL + SUPER + T", hl.dsp.global("quickshell:wallpaperSelectorToggle"),
     { description = "Shell: Change wallpaper" })

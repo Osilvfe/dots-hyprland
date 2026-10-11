@@ -19,22 +19,48 @@ MouseArea {
 
     hoverEnabled: true
     acceptedButtons: Qt.LeftButton | Qt.RightButton
-    implicitWidth: 20
-    implicitHeight: 20
+    implicitWidth: TabletMode.isTabletMode ? 26 : 20
+    implicitHeight: TabletMode.isTabletMode ? 26 : 20
+
+    property bool longPressed: false
+
+    Timer {
+        id: longPressTimer
+        interval: 450
+        onTriggered: {
+            if (root.pressed && item.hasMenu) {
+                root.longPressed = true;
+                if (menu.active && menu.item && typeof menu.item.close === "function")
+                    menu.item.close();
+                else 
+                    menu.open();
+            }
+        }
+    }
+
     onPressed: (event) => {
-        switch (event.button) {
-        case Qt.LeftButton:
-            item.activate();
-            break;
-        case Qt.RightButton:
+        root.longPressed = false;
+        if (event.button === Qt.RightButton) {
             if (item.hasMenu)
                 if (menu.active && menu.item && typeof menu.item.close === "function")
                     menu.item.close();
                 else 
                     menu.open();
-            break;
+        } else if (event.button === Qt.LeftButton) {
+            longPressTimer.start();
         }
         event.accepted = true;
+    }
+
+    onReleased: (event) => {
+        longPressTimer.stop();
+        if (event.button === Qt.LeftButton && !root.longPressed) {
+            item.activate();
+        }
+    }
+
+    onCanceled: {
+        longPressTimer.stop();
     }
     onEntered: {
         tooltip.text = TrayService.getTooltipForItem(root.item);

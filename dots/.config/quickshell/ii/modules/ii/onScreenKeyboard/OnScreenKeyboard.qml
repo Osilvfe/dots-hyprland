@@ -75,8 +75,8 @@ Scope { // Scope
                 color: Appearance.colors.colLayer0
                 radius: Appearance.rounding.windowRounding
                 property real padding: 10
-                implicitWidth: oskRowLayout.implicitWidth + padding * 2
-                implicitHeight: oskRowLayout.implicitHeight + padding * 2
+                implicitWidth: oskColLayout.implicitWidth + padding * 2
+                implicitHeight: oskColLayout.implicitHeight + padding * 2
 
                 Keys.onPressed: (event) => { // Esc to close
                     if (event.key === Qt.Key_Escape) {
@@ -84,10 +84,53 @@ Scope { // Scope
                     }
                 }
 
-                RowLayout {
-                    id: oskRowLayout
+                ColumnLayout {
+                    id: oskColLayout
                     anchors.centerIn: parent
-                    spacing: 5
+                    spacing: 4
+
+                    // Swipe-down / tap dismiss handle
+                    Item {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.topMargin: 2
+                        Layout.bottomMargin: 2
+                        implicitWidth: 80
+                        implicitHeight: 14
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 48
+                            height: 4
+                            radius: 2
+                            color: handleMouseArea.containsMouse ? Appearance.colors.colOutline : Appearance.colors.colOutlineVariant
+                            Behavior on color {
+                                ColorAnimation { duration: 150 }
+                            }
+                        }
+
+                        MouseArea {
+                            id: handleMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            property real startY: 0
+                            onPressed: mouse => {
+                                startY = mouse.y;
+                            }
+                            onPositionChanged: mouse => {
+                                if (mouse.y - startY > 15) {
+                                    oskRoot.hide();
+                                }
+                            }
+                            onClicked: {
+                                oskRoot.hide();
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        id: oskRowLayout
+                        spacing: 5
                     VerticalButtonGroup {
                         OskControlButton { // Pin button
                             toggled: root.pinned
@@ -123,7 +166,68 @@ Scope { // Scope
                     }
                 }
             }
+            }
 
+        }
+    }
+
+    Loader {
+        id: edgeTriggerLoader
+        active: !GlobalStates.oskOpen && !GlobalStates.screenLocked && (TabletMode.isTabletMode || (Config.options?.osk?.bottomEdgeSwipe ?? false))
+        sourceComponent: PanelWindow {
+            id: edgeTriggerWindow
+            WlrLayershell.namespace: "quickshell:osk_edge_trigger"
+            WlrLayershell.layer: WlrLayer.Overlay
+            exclusiveZone: 0
+            color: "transparent"
+
+            anchors {
+                bottom: true
+                left: true
+                right: true
+            }
+            implicitHeight: 14
+
+            // Handle indicator shown in tablet mode
+            Rectangle {
+                anchors.centerIn: parent
+                width: 72
+                height: 4
+                radius: 2
+                visible: TabletMode.isTabletMode
+                color: ColorUtils.transparentize(Appearance.colors.colOutlineVariant, 0.4)
+                opacity: edgeMouseArea.containsMouse ? 1 : 0.6
+                Behavior on opacity {
+                    NumberAnimation { duration: 150 }
+                }
+            }
+
+            MouseArea {
+                id: edgeMouseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                property real startY: 0
+                property bool swiping: false
+
+                onPressed: mouse => {
+                    startY = mouse.y;
+                    swiping = true;
+                }
+                onPositionChanged: mouse => {
+                    if (swiping && (startY - mouse.y > 10 || mouse.y < -5)) {
+                        swiping = false;
+                        GlobalStates.oskOpen = true;
+                    }
+                }
+                onReleased: {
+                    swiping = false;
+                }
+                onClicked: {
+                    if (TabletMode.isTabletMode) {
+                        GlobalStates.oskOpen = true;
+                    }
+                }
+            }
         }
     }
 
