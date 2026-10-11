@@ -2,6 +2,7 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Io
 import qs.modules.common
@@ -20,18 +21,13 @@ Singleton {
     FileView {
         id: stateFile
         path: FileUtils.trimFileProtocol(root.stateFilePath)
+        watchChanges: true
+        onFileChanged: reload()
         onLoaded: {
             const val = parseInt(stateFile.text().trim());
             if (!isNaN(val) && val >= 0 && val <= 3) {
                 root.transform = val;
             }
-        }
-    }
-
-    FileWatch {
-        path: FileUtils.trimFileProtocol(root.stateFilePath)
-        onFileChanged: {
-            stateFile.reload();
         }
     }
 
@@ -56,6 +52,8 @@ Singleton {
         root.autoRotate = !root.autoRotate;
     }
 
+    function init(): void {}
+
     IpcHandler {
         target: "orientation"
 
@@ -73,6 +71,10 @@ Singleton {
 
         function auto(): void {
             root.toggleAutoRotate();
+        }
+
+        function status(): int {
+            return root.transform;
         }
     }
 }

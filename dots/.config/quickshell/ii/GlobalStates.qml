@@ -52,6 +52,9 @@ Singleton {
         OplusBuds3.syncBridge();
         // Ensure Polkit authentication agent is initialized immediately
         PolkitService.init();
+        // Initialize tablet mode and orientation services
+        TabletMode.check();
+        Orientation.init();
         // Pre-warm AppSearch and LauncherSearch in idle loop to eliminate first-open latency
         Qt.callLater(() => {
             AppSearch.rebuildList();

@@ -2,6 +2,7 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Io
 import qs.modules.common
@@ -18,16 +19,11 @@ Singleton {
     FileView {
         id: stateFile
         path: FileUtils.trimFileProtocol(root.stateFilePath)
+        watchChanges: true
+        onFileChanged: reload()
         onLoaded: {
             const val = stateFile.text().trim();
             root.isTabletMode = (val === "1" || val === "true");
-        }
-    }
-
-    FileWatch {
-        path: FileUtils.trimFileProtocol(root.stateFilePath)
-        onFileChanged: {
-            stateFile.reload();
         }
     }
 
@@ -54,6 +50,10 @@ Singleton {
 
         function check(): void {
             root.check();
+        }
+
+        function status(): bool {
+            return root.isTabletMode;
         }
     }
 
