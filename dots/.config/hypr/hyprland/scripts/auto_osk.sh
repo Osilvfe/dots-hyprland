@@ -68,44 +68,51 @@ worker() {
     }
     trap cleanup EXIT INT TERM HUP
 
-    rm -f "$fifo"
-    mkfifo -m 600 "$fifo" || return 1
-
     export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${RUNTIME_DIR}/bus}"
 
-    if command -v stdbuf >/dev/null 2>&1; then
-        stdbuf -oL busctl --user monitor org.fcitx.Fcitx5 > "$fifo" 2>/dev/null &
-    else
-        busctl --user monitor org.fcitx.Fcitx5 > "$fifo" 2>/dev/null &
-    fi
-    monitor_pid=$!
+    while true; do
+        rm -f "$fifo"
+        mkfifo -m 600 "$fifo" || { sleep 1; continue; }
 
-    while IFS= read -r line; do
-        if [[ "$line" == *"Member=FocusIn"* ]]; then
-            # Cancel any pending debounce close
-            if [[ -n "$close_pid" ]]; then
-                kill "$close_pid" 2>/dev/null || true
-                close_pid=""
-            fi
-            if is_tablet_mode && command -v qs >/dev/null 2>&1; then
-                env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
-                    qs -c ii ipc --any-display call osk open >/dev/null 2>&1 || true
-            fi
-        elif [[ "$line" == *"Member=FocusOut"* ]]; then
-            if [[ -n "$close_pid" ]]; then
-                kill "$close_pid" 2>/dev/null || true
-            fi
-            # Debounce by 250ms to allow smooth focus transfer between input fields
-            (
-                sleep 0.25
+        if command -v stdbuf >/dev/null 2>&1; then
+            stdbuf -oL busctl --user monitor org.fcitx.Fcitx5 > "$fifo" 2>/dev/null &
+        else
+            busctl --user monitor org.fcitx.Fcitx5 > "$fifo" 2>/dev/null &
+        fi
+        monitor_pid=$!
+
+        while IFS= read -r line; do
+            if [[ "$line" == *"Member=FocusIn"* ]]; then
+                # Cancel any pending debounce close
+                if [[ -n "$close_pid" ]]; then
+                    kill "$close_pid" 2>/dev/null || true
+                    close_pid=""
+                fi
                 if is_tablet_mode && command -v qs >/dev/null 2>&1; then
                     env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
-                        qs -c ii ipc --any-display call osk close >/dev/null 2>&1 || true
+                        qs -c ii ipc --any-display call osk open >/dev/null 2>&1 || true
                 fi
-            ) &
-            close_pid=$!
-        fi
-    done < "$fifo"
+            elif [[ "$line" == *"Member=FocusOut"* ]]; then
+                if [[ -n "$close_pid" ]]; then
+                    kill "$close_pid" 2>/dev/null || true
+                fi
+                # Debounce by 250ms to allow smooth focus transfer between input fields
+                (
+                    sleep 0.25
+                    if is_tablet_mode && command -v qs >/dev/null 2>&1; then
+                        env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" \
+                            qs -c ii ipc --any-display call osk close >/dev/null 2>&1 || true
+                    fi
+                ) &
+                close_pid=$!
+            fi
+        done < "$fifo"
+
+        [[ -n "$monitor_pid" ]] && kill "$monitor_pid" 2>/dev/null || true
+        monitor_pid=""
+        rm -f "$fifo"
+        sleep 1
+    done
 }
 
 start_daemon() {

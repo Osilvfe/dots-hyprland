@@ -846,6 +846,18 @@ ContentPage {
         title: Translation.tr("On-screen keyboard")
 
         ConfigSwitch {
+            buttonIcon: "edit_note"
+            text: Translation.tr("Auto-show on input focus in tablet mode")
+            checked: Config.options.osk.autoShowOnFocus ?? true
+            onCheckedChanged: {
+                Config.options.osk.autoShowOnFocus = checked;
+            }
+            StyledToolTip {
+                text: Translation.tr("Automatically popup virtual keyboard when focusing input fields in tablet mode")
+            }
+        }
+
+        ConfigSwitch {
             buttonIcon: "swipe_up"
             text: Translation.tr("Bottom-edge shortcut in desktop mode")
             checked: Config.options.osk.bottomEdgeSwipe

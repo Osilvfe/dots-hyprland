@@ -1170,5 +1170,7 @@
   "Right-edge shortcut in desktop mode": "桌面模式下启用右边缘划入手势",
   "Left-edge shortcut in desktop mode": "桌面模式下启用左边缘划入手势",
   "Tablet mode always enables edge swipe shortcuts": "平板模式会始终启用边缘划入手势",
-  "Swipe from screen edges to open sidebars in tablet or desktop mode": "在平板或桌面模式下从屏幕边缘划入以打开侧边栏"
+  "Swipe from screen edges to open sidebars in tablet or desktop mode": "在平板或桌面模式下从屏幕边缘划入以打开侧边栏",
+  "Auto-show on input focus in tablet mode": "平板模式下聚焦输入框自动弹出键盘",
+  "Automatically popup virtual keyboard when focusing input fields in tablet mode": "在平板模式下，聚焦文本输入框时自动弹出虚拟键盘，失焦时自动收起"
 }

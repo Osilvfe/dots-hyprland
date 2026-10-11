@@ -448,6 +448,7 @@ Singleton {
                 property string layout: "qwerty_full"
                 property bool pinnedOnStartup: false
                 property bool bottomEdgeSwipe: false
+                property bool autoShowOnFocus: true
             }
 
             property JsonObject overlay: JsonObject {
