@@ -171,6 +171,7 @@
   - **发行版与架构识别放行**：在 `sdata/lib/dist-determine.sh` 中将 Arch Linux ARM 发行版 ID `archarm` 纳入原生 `arch` 组别，避免伪“alike”警告；将 `MACHINE_ARCH` 架构支持拓宽至 `x86_64` 与 `aarch64`，解除原先对非 x86_64 的阻断提示。
   - **双 AUR 辅助工具自动适配（paru & yay）**：在 `sdata/dist-arch/install-deps.sh` 中彻底解绑对 `paru` 的硬编码依赖，自动探测并优先复用系统已安装的 `paru` 或 `yay`；在两者皆无时，`aarch64` 自动拉取原生跨架构预构建的 `yay-bin`（内置 aarch64），避免在 ARM 移动/平板端因下载仅限 x86_64 的 `paru-bin` 发生死锁。
   - **PKGBUILD 架构放行与 ignorearch 构建容错**：在 `illogical-impulse-microtex-git/PKGBUILD` 中补齐 `aarch64` 声明；在 `install-local-pkgbuild()` 中为 aarch64 构建自动注入 `--mflags="--ignorearch"`，无缝支持 AUR 中纯源码但未显式标注 aarch64 的底层依赖（如 `udis86`、`xorg-xwayland-hidpi-xprop`）；将旧依赖隐式化转换统一改用原生 `sudo pacman -D --asdeps`。
+  - **前置清理、依赖时序拓扑与主动冲突解决（--ask 4 / --useask）**：在 `remove_deprecated_dependencies` 中前置清理将要被定制/git包替换的官方源同名包（如 `hyprland`、`xorg-xwayland`、`hyprutils`、`hyprlang`、`hyprgraphics`、`hyprcursor`、`aquamarine`、`hyprwayland-scanner`、`quickshell`），同时移除对必要 git 依赖的误删；优化 `metapkgs` 安装时序，将提供核心定制替代包（`hyprland-hidpi-xprop-moetayuko` 与 `illogical-impulse-quickshell-git` 等）调整至首位抢先安装，避免后续元包在解析 `xdg-desktop-portal-hyprland`、`hyprlock` 等依赖时提前从官方源拉取不同包名的原版软件导致死锁冲突；解耦 `makepkg` 构建与安装流程，采用 `makepkg -CAfs` + `makepkg --packagelist` 精确产物定位 + `sudo pacman -U --ask 4` 安装，并在 AUR helper 阶段注入 `--ask 4` 与 `--useask`（yay 与 paru 均支持），使依赖与本地包安装在遭遇冲突时均能主动回答 `yes` 自动替换。
   - **屏幕显示通用兜底**：在 `general.lua` 中补充通配 monitor 规则 `hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })`，完美适配高通骁龙 8 Gen 2 / Gen 3 等 ARM 平板设备内屏（`DSI-1`）与多功能外接屏。
 
 ### 本地修复（无对应 PR）
