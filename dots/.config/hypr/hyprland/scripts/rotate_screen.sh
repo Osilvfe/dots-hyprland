@@ -50,7 +50,7 @@ publish_transform() {
 
     atomic_write "$STATE_FILE" "$transform"
     if [[ "$send_ipc" == "true" ]] && command -v qs >/dev/null 2>&1; then
-        qs -c ii ipc call orientation set "$transform" >/dev/null 2>&1 || true
+        env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" qs -c ii ipc call orientation set "$transform" >/dev/null 2>&1 || true
     fi
 }
 
@@ -62,7 +62,7 @@ publish_auto_state() {
     [[ "$enabled" == "1" ]] && qs_value="true"
     atomic_write "$AUTO_STATE_FILE" "$enabled"
     if [[ "$send_ipc" == "true" ]] && command -v qs >/dev/null 2>&1; then
-        qs -c ii ipc call orientation setAuto "$qs_value" >/dev/null 2>&1 || true
+        env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" qs -c ii ipc call orientation setAuto "$qs_value" >/dev/null 2>&1 || true
     fi
 }
 
@@ -157,7 +157,12 @@ auto_worker() {
 
     rm -f "$fifo"
     mkfifo -m 600 "$fifo" || return 1
-    if command -v stdbuf >/dev/null 2>&1; then
+
+    export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${RUNTIME_DIR}/bus}"
+
+    if command -v systemd-run >/dev/null 2>&1; then
+        systemd-run --user --pipe -q stdbuf -oL monitor-sensor --accel > "$fifo" 2>/dev/null &
+    elif command -v stdbuf >/dev/null 2>&1; then
         stdbuf -oL monitor-sensor --accel > "$fifo" 2>/dev/null &
     else
         monitor-sensor --accel > "$fifo" 2>/dev/null &
