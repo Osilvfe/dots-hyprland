@@ -79,7 +79,7 @@ publish_state() {
     atomic_write "$STATE_FILE" "$mode"
 
     if [[ "$send_ipc" == "true" ]] && command -v qs >/dev/null 2>&1; then
-        qs -c ii ipc call tabletMode set "$qs_value" >/dev/null 2>&1 || true
+        env HOME="${HOME:-/home/$(id -un)}" XDG_RUNTIME_DIR="${RUNTIME_DIR}" qs -c ii ipc call tabletMode set "$qs_value" >/dev/null 2>&1 || true
     fi
 
     if [[ "$notify_change" == "true" && "$old_mode" != "unknown" && "$old_mode" != "$mode" ]] \
@@ -128,13 +128,16 @@ stop_listener() {
 
 listener_worker() {
     local fifo="${RUNTIME_DIR}/hypr_tablet_mode.udev.${BASHPID}"
-    local monitor_pid=""
+    local pogo_pid=""
+    local udev_pid=""
     local stopping="0"
-    local line
+    local line event
 
     cleanup() {
-        [[ -n "$monitor_pid" ]] && kill "$monitor_pid" 2>/dev/null || true
-        monitor_pid=""
+        [[ -n "$pogo_pid" ]] && kill "$pogo_pid" 2>/dev/null || true
+        [[ -n "$udev_pid" ]] && kill "$udev_pid" 2>/dev/null || true
+        pogo_pid=""
+        udev_pid=""
         rm -f "$fifo"
     }
     stop_worker() {
@@ -145,30 +148,70 @@ listener_worker() {
     trap stop_worker INT TERM HUP
 
     publish_state "$(detect_tablet_mode)" false
-    command -v udevadm >/dev/null 2>&1 || return 1
 
     while [[ "$stopping" == "0" ]]; do
-        rm -f "$fifo"
-        mkfifo -m 600 "$fifo" || return 1
-        udevadm monitor --udev --subsystem-match=input > "$fifo" 2>/dev/null &
-        monitor_pid=$!
+        event=$(find_pogo_event || true)
 
-        while IFS= read -r line; do
-            [[ "$stopping" == "0" ]] || break
-            case "$line" in
-                *" add "*|*" remove "*|*" change "*)
-                    # One event can create several input nodes. Let udev settle,
-                    # then derive the state from the exact Pogo device.
-                    sleep 0.35
-                    publish_state "$(detect_tablet_mode)"
-                    ;;
-            esac
-        done < "$fifo"
+        # 1. If pogo device node exists and evtest is available, monitor its EV_SW events directly
+        if [[ -n "$event" && -r "$event" ]] && command -v evtest >/dev/null 2>&1; then
+            rm -f "$fifo"
+            mkfifo -m 600 "$fifo" || return 1
+            if command -v stdbuf >/dev/null 2>&1; then
+                stdbuf -oL evtest "$event" > "$fifo" 2>/dev/null &
+            else
+                evtest "$event" > "$fifo" 2>/dev/null &
+            fi
+            pogo_pid=$!
 
-        wait "$monitor_pid" 2>/dev/null || true
-        monitor_pid=""
-        rm -f "$fifo"
-        [[ "$stopping" == "0" ]] && sleep 1
+            while IFS= read -r line; do
+                [[ "$stopping" == "0" ]] || break
+                case "$line" in
+                    *"(SW_TABLET_MODE), value 1"*)
+                        publish_state "1"
+                        ;;
+                    *"(SW_TABLET_MODE), value 0"*)
+                        publish_state "0"
+                        ;;
+                esac
+            done < "$fifo"
+
+            wait "$pogo_pid" 2>/dev/null || true
+            pogo_pid=""
+            rm -f "$fifo"
+        fi
+
+        # 2. Also listen for udev input add/remove/change events (when device connects/disconnects)
+        if command -v udevadm >/dev/null 2>&1; then
+            rm -f "$fifo"
+            mkfifo -m 600 "$fifo" || return 1
+            if command -v stdbuf >/dev/null 2>&1; then
+                stdbuf -oL udevadm monitor --subsystem-match=input > "$fifo" 2>/dev/null &
+            else
+                udevadm monitor --subsystem-match=input > "$fifo" 2>/dev/null &
+            fi
+            udev_pid=$!
+
+            while IFS= read -r line; do
+                [[ "$stopping" == "0" ]] || break
+                case "$line" in
+                    *"add"*|*"remove"*|*"change"*)
+                        sleep 0.35
+                        publish_state "$(detect_tablet_mode)"
+                        # If pogo device appeared, break to start evtest listener
+                        if event=$(find_pogo_event 2>/dev/null); then
+                            break
+                        fi
+                        ;;
+                esac
+            done < "$fifo"
+
+            kill "$udev_pid" 2>/dev/null || true
+            wait "$udev_pid" 2>/dev/null || true
+            udev_pid=""
+            rm -f "$fifo"
+        else
+            sleep 1
+        fi
     done
 }
 
